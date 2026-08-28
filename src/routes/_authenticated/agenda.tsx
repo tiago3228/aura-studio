@@ -286,7 +286,7 @@ type Lists = {
   professionals: { id: string; name: string }[];
 };
 
-function NewAppointmentDialog({ lists, onDone }: { lists?: Lists; onDone: () => void }) {
+function NewAppointmentDialog({ lists, onDone }: { lists: Lists | undefined; onDone: () => void }) {
   const { data: membership } = useMembership();
   const [form, setForm] = useState({
     client_id: "",
