@@ -228,14 +228,14 @@ function Row({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
-const FIELDS = [
+const FIELDS: { key: string; label: string; long?: boolean }[] = [
   { key: "queixa_principal", label: "Queixa principal", long: true },
   { key: "alergias", label: "Alergias" },
   { key: "medicamentos", label: "Medicamentos em uso" },
   { key: "cirurgias", label: "Cirurgias prévias" },
   { key: "gestante", label: "Gestante ou lactante" },
   { key: "observacoes", label: "Observações clínicas", long: true },
-] as const;
+];
 
 function AnamnesisDialog({ clientId, onDone }: { clientId: string; onDone: () => void }) {
   const { data: membership } = useMembership();
