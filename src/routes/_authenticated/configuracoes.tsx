@@ -100,7 +100,7 @@ function Configuracoes() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PageHeader title="Configurações" subtitle={`Seu acesso: ${roleLabel(membership!.role)}`} />
+      <PageHeader title="Configurações" subtitle={`Seu acesso: ${roleLabel[membership!.role]}`} />
 
       <form onSubmit={save} className="space-y-6">
         <Surface className="space-y-4 p-5">
