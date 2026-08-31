@@ -22,6 +22,7 @@ import { Route as AuthenticatedEstoqueRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedServicosRouteImport } from './routes/_authenticated/servicos'
+import { Route as AgendarSlugRouteImport } from './routes/agendar.$slug'
 import { Route as AuthenticatedClientesIndexRouteImport } from './routes/_authenticated/clientes/index'
 import { Route as AuthenticatedClientesIdRouteImport } from './routes/_authenticated/clientes/$id'
 
@@ -90,6 +91,11 @@ const AuthenticatedServicosRoute = AuthenticatedServicosRouteImport.update({
   path: '/servicos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AgendarSlugRoute = AgendarSlugRouteImport.update({
+  id: '/agendar/$slug',
+  path: '/agendar/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedClientesIndexRoute =
   AuthenticatedClientesIndexRouteImport.update({
     id: '/clientes/',
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/servicos': typeof AuthenticatedServicosRoute
+  '/agendar/$slug': typeof AgendarSlugRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/clientes/': typeof AuthenticatedClientesIndexRoute
 }
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/servicos': typeof AuthenticatedServicosRoute
+  '/agendar/$slug': typeof AgendarSlugRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/clientes': typeof AuthenticatedClientesIndexRoute
 }
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/servicos': typeof AuthenticatedServicosRoute
+  '/agendar/$slug': typeof AgendarSlugRoute
   '/_authenticated/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/_authenticated/clientes/': typeof AuthenticatedClientesIndexRoute
 }
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/onboarding'
     | '/servicos'
+    | '/agendar/$slug'
     | '/clientes/$id'
     | '/clientes/'
   fileRoutesByTo: FileRoutesByTo
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/onboarding'
     | '/servicos'
+    | '/agendar/$slug'
     | '/clientes/$id'
     | '/clientes'
   id:
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/_authenticated/financeiro'
     | '/_authenticated/onboarding'
     | '/_authenticated/servicos'
+    | '/agendar/$slug'
     | '/_authenticated/clientes/$id'
     | '/_authenticated/clientes/'
   fileRoutesById: FileRoutesById
@@ -208,6 +220,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  AgendarSlugRoute: typeof AgendarSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -303,6 +316,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedServicosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/agendar/$slug': {
+      id: '/agendar/$slug'
+      path: '/agendar/$slug'
+      fullPath: '/agendar/$slug'
+      preLoaderRoute: typeof AgendarSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/clientes/': {
       id: '/_authenticated/clientes/'
       path: '/clientes'
@@ -357,6 +377,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  AgendarSlugRoute: AgendarSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
