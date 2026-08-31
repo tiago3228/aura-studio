@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
@@ -49,6 +49,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { data: membership } = useMembership();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
