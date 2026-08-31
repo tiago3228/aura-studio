@@ -74,7 +74,8 @@ function Dashboard() {
     },
   });
 
-  if (query.isLoading) {
+  if (query.error) return <ErrorState message={(query.error as Error).message} />;
+  if (!query.data) {
     return (
       <div className="space-y-4">
         <SkeletonCard lines={1} />
@@ -82,9 +83,8 @@ function Dashboard() {
       </div>
     );
   }
-  if (query.error) return <ErrorState message={(query.error as Error).message} />;
 
-  const data = query.data!;
+  const data = query.data;
   const attended = data.appointments.filter((a) => a.status === "atendido").length;
 
   return (
