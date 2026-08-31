@@ -74,7 +74,8 @@ function Dashboard() {
     },
   });
 
-  if (query.isLoading || !query.data) {
+  if (query.error) return <ErrorState message={(query.error as Error).message} />;
+  if (!query.data) {
     return (
       <div className="space-y-4">
         <SkeletonCard lines={1} />
