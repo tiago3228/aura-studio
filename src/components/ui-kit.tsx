@@ -45,10 +45,11 @@ export function PageHeader({
       <div className="flex items-start gap-3">
         {back ? <BackButton {...(backTo !== undefined ? { fallback: backTo } : {})} className="mt-0.5" /> : null}
         <div>
-        <h1 className="font-display text-2xl leading-tight font-semibold text-balance sm:text-3xl">
-          {title}
-        </h1>
-        {subtitle ? <p className="mt-1 text-sm text-pretty text-muted-foreground">{subtitle}</p> : null}
+          <h1 className="font-display text-2xl leading-tight font-semibold text-balance sm:text-3xl">
+            {title}
+          </h1>
+          {subtitle ? <p className="mt-1 text-sm text-pretty text-muted-foreground">{subtitle}</p> : null}
+        </div>
       </div>
       {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
     </div>
