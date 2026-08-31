@@ -1,22 +1,50 @@
 import type { ReactNode } from "react";
+import { useRouter } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function Surface({ className, children }: { className?: string; children: ReactNode }) {
   return <div className={cn("surface p-5", className)}>{children}</div>;
 }
 
+export function BackButton({ fallback = "/dashboard", className }: { fallback?: string; className?: string }) {
+  const router = useRouter();
+  return (
+    <button
+      type="button"
+      aria-label="Voltar"
+      onClick={() => {
+        if (window.history.length > 1) router.history.back();
+        else router.navigate({ to: fallback });
+      }}
+      className={cn(
+        "grid size-9 shrink-0 place-items-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+        className,
+      )}
+    >
+      <ArrowLeft className="size-4" />
+    </button>
+  );
+}
+
 export function PageHeader({
   title,
   subtitle,
   actions,
+  back = true,
+  backTo,
 }: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
+  back?: boolean;
+  backTo?: string;
 }) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div>
+      <div className="flex items-start gap-3">
+        {back ? <BackButton {...(backTo !== undefined ? { fallback: backTo } : {})} className="mt-0.5" /> : null}
+        <div>
         <h1 className="font-display text-2xl leading-tight font-semibold text-balance sm:text-3xl">
           {title}
         </h1>
