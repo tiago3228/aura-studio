@@ -37,22 +37,20 @@ function Onboarding() {
       if (!auth.user) throw new Error("Sessão expirada.");
 
       const slug = `${slugify(form.name)}-${Math.random().toString(36).slice(2, 6)}`;
-      const { data: org, error } = await supabase
-        .from("organizations")
-        .insert({
-          name: form.name,
-          phone: form.phone || null,
-          city: form.city || null,
-          description: form.description || null,
-          booking_slug: slug,
-          onboarding_done: true,
-        })
-        .select()
-        .single();
+      const orgId = crypto.randomUUID();
+      const { error } = await supabase.from("organizations").insert({
+        id: orgId,
+        name: form.name,
+        phone: form.phone || null,
+        city: form.city || null,
+        description: form.description || null,
+        booking_slug: slug,
+        onboarding_done: true,
+      });
       if (error) throw error;
 
       const { error: memberError } = await supabase.from("organization_members").insert({
-        organization_id: org.id,
+        organization_id: orgId,
         user_id: auth.user.id,
         role: "owner",
       });
