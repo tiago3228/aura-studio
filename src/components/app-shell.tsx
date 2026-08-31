@@ -14,6 +14,7 @@ import {
   UserCog,
   LogOut,
   Menu,
+  ArrowLeft,
   X,
 } from "lucide-react";
 
@@ -129,9 +130,16 @@ export function AppShell({ children }: { children: ReactNode }) {
       ) : null}
 
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/85 px-4 py-3 backdrop-blur lg:hidden">
-        <button onClick={() => setOpen(true)} aria-label="Abrir menu">
-          <Menu className="size-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          {pathname !== "/dashboard" ? (
+            <button onClick={() => router.history.back()} aria-label="Voltar">
+              <ArrowLeft className="size-5" />
+            </button>
+          ) : null}
+          <button onClick={() => setOpen(true)} aria-label="Abrir menu">
+            <Menu className="size-5" />
+          </button>
+        </div>
         <span className="font-display text-base font-semibold">
           Aura<span className="text-gold">.</span>
         </span>
