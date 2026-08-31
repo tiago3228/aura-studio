@@ -90,6 +90,7 @@ function Dashboard() {
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
+        back={false}
         title={`Olá, ${membership?.organization.name ?? ""}`}
         subtitle={longDate(new Date())}
         actions={
