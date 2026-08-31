@@ -74,7 +74,7 @@ function Dashboard() {
     },
   });
 
-  if (query.isLoading) {
+  if (query.isLoading || !query.data) {
     return (
       <div className="space-y-4">
         <SkeletonCard lines={1} />
