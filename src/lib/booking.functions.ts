@@ -95,10 +95,7 @@ async function loadContext(slug: string, professionalId: string, serviceId: stri
   if (!pro.data) return { error: "Profissional indisponível." as const };
   if (!service.data) return { error: "Procedimento indisponível." as const };
 
-  const duration = Math.max(
-    service.data.duration_min + service.data.buffer_min,
-    pro.data.slot_minutes ? 0 : 0,
-  );
+  const duration = service.data.duration_min + service.data.buffer_min;
 
   const ctx: Ctx = {
     orgId: org.data.id,

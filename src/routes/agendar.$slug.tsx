@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Loader2, CalendarCheck, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
-import { getBookingPage, createPublicBooking } from "@/lib/booking.functions";
+import { getBookingPage, createPublicBooking, getAvailableSlots } from "@/lib/booking.functions";
 import { brl } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ export const Route = createFileRoute("/agendar/$slug")({
 function PublicBooking() {
   const { slug } = Route.useParams();
   const load = useServerFn(getBookingPage);
+  const loadSlots = useServerFn(getAvailableSlots);
   const submit = useServerFn(createPublicBooking);
 
   const page = useQuery({
@@ -38,11 +39,17 @@ function PublicBooking() {
 
   const [serviceId, setServiceId] = useState("");
   const [professionalId, setProfessionalId] = useState("");
-  const [date, setDate] = useState("");
+  const [day, setDay] = useState("");
   const [time, setTime] = useState("");
   const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "" });
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
+
+  const slots = useQuery({
+    enabled: !!serviceId && !!professionalId && !!day,
+    queryKey: ["booking-slots", slug, serviceId, professionalId, day],
+    queryFn: () => loadSlots({ data: { slug, serviceId, professionalId, day } }),
+  });
 
   if (page.isLoading) {
     return (
@@ -68,11 +75,12 @@ function PublicBooking() {
 
   const services = page.data!.services;
   const professionals = page.data!.professionals;
+  const maxDay = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
-    if (!serviceId || !date || !time) {
-      toast.error("Escolha procedimento, data e horário.");
+    if (!serviceId || !professionalId || !day || !time) {
+      toast.error("Escolha procedimento, profissional, data e horário.");
       return;
     }
     setSending(true);
@@ -81,8 +89,9 @@ function PublicBooking() {
         data: {
           slug,
           serviceId,
-          professionalId: professionalId || null,
-          startsAt: new Date(`${date}T${time}`).toISOString(),
+          professionalId,
+          day,
+          time,
           name: form.name,
           phone: form.phone,
           email: form.email,
@@ -90,7 +99,10 @@ function PublicBooking() {
         },
       });
       if (result.ok) setDone(true);
-      else toast.error(result.message);
+      else {
+        toast.error(result.message);
+        slots.refetch();
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não foi possível agendar.");
     } finally {
@@ -135,7 +147,10 @@ function PublicBooking() {
               <button
                 type="button"
                 key={s.id}
-                onClick={() => setServiceId(s.id)}
+                onClick={() => {
+                  setServiceId(s.id);
+                  setTime("");
+                }}
                 className={`surface flex items-center gap-3 p-4 text-left transition-colors ${
                   serviceId === s.id ? "ring-2 ring-primary" : ""
                 }`}
@@ -155,36 +170,75 @@ function PublicBooking() {
           </div>
         </section>
 
-        {professionals.length > 0 ? (
-          <section className="space-y-2">
-            <Label>Profissional (opcional)</Label>
-            <div className="flex flex-wrap gap-2">
-              {professionals.map((p) => (
+        <section className="space-y-2">
+          <Label>Profissional</Label>
+          <div className="flex flex-wrap gap-2">
+            {professionals.map((p) => (
+              <button
+                type="button"
+                key={p.id}
+                onClick={() => {
+                  setProfessionalId(p.id);
+                  setTime("");
+                }}
+                className={`rounded-full border border-border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  professionalId === p.id ? "bg-primary text-primary-foreground" : "bg-card"
+                }`}
+              >
+                {p.name}
+              </button>
+            ))}
+            {professionals.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum profissional disponível online.</p>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="space-y-2">
+          <Label htmlFor="bk-date">Data</Label>
+          <Input
+            id="bk-date"
+            type="date"
+            value={day}
+            min={new Date().toISOString().slice(0, 10)}
+            max={maxDay}
+            onChange={(e) => {
+              setDay(e.target.value);
+              setTime("");
+            }}
+            required
+          />
+        </section>
+
+        <section className="space-y-2">
+          <Label>Horário</Label>
+          {!serviceId || !professionalId || !day ? (
+            <p className="text-xs text-muted-foreground">
+              Escolha procedimento, profissional e data para ver os horários.
+            </p>
+          ) : slots.isFetching ? (
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+          ) : (slots.data?.slots.length ?? 0) === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {slots.data?.message ?? "Sem horários livres nesta data. Tente outro dia."}
+            </p>
+          ) : (
+            <div className="grid grid-cols-4 gap-2">
+              {slots.data!.slots.map((s) => (
                 <button
                   type="button"
-                  key={p.id}
-                  onClick={() => setProfessionalId(professionalId === p.id ? "" : p.id)}
-                  className={`rounded-full border border-border px-3 py-1.5 text-xs font-medium transition-colors ${
-                    professionalId === p.id ? "bg-primary text-primary-foreground" : "bg-card"
+                  key={s}
+                  onClick={() => setTime(s)}
+                  className={`rounded-lg border border-border px-2 py-2 text-xs font-semibold transition-colors ${
+                    time === s ? "bg-primary text-primary-foreground" : "bg-card"
                   }`}
                 >
-                  {p.name}
+                  {s}
                 </button>
               ))}
             </div>
-          </section>
-        ) : null}
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="bk-date">Data</Label>
-            <Input id="bk-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="bk-time">Horário</Label>
-            <Input id="bk-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
-          </div>
-        </div>
+          )}
+        </section>
 
         <div className="space-y-4">
           <div className="space-y-1.5">
@@ -225,7 +279,7 @@ function PublicBooking() {
           </div>
         </div>
 
-        <Button type="submit" className="w-full" disabled={sending}>
+        <Button type="submit" className="w-full" disabled={sending || !time}>
           {sending ? <Loader2 className="size-4 animate-spin" /> : null} Solicitar agendamento
         </Button>
       </form>
