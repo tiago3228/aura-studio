@@ -1399,15 +1399,22 @@ export type Database = {
       professionals: {
         Row: {
           active: boolean
+          booking_horizon_days: number
           commission_default: number
           commission_type: Database["public"]["Enums"]["commission_type"]
           created_at: string
           email: string | null
           id: string
+          lunch_enabled: boolean
+          lunch_end: string
+          lunch_start: string
           name: string
+          online_booking: boolean
           organization_id: string
           phone: string | null
           photo_url: string | null
+          slot_gap_min: number
+          slot_minutes: number
           specialty: string | null
           updated_at: string
           user_id: string | null
@@ -1417,15 +1424,22 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          booking_horizon_days?: number
           commission_default?: number
           commission_type?: Database["public"]["Enums"]["commission_type"]
           created_at?: string
           email?: string | null
           id?: string
+          lunch_enabled?: boolean
+          lunch_end?: string
+          lunch_start?: string
           name: string
+          online_booking?: boolean
           organization_id: string
           phone?: string | null
           photo_url?: string | null
+          slot_gap_min?: number
+          slot_minutes?: number
           specialty?: string | null
           updated_at?: string
           user_id?: string | null
@@ -1435,15 +1449,22 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          booking_horizon_days?: number
           commission_default?: number
           commission_type?: Database["public"]["Enums"]["commission_type"]
           created_at?: string
           email?: string | null
           id?: string
+          lunch_enabled?: boolean
+          lunch_end?: string
+          lunch_start?: string
           name?: string
+          online_booking?: boolean
           organization_id?: string
           phone?: string | null
           photo_url?: string | null
+          slot_gap_min?: number
+          slot_minutes?: number
           specialty?: string | null
           updated_at?: string
           user_id?: string | null
@@ -1794,6 +1815,119 @@ export type Database = {
             foreignKeyName: "services_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_events: {
+        Row: {
+          amount: number | null
+          created_at: string
+          external_id: string | null
+          id: string
+          kind: string
+          meta: Json
+          organization_id: string
+          status: string | null
+          subscription_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          kind: string
+          meta?: Json
+          organization_id: string
+          status?: string | null
+          subscription_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          kind?: string
+          meta?: Json
+          organization_id?: string
+          status?: string | null
+          subscription_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_events_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          amount: number
+          canceled_at: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          current_period_end: string | null
+          id: string
+          mp_init_point: string | null
+          mp_payer_email: string | null
+          mp_preapproval_id: string | null
+          organization_id: string
+          plan: string
+          status: string
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          canceled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          current_period_end?: string | null
+          id?: string
+          mp_init_point?: string | null
+          mp_payer_email?: string | null
+          mp_preapproval_id?: string | null
+          organization_id: string
+          plan?: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          canceled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          current_period_end?: string | null
+          id?: string
+          mp_init_point?: string | null
+          mp_payer_email?: string | null
+          mp_preapproval_id?: string | null
+          organization_id?: string
+          plan?: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
