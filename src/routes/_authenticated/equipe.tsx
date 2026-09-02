@@ -105,6 +105,12 @@ function Equipe() {
                 </div>
                 <Pill tone={p.active ? "success" : "neutral"}>{p.active ? "ativo" : "inativo"}</Pill>
               </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Sessão {p.slot_minutes} min
+                {p.lunch_enabled ? ` · almoço ${p.lunch_start.slice(0, 5)}–${p.lunch_end.slice(0, 5)}` : ""}
+                {` · agenda até ${p.booking_horizon_days} dias`}
+                {p.online_booking ? " · online ativo" : " · online desligado"}
+              </p>
               <div className="mt-3 flex flex-wrap items-center gap-1.5">
                 {WEEKDAYS.map((d, i) => (
                   <span
@@ -124,6 +130,14 @@ function Equipe() {
                     : brl(Number(p.commission_default))}
                 </span>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 w-full"
+                onClick={() => setEditing(p)}
+              >
+                <CalendarClock className="size-4" /> Configurar agenda
+              </Button>
             </li>
           ))}
         </ul>
