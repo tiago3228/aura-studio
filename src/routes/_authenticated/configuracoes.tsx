@@ -210,6 +210,10 @@ function Configuracoes() {
               </Button>
             </div>
           ) : null}
+          <p className="text-xs text-muted-foreground">
+            Compartilhe este link no site publicado da clínica. No endereço de pré-visualização do editor
+            ele pede login — no domínio publicado a página abre livremente para suas clientes.
+          </p>
         </Surface>
 
         {canEdit ? (
