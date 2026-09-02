@@ -6,7 +6,7 @@ import { Loader2, CreditCard, Check } from "lucide-react";
 import { toast } from "sonner";
 
 import { getBilling, startProSubscription, cancelProSubscription } from "@/lib/billing.functions";
-import { brl, longDate } from "@/lib/format";
+import { brl, dateFmt } from "@/lib/format";
 import { PageHeader, Surface, SkeletonCard, Pill } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 
@@ -22,12 +22,12 @@ export const Route = createFileRoute("/_authenticated/assinatura")({
   component: Assinatura,
 });
 
-const STATUS: Record<string, { label: string; tone: "primary" | "success" | "warning" | "neutral" }> = {
+const STATUS: Record<string, { label: string; tone: "primary" | "success" | "gold" | "neutral" }> = {
   trialing: { label: "Período de teste", tone: "primary" },
-  pending: { label: "Aguardando cartão", tone: "warning" },
+  pending: { label: "Aguardando cartão", tone: "gold" },
   active: { label: "Ativa", tone: "success" },
-  paused: { label: "Pausada", tone: "warning" },
-  past_due: { label: "Pagamento recusado", tone: "warning" },
+  paused: { label: "Pausada", tone: "gold" },
+  past_due: { label: "Pagamento recusado", tone: "gold" },
   canceled: { label: "Cancelada", tone: "neutral" },
 };
 
@@ -108,7 +108,7 @@ function Assinatura() {
         <div className="grid gap-3 rounded-lg bg-muted p-4 text-xs sm:grid-cols-2">
           <div>
             <p className="text-muted-foreground">Fim do período de teste</p>
-            <p className="font-semibold">{sub?.trial_ends_at ? longDate(sub.trial_ends_at) : "—"}</p>
+            <p className="font-semibold">{sub?.trial_ends_at ? dateFmt(sub.trial_ends_at) : "—"}</p>
           </div>
           <div>
             <p className="text-muted-foreground">Próxima cobrança</p>
@@ -116,14 +116,14 @@ function Assinatura() {
               {sub?.status === "canceled"
                 ? "Cancelada"
                 : sub?.current_period_end
-                  ? longDate(sub.current_period_end)
+                  ? dateFmt(sub.current_period_end)
                   : "—"}
             </p>
           </div>
         </div>
 
         {!billing.data?.configured ? (
-          <p className="rounded-lg bg-warning-soft px-3 py-2 text-xs text-muted-foreground">
+          <p className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
             Pagamento em configuração: o cadastro de cartão será liberado assim que a integração for
             concluída.
           </p>
@@ -156,7 +156,7 @@ function Assinatura() {
                 <span className="capitalize">{e.kind.replace(/_/g, " ")}</span>
                 <span className="text-xs text-muted-foreground">
                   {e.amount ? `${brl(Number(e.amount))} · ` : ""}
-                  {e.status ?? ""} · {longDate(e.created_at)}
+                  {e.status ?? ""} · {dateFmt(e.created_at)}
                 </span>
               </li>
             ))}
