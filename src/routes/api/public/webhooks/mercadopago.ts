@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createHmac, timingSafeEqual } from "crypto";
 
 const MP_API = "https://api.mercadopago.com";
 
@@ -15,11 +16,37 @@ async function mpGet(path: string, token: string) {
   return (await res.json()) as Record<string, any>;
 }
 
+/** Verifica a assinatura x-signature do Mercado Pago (HMAC-SHA256). */
+function verifySignature(request: Request, dataId: string): boolean {
+  const secret = process.env["MERCADOPAGO_WEBHOOK_SECRET"];
+  if (!secret) return true; // segredo não configurado: não bloqueia
+  const signature = request.headers.get("x-signature");
+  const requestId = request.headers.get("x-request-id");
+  if (!signature || !requestId) return false;
+
+  const parts: Record<string, string> = {};
+  for (const kv of signature.split(",")) {
+    const [k, v] = kv.split("=");
+    if (k && v) parts[k.trim()] = v.trim();
+  }
+  const ts = parts["ts"];
+  const v1 = parts["v1"];
+  if (!ts || !v1) return false;
+
+  const manifest = `id:${dataId.toLowerCase()};request-id:${requestId};ts:${ts};`;
+  const expected = createHmac("sha256", secret).update(manifest).digest("hex");
+  try {
+    return timingSafeEqual(Buffer.from(expected), Buffer.from(v1));
+  } catch {
+    return false;
+  }
+}
+
 export const Route = createFileRoute("/api/public/webhooks/mercadopago")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const token = process.env["MERCADOPAGO_ACCESS_TOKEN"];
+        const token = process.env["MERCADOPAGO_PROD_ACCESS_TOKEN"] ?? process.env["MERCADOPAGO_ACCESS_TOKEN"];
         if (!token) return new Response("not configured", { status: 200 });
 
         let payload: Record<string, any> = {};
@@ -32,6 +59,8 @@ export const Route = createFileRoute("/api/public/webhooks/mercadopago")({
         const type = payload["type"] ?? payload["topic"] ?? url.searchParams.get("type") ?? "";
         const id = String(payload["data"]?.id ?? payload["id"] ?? url.searchParams.get("id") ?? "");
         if (!id) return new Response("ok");
+
+        if (!verifySignature(request, id)) return new Response("invalid signature", { status: 401 });
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
