@@ -19,7 +19,7 @@ export const Route = createFileRoute("/api/public/webhooks/mercadopago")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const token = process.env["MERCADOPAGO_ACCESS_TOKEN"];
+        const token = process.env["MERCADOPAGO_PROD_ACCESS_TOKEN"] ?? process.env["MERCADOPAGO_ACCESS_TOKEN"];
         if (!token) return new Response("not configured", { status: 200 });
 
         let payload: Record<string, any> = {};

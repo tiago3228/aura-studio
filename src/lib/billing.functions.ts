@@ -64,7 +64,7 @@ export const getBilling = createServerFn({ method: "GET" })
     return {
       subscription,
       events: events.data ?? [],
-      configured: !!process.env["MERCADOPAGO_ACCESS_TOKEN"],
+      configured: !!process.env["MERCADOPAGO_PROD_ACCESS_TOKEN"] ?? process.env["MERCADOPAGO_ACCESS_TOKEN"],
       isAdmin: org.role === "owner" || org.role === "manager",
     };
   });
@@ -76,7 +76,7 @@ export const startProSubscription = createServerFn({ method: "POST" })
     z.object({ backUrl: z.string().url(), email: z.string().email().optional() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const token = process.env["MERCADOPAGO_ACCESS_TOKEN"];
+    const token = process.env["MERCADOPAGO_PROD_ACCESS_TOKEN"] ?? process.env["MERCADOPAGO_ACCESS_TOKEN"];
     if (!token) return { ok: false as const, message: "Mercado Pago ainda não configurado." };
 
     const org = await currentOrg(context.supabase as never);
@@ -168,7 +168,7 @@ export const cancelProSubscription = createServerFn({ method: "POST" })
     const sub = await admin.from("subscriptions").select("*").eq("organization_id", org.id).maybeSingle();
     if (!sub.data) return { ok: false as const, message: "Assinatura não encontrada." };
 
-    const token = process.env["MERCADOPAGO_ACCESS_TOKEN"];
+    const token = process.env["MERCADOPAGO_PROD_ACCESS_TOKEN"] ?? process.env["MERCADOPAGO_ACCESS_TOKEN"];
     if (token && sub.data.mp_preapproval_id) {
       const res = await fetch(`https://api.mercadopago.com/preapproval/${sub.data.mp_preapproval_id}`, {
         method: "PUT",
