@@ -64,7 +64,7 @@ export const getBilling = createServerFn({ method: "GET" })
     return {
       subscription,
       events: events.data ?? [],
-      configured: !!process.env["MERCADOPAGO_PROD_ACCESS_TOKEN"] ?? process.env["MERCADOPAGO_ACCESS_TOKEN"],
+      configured: !!(process.env["MERCADOPAGO_PROD_ACCESS_TOKEN"] ?? process.env["MERCADOPAGO_ACCESS_TOKEN"]),
       isAdmin: org.role === "owner" || org.role === "manager",
     };
   });
