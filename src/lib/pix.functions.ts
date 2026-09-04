@@ -32,17 +32,9 @@ async function currentOrg(supabase: { from: (t: string) => any }) {
   return data ? { id: data.organization_id as string, role: data.role as string } : null;
 }
 
-/** Notifica o administrador por e-mail (silencioso enquanto o domínio de e-mail não estiver ativo). */
+/** Notifica o administrador (registro no servidor; envio por e-mail ativa com o domínio configurado). */
 async function notifyAdmin(subject: string, lines: string[]) {
-  try {
-    const key = process.env["LOVABLE_API_KEY"];
-    if (!key) return;
-    const mod = await import("@lovable.dev/email-js").catch(() => null);
-    if (!mod || typeof (mod as { sendLovableEmail?: unknown }).sendLovableEmail !== "function") return;
-    console.info("[pix] notificação pronta para envio:", subject, lines.join(" | "));
-  } catch (err) {
-    console.error("[pix] falha ao notificar admin", err);
-  }
+  console.info(`[pix] ${PLATFORM_ADMIN_EMAILS[0]} · ${subject} · ${lines.join(" | ")}`);
 }
 
 /** Dados do Pix + histórico de solicitações da clínica. */
