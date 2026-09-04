@@ -1319,6 +1319,69 @@ export type Database = {
           },
         ]
       }
+      pix_payments: {
+        Row: {
+          admin_note: string | null
+          amount: number
+          created_at: string
+          id: string
+          months: number
+          organization_id: string
+          payer_note: string | null
+          pix_key: string
+          requested_by: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          subscription_id: string | null
+        }
+        Insert: {
+          admin_note?: string | null
+          amount?: number
+          created_at?: string
+          id?: string
+          months?: number
+          organization_id: string
+          payer_note?: string | null
+          pix_key: string
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          subscription_id?: string | null
+        }
+        Update: {
+          admin_note?: string | null
+          amount?: number
+          created_at?: string
+          id?: string
+          months?: number
+          organization_id?: string
+          payer_note?: string | null
+          pix_key?: string
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          subscription_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pix_payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pix_payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plans: {
         Row: {
           id: string

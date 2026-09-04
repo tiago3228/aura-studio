@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, CreditCard, Check } from "lucide-react";
+import { Loader2, CreditCard, Check, Copy, QrCode } from "lucide-react";
 import { toast } from "sonner";
 
 import { getBilling, startProSubscription, cancelProSubscription } from "@/lib/billing.functions";
+import { getPixInfo, declarePixPayment } from "@/lib/pix.functions";
 import { brl, dateFmt } from "@/lib/format";
 import { PageHeader, Surface, SkeletonCard, Pill } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/assinatura")({
   head: () => ({
@@ -43,9 +45,13 @@ function Assinatura() {
   const load = useServerFn(getBilling);
   const start = useServerFn(startProSubscription);
   const cancel = useServerFn(cancelProSubscription);
+  const loadPix = useServerFn(getPixInfo);
+  const declarePix = useServerFn(declarePixPayment);
   const [busy, setBusy] = useState(false);
+  const [pixNote, setPixNote] = useState("");
 
   const billing = useQuery({ queryKey: ["billing"], queryFn: () => load({}) });
+  const pix = useQuery({ queryKey: ["pix"], queryFn: () => loadPix({}) });
 
   if (billing.isLoading) return <SkeletonCard />;
 
