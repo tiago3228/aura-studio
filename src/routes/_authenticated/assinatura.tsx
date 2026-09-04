@@ -45,9 +45,13 @@ function Assinatura() {
   const load = useServerFn(getBilling);
   const start = useServerFn(startProSubscription);
   const cancel = useServerFn(cancelProSubscription);
+  const loadPix = useServerFn(getPixInfo);
+  const declarePix = useServerFn(declarePixPayment);
   const [busy, setBusy] = useState(false);
+  const [pixNote, setPixNote] = useState("");
 
   const billing = useQuery({ queryKey: ["billing"], queryFn: () => load({}) });
+  const pix = useQuery({ queryKey: ["pix"], queryFn: () => loadPix({}) });
 
   if (billing.isLoading) return <SkeletonCard />;
 
