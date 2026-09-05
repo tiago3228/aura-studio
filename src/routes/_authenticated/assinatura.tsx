@@ -41,6 +41,12 @@ const BENEFITS = [
   "Cancelamento a qualquer momento, sem multa",
 ];
 
+const PIX_STATUS: Record<string, string> = {
+  pending: "Aguardando liberação",
+  approved: "Liberado",
+  rejected: "Recusado",
+};
+
 function Assinatura() {
   const load = useServerFn(getBilling);
   const start = useServerFn(startProSubscription);
@@ -58,6 +64,28 @@ function Assinatura() {
   const sub = billing.data?.subscription;
   const status = STATUS[sub?.status ?? "trialing"] ?? STATUS["trialing"]!;
   const canManage = billing.data?.isAdmin ?? false;
+  const pendingPix = pix.data?.payments.find((p) => p.status === "pending");
+
+  async function copyPix() {
+    await navigator.clipboard.writeText(pix.data?.pixKey ?? "");
+    toast.success("Chave Pix copiada.");
+  }
+
+  async function informPix() {
+    setBusy(true);
+    try {
+      const res = await declarePix({ data: { months: 1, note: pixNote || undefined } });
+      if (res.ok) {
+        toast.success(res.message);
+        setPixNote("");
+        pix.refetch();
+      } else toast.error(res.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao informar o pagamento.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function subscribe() {
     setBusy(true);
