@@ -151,6 +151,62 @@ function Assinatura() {
         ) : null}
       </Surface>
 
+      <Surface className="mt-6 space-y-4 p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+              <QrCode className="size-5 text-primary" /> Pagar via Pix
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Copie a chave, pague {brl(pix.data?.amount ?? 29.9)} e avise: a liberação é feita manualmente
+              pela administração.
+            </p>
+          </div>
+          {pendingPix ? <Pill tone="gold">Aguardando liberação</Pill> : null}
+        </div>
+
+        <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">{pix.data?.pixKey ?? "—"}</span>
+          <Button size="sm" variant="outline" onClick={copyPix}>
+            <Copy className="size-4" /> Copiar
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">Tipo da chave: e-mail · Titular: administração Aura.</p>
+
+        <Textarea
+          rows={2}
+          placeholder="Observação (opcional): nome de quem pagou, horário do Pix..."
+          value={pixNote}
+          onChange={(e) => setPixNote(e.target.value)}
+          disabled={!canManage || !!pendingPix}
+        />
+        <Button onClick={informPix} disabled={busy || !canManage || !!pendingPix} variant="secondary">
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+          Já paguei via Pix
+        </Button>
+
+        {(pix.data?.payments.length ?? 0) > 0 ? (
+          <ul className="divide-y divide-border text-sm">
+            {pix.data!.payments.map((p) => (
+              <li key={p.id} className="flex items-center justify-between py-2">
+                <span>{brl(Number(p.amount))}</span>
+                <span className="text-xs text-muted-foreground">
+                  {PIX_STATUS[p.status] ?? p.status} · {dateFmt(p.created_at)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {pix.data?.isPlatformAdmin ? (
+          <Link to="/pix-admin" className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+            Abrir painel de liberação Pix
+          </Link>
+        ) : null}
+      </Surface>
+
+
+
       <section className="mt-8">
         <h2 className="mb-3 font-display text-base font-semibold">Histórico</h2>
         {(billing.data?.events.length ?? 0) === 0 ? (
