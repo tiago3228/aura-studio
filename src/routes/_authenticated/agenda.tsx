@@ -38,17 +38,34 @@ const STATUSES: Status[] = [
   "atendido",
   "cancelado",
   "faltou",
+  "reagendado",
 ];
 
-const statusTone = {
-  agendado: "neutral",
-  confirmado: "primary",
-  aguardando: "gold",
-  atendido: "success",
-  cancelado: "danger",
-  faltou: "danger",
-  reagendado: "gold",
-} as const;
+/** Cor e rótulo por status — usados na agenda e na legenda. */
+const STATUS_META: Record<Status, { label: string; dot: string; bar: string; text: string }> = {
+  agendado: { label: "Agendado", dot: "bg-amber-400", bar: "bg-amber-400", text: "text-amber-700" },
+  confirmado: { label: "Confirmado", dot: "bg-blue-500", bar: "bg-blue-500", text: "text-blue-700" },
+  aguardando: { label: "Aguardando", dot: "bg-orange-500", bar: "bg-orange-500", text: "text-orange-700" },
+  atendido: { label: "Atendido", dot: "bg-emerald-500", bar: "bg-emerald-500", text: "text-emerald-700" },
+  cancelado: { label: "Cancelado", dot: "bg-red-500", bar: "bg-red-500", text: "text-red-700" },
+  faltou: { label: "Faltou", dot: "bg-neutral-700", bar: "bg-neutral-700", text: "text-neutral-700" },
+  reagendado: { label: "Reagendado", dot: "bg-violet-500", bar: "bg-violet-500", text: "text-violet-700" },
+};
+
+function StatusLegend() {
+  return (
+    <div className="surface mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 p-3">
+      <span className="text-xs font-semibold text-muted-foreground">Legenda:</span>
+      {STATUSES.map((s) => (
+        <span key={s} className="inline-flex items-center gap-1.5 text-xs">
+          <span className={`size-2.5 rounded-full ${STATUS_META[s].dot}`} aria-hidden />
+          {STATUS_META[s].label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 
 export const Route = createFileRoute("/_authenticated/agenda")({
   head: () => ({
