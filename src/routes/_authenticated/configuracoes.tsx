@@ -64,8 +64,53 @@ function Configuracoes() {
       state: org.state ?? "",
       booking_slug: org.booking_slug ?? "",
       online_booking_enabled: org.online_booking_enabled ?? true,
+      logo_url: org.logo_url ?? "",
+      primary_color: org.primary_color || "#1f6f5c",
+      secondary_color: org.secondary_color || "#c9964f",
     });
   }, [org]);
+
+  useEffect(() => {
+    let alive = true;
+    const path = form.logo_url;
+    if (!path) {
+      setLogoPreview(null);
+      return;
+    }
+    if (path.startsWith("http")) {
+      setLogoPreview(path);
+      return;
+    }
+    supabase.storage
+      .from("clinic-files")
+      .createSignedUrl(path, 3600)
+      .then(({ data }) => {
+        if (alive) setLogoPreview(data?.signedUrl ?? null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [form.logo_url]);
+
+  async function uploadLogo(file: File) {
+    if (!org) return;
+    setUploading(true);
+    try {
+      const resized = await resizeImage(file, 512);
+      const path = `${org.id}/branding/logo-${Date.now()}.jpg`;
+      const { error } = await supabase.storage
+        .from("clinic-files")
+        .upload(path, resized, { contentType: "image/jpeg", upsert: true });
+      if (error) throw error;
+      setForm((f) => ({ ...f, logo_url: path }));
+      toast.success("Logo carregada. Salve para publicar.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao enviar a logo.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
 
   if (isLoading || !org) return <SkeletonCard />;
   const canEdit = isAdminRole(membership?.role);
