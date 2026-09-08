@@ -137,6 +137,10 @@ function ClientDetail() {
           )}
         </TabsContent>
 
+        <TabsContent value="prontuario" className="mt-4">
+          <TreatmentRecords clientId={id} />
+        </TabsContent>
+
         <TabsContent value="pacotes" className="mt-4 space-y-3">
           {packages.length === 0 ? (
             <EmptyState title="Nenhum pacote" description="Venda pacotes em Procedimentos para controlar sessões." />
