@@ -316,8 +316,6 @@ function AppointmentRow({ appointment: a, onStatus }: AppointmentRowProps) {
           ))}
         </SelectContent>
       </Select>
-
-      </Select>
     </article>
   );
 }
