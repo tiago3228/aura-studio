@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/lib/session";
 import { brl, dateFmt, initials, timeFmt } from "@/lib/format";
 import { PageHeader, Pill, SkeletonCard, EmptyState, StatCard } from "@/components/ui-kit";
+import { TreatmentRecords } from "@/components/treatment-records";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
