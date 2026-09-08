@@ -19,13 +19,28 @@ function publicClient() {
   });
 }
 
+/** Converte caminho no bucket privado em URL assinada de longa duração. */
+async function signAll(paths: (string | null)[]) {
+  const real = paths.filter((p): p is string => !!p && !p.startsWith("http"));
+  if (real.length === 0) return new Map<string, string>();
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin.storage.from("clinic-files").createSignedUrls(real, 60 * 60 * 24 * 7);
+  const map = new Map<string, string>();
+  (data ?? []).forEach((d) => {
+    if (d.path && d.signedUrl) map.set(d.path, d.signedUrl);
+  });
+  return map;
+}
+
 export const getBookingPage = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ slug: z.string().min(1) }).parse(input))
   .handler(async ({ data }) => {
     const supabase = publicClient();
     const org = await supabase
       .from("organizations")
-      .select("id, name, description, city, whatsapp, primary_color, online_booking_enabled")
+      .select(
+        "id, name, description, address, city, state, zip, phone, whatsapp, instagram, logo_url, primary_color, secondary_color, online_booking_enabled",
+      )
       .eq("booking_slug", data.slug)
       .eq("online_booking_enabled", true)
       .maybeSingle();
@@ -42,19 +57,24 @@ export const getBookingPage = createServerFn({ method: "GET" })
         .order("name"),
       supabase
         .from("professionals")
-        .select("id, name, specialty, booking_horizon_days")
+        .select("id, name, specialty, bio, certifications, photo_url, booking_horizon_days")
         .eq("organization_id", org.data.id)
         .eq("active", true)
         .eq("online_booking", true)
         .order("name"),
     ]);
 
+    const pros = professionals.data ?? [];
+    const signed = await signAll([org.data.logo_url, ...pros.map((p) => p.photo_url)]);
+    const resolve = (v: string | null) => (v ? (v.startsWith("http") ? v : (signed.get(v) ?? null)) : null);
+
     return {
-      org: org.data,
+      org: { ...org.data, logo_url: resolve(org.data.logo_url) },
       services: services.data ?? [],
-      professionals: professionals.data ?? [],
+      professionals: pros.map((p) => ({ ...p, photo_url: resolve(p.photo_url) })),
     };
   });
+
 
 type Ctx = {
   orgId: string;
