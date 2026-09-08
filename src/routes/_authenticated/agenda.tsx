@@ -204,6 +204,8 @@ function Agenda() {
         </div>
       </div>
 
+      <StatusLegend />
+
       {appointments.isLoading ? (
         <SkeletonCard />
       ) : (appointments.data?.length ?? 0) === 0 ? (
@@ -232,14 +234,31 @@ function Agenda() {
                 ) : (
                   <ul className="space-y-2">
                     {items.map((a) => (
-                      <li key={a.id} className="rounded-lg bg-muted/60 p-2 text-xs">
-                        <span className="font-semibold tabular-nums">{timeFmt(a.starts_at)}</span>{" "}
-                        {a.clients?.name ?? a.guest_name ?? "Cliente"}
-                        <span className="block text-muted-foreground">{a.services?.name}</span>
+                      <li
+                        key={a.id}
+                        title={STATUS_META[a.status].label}
+                        className="flex gap-2 rounded-lg bg-muted/60 p-2 text-xs"
+                      >
+                        <span
+                          className={`w-1 shrink-0 rounded-full ${STATUS_META[a.status].bar}`}
+                          aria-hidden
+                        />
+                        <span className="min-w-0">
+                          <span className="font-semibold tabular-nums">{timeFmt(a.starts_at)}</span>{" "}
+                          {a.clients?.name ?? a.guest_name ?? "Cliente"}
+                          <span className="block text-muted-foreground">{a.services?.name}</span>
+                          <span className={`block font-semibold ${STATUS_META[a.status].text}`}>
+                            {STATUS_META[a.status].label}
+                          </span>
+                        </span>
                       </li>
                     ))}
                   </ul>
                 )}
+              </section>
+            );
+          })}
+
               </section>
             );
           })}
