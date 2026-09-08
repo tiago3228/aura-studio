@@ -30,6 +30,8 @@ function Configuracoes() {
   const { data: membership, isLoading } = useMembership();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -41,7 +43,11 @@ function Configuracoes() {
     state: "",
     booking_slug: "",
     online_booking_enabled: true,
+    logo_url: "",
+    primary_color: "#1f6f5c",
+    secondary_color: "#c9964f",
   });
+
 
   const org = membership?.organization;
 
