@@ -32,6 +32,106 @@ async function signAll(paths: (string | null)[]) {
   return map;
 }
 
+type OfferService = {
+  id: string;
+  name: string;
+  description: string | null;
+  duration_min: number;
+  price: number;
+  promo_price: number | null;
+};
+
+type OfferPackage = {
+  id: string;
+  name: string;
+  description: string | null;
+  sessions: number;
+  price: number;
+  validity_days: number;
+  items: { service_id: string; service_name: string; sessions: number }[];
+};
+
+/**
+ * Catálogo público por profissional.
+ * Regra: se o profissional oferece um pacote ativo, os procedimentos contidos
+ * nesse pacote deixam de aparecer como avulsos — apenas para esse profissional.
+ */
+async function loadCatalog(orgId: string) {
+  const supabase = publicClient();
+  const [services, packages, items, profServices, profPackages] = await Promise.all([
+    supabase
+      .from("services")
+      .select("id, name, description, duration_min, price, promo_price")
+      .eq("organization_id", orgId)
+      .eq("active", true)
+      .eq("online_booking", true)
+      .order("name"),
+    supabase
+      .from("packages")
+      .select("id, name, description, sessions, price, validity_days")
+      .eq("organization_id", orgId)
+      .eq("active", true)
+      .eq("online_booking", true)
+      .order("name"),
+    supabase.from("package_items").select("package_id, service_id, sessions").eq("organization_id", orgId),
+    supabase
+      .from("professional_services")
+      .select("professional_id, service_id")
+      .eq("organization_id", orgId)
+      .eq("active", true),
+    supabase
+      .from("professional_packages")
+      .select("professional_id, package_id")
+      .eq("organization_id", orgId)
+      .eq("active", true),
+  ]);
+
+  const serviceById = new Map((services.data ?? []).map((s) => [s.id, s as OfferService]));
+  const itemsByPackage = new Map<string, { service_id: string; service_name: string; sessions: number }[]>();
+  for (const it of items.data ?? []) {
+    const list = itemsByPackage.get(it.package_id) ?? [];
+    list.push({
+      service_id: it.service_id,
+      service_name: serviceById.get(it.service_id)?.name ?? "Procedimento",
+      sessions: it.sessions,
+    });
+    itemsByPackage.set(it.package_id, list);
+  }
+  const packageById = new Map(
+    (packages.data ?? []).map((p) => [
+      p.id,
+      { ...p, price: Number(p.price), items: itemsByPackage.get(p.id) ?? [] } as OfferPackage,
+    ]),
+  );
+
+  const svcByPro = new Map<string, string[]>();
+  for (const r of profServices.data ?? [])
+    svcByPro.set(r.professional_id, [...(svcByPro.get(r.professional_id) ?? []), r.service_id]);
+  const pkgByPro = new Map<string, string[]>();
+  for (const r of profPackages.data ?? [])
+    pkgByPro.set(r.professional_id, [...(pkgByPro.get(r.professional_id) ?? []), r.package_id]);
+
+  return function offerFor(professionalId: string) {
+    const pkgs = (pkgByPro.get(professionalId) ?? [])
+      .map((id) => packageById.get(id))
+      .filter((p): p is OfferPackage => !!p);
+
+    const blocked = new Set<string>();
+    for (const p of pkgs) for (const it of p.items) blocked.add(it.service_id);
+
+    const selected = svcByPro.get(professionalId);
+    const base = selected
+      ? selected.map((id) => serviceById.get(id)).filter((s): s is OfferService => !!s)
+      : // sem seleção explícita, oferece tudo o que a clínica liberou online
+        [...serviceById.values()];
+
+    return {
+      services: base.filter((s) => !blocked.has(s.id)),
+      packages: pkgs,
+    };
+  };
+}
+
 export const getBookingPage = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ slug: z.string().min(1) }).parse(input))
   .handler(async ({ data }) => {
@@ -45,16 +145,9 @@ export const getBookingPage = createServerFn({ method: "GET" })
       .eq("online_booking_enabled", true)
       .maybeSingle();
 
-    if (!org.data) return { org: null, services: [], professionals: [] };
+    if (!org.data) return { org: null, professionals: [] };
 
-    const [services, professionals] = await Promise.all([
-      supabase
-        .from("services")
-        .select("id, name, description, duration_min, price, promo_price")
-        .eq("organization_id", org.data.id)
-        .eq("active", true)
-        .eq("online_booking", true)
-        .order("name"),
+    const [professionals, offerFor] = await Promise.all([
       supabase
         .from("professionals")
         .select("id, name, specialty, bio, certifications, photo_url, booking_horizon_days")
@@ -62,6 +155,7 @@ export const getBookingPage = createServerFn({ method: "GET" })
         .eq("active", true)
         .eq("online_booking", true)
         .order("name"),
+      loadCatalog(org.data.id),
     ]);
 
     const pros = professionals.data ?? [];
@@ -70,19 +164,28 @@ export const getBookingPage = createServerFn({ method: "GET" })
 
     return {
       org: { ...org.data, logo_url: resolve(org.data.logo_url) },
-      services: services.data ?? [],
-      professionals: pros.map((p) => ({ ...p, photo_url: resolve(p.photo_url) })),
+      professionals: pros.map((p) => ({
+        ...p,
+        photo_url: resolve(p.photo_url),
+        ...offerFor(p.id),
+      })),
     };
   });
-
 
 type Ctx = {
   orgId: string;
   cfg: SlotConfig;
   duration: number;
+  serviceId: string;
 };
 
-async function loadContext(slug: string, professionalId: string, serviceId: string) {
+/** Resolve organização, profissional e o procedimento a ser agendado (avulso ou 1ª sessão do pacote). */
+async function loadContext(
+  slug: string,
+  professionalId: string,
+  serviceId: string | undefined,
+  packageId: string | undefined,
+) {
   const supabase = publicClient();
   const org = await supabase
     .from("organizations")
@@ -92,34 +195,46 @@ async function loadContext(slug: string, professionalId: string, serviceId: stri
     .maybeSingle();
   if (!org.data) return { error: "Agendamento online indisponível." as const };
 
-  const [pro, service] = await Promise.all([
-    supabase
-      .from("professionals")
-      .select(
-        "id, work_days, work_start, work_end, lunch_enabled, lunch_start, lunch_end, slot_minutes, slot_gap_min, booking_horizon_days",
-      )
-      .eq("id", professionalId)
-      .eq("organization_id", org.data.id)
-      .eq("active", true)
-      .eq("online_booking", true)
-      .maybeSingle(),
-    supabase
-      .from("services")
-      .select("duration_min, buffer_min, price, promo_price")
-      .eq("id", serviceId)
-      .eq("organization_id", org.data.id)
-      .eq("online_booking", true)
-      .maybeSingle(),
-  ]);
-
+  const pro = await supabase
+    .from("professionals")
+    .select(
+      "id, work_days, work_start, work_end, lunch_enabled, lunch_start, lunch_end, slot_minutes, slot_gap_min, booking_horizon_days",
+    )
+    .eq("id", professionalId)
+    .eq("organization_id", org.data.id)
+    .eq("active", true)
+    .eq("online_booking", true)
+    .maybeSingle();
   if (!pro.data) return { error: "Profissional indisponível." as const };
-  if (!service.data) return { error: "Procedimento indisponível." as const };
 
-  const duration = service.data.duration_min + service.data.buffer_min;
+  const offerFor = await loadCatalog(org.data.id);
+  const offer = offerFor(professionalId);
+
+  let pkg: OfferPackage | null = null;
+  let targetServiceId = serviceId ?? "";
+
+  if (packageId) {
+    pkg = offer.packages.find((p) => p.id === packageId) ?? null;
+    if (!pkg) return { error: "Pacote indisponível para este profissional." as const };
+    const first = pkg.items[0];
+    if (!first) return { error: "Este pacote ainda não tem procedimentos vinculados." as const };
+    targetServiceId = serviceId && pkg.items.some((i) => i.service_id === serviceId) ? serviceId : first.service_id;
+  } else if (!offer.services.some((s) => s.id === targetServiceId)) {
+    return { error: "Procedimento indisponível para este profissional." as const };
+  }
+
+  const service = await supabase
+    .from("services")
+    .select("id, duration_min, buffer_min, price, promo_price")
+    .eq("id", targetServiceId)
+    .eq("organization_id", org.data.id)
+    .maybeSingle();
+  if (!service.data) return { error: "Procedimento indisponível." as const };
 
   const ctx: Ctx = {
     orgId: org.data.id,
-    duration,
+    serviceId: service.data.id,
+    duration: service.data.duration_min + service.data.buffer_min,
     cfg: {
       workDays: (pro.data.work_days as number[]) ?? [1, 2, 3, 4, 5],
       workStart: pro.data.work_start,
@@ -132,7 +247,7 @@ async function loadContext(slug: string, professionalId: string, serviceId: stri
       horizonDays: pro.data.booking_horizon_days,
     },
   };
-  return { ctx, price: Number(service.data.promo_price ?? service.data.price) };
+  return { ctx, pkg, price: Number(service.data.promo_price ?? service.data.price) };
 }
 
 async function busyRanges(orgId: string, professionalId: string, day: string): Promise<BusyRange[]> {
@@ -177,13 +292,14 @@ export const getAvailableSlots = createServerFn({ method: "GET" })
       .object({
         slug: z.string().min(1),
         professionalId: z.string().uuid(),
-        serviceId: z.string().uuid(),
+        serviceId: z.string().uuid().optional(),
+        packageId: z.string().uuid().optional(),
         day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       })
       .parse(input),
   )
   .handler(async ({ data }) => {
-    const loaded = await loadContext(data.slug, data.professionalId, data.serviceId);
+    const loaded = await loadContext(data.slug, data.professionalId, data.serviceId, data.packageId);
     if ("error" in loaded) return { slots: [] as string[], message: loaded.error };
     const { ctx } = loaded;
 
@@ -200,7 +316,8 @@ export const createPublicBooking = createServerFn({ method: "POST" })
     z
       .object({
         slug: z.string().min(1),
-        serviceId: z.string().uuid(),
+        serviceId: z.string().uuid().optional(),
+        packageId: z.string().uuid().optional(),
         professionalId: z.string().uuid(),
         day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         time: z.string().regex(/^\d{2}:\d{2}$/),
@@ -212,9 +329,9 @@ export const createPublicBooking = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }) => {
-    const loaded = await loadContext(data.slug, data.professionalId, data.serviceId);
+    const loaded = await loadContext(data.slug, data.professionalId, data.serviceId, data.packageId);
     if ("error" in loaded) return { ok: false as const, message: loaded.error };
-    const { ctx, price } = loaded;
+    const { ctx, pkg, price } = loaded;
 
     const busy = await busyRanges(ctx.orgId, data.professionalId, data.day);
     const slots = buildSlots(data.day, ctx.cfg, ctx.duration, busy);
@@ -226,19 +343,81 @@ export const createPublicBooking = createServerFn({ method: "POST" })
     const end = brInstant(data.day, startMin + ctx.duration);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    let clientId: string | null = null;
+    let clientPackageId: string | null = null;
+    let notes = data.notes || null;
+    let appointmentPrice = price;
+
+    if (pkg) {
+      // pacote: garante cadastro do cliente e cria o saldo de sessões
+      const digits = data.phone.replace(/\D/g, "");
+      const existing = await supabaseAdmin
+        .from("clients")
+        .select("id")
+        .eq("organization_id", ctx.orgId)
+        .or(`phone.eq.${digits},whatsapp.eq.${digits}`)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (existing.data) clientId = existing.data.id;
+      else {
+        const created = await supabaseAdmin
+          .from("clients")
+          .insert({
+            organization_id: ctx.orgId,
+            name: data.name,
+            phone: digits,
+            whatsapp: digits,
+            email: data.email || null,
+            origin: "agendamento online",
+          })
+          .select("id")
+          .single();
+        clientId = created.data?.id ?? null;
+      }
+
+      const totalSessions = pkg.items.reduce((sum, i) => sum + i.sessions, 0) || pkg.sessions;
+      if (clientId) {
+        const expires = new Date(Date.now() + (pkg.validity_days || 180) * 86400000)
+          .toISOString()
+          .slice(0, 10);
+        const cp = await supabaseAdmin
+          .from("client_packages")
+          .insert({
+            organization_id: ctx.orgId,
+            client_id: clientId,
+            package_id: pkg.id,
+            name: pkg.name,
+            service_id: pkg.items[0]?.service_id ?? null,
+            sessions_total: totalSessions,
+            sessions_used: 0,
+            price: pkg.price,
+            expires_at: expires,
+          })
+          .select("id")
+          .single();
+        clientPackageId = cp.data?.id ?? null;
+      }
+      appointmentPrice = 0;
+      notes = [`Pacote: ${pkg.name} — sessão 1 de ${totalSessions}`, data.notes].filter(Boolean).join(" · ");
+    }
+
     const { error } = await supabaseAdmin.from("appointments").insert({
       organization_id: ctx.orgId,
-      service_id: data.serviceId,
+      client_id: clientId,
+      client_package_id: clientPackageId,
+      service_id: ctx.serviceId,
       professional_id: data.professionalId,
       starts_at: start.toISOString(),
       ends_at: end.toISOString(),
       status: "agendado",
       source: "online",
-      price,
+      price: appointmentPrice,
       guest_name: data.name,
       guest_phone: data.phone,
       guest_email: data.email || null,
-      notes: data.notes || null,
+      notes,
     });
 
     if (error) return { ok: false as const, message: error.message };

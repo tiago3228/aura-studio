@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -42,27 +43,65 @@ export const Route = createFileRoute("/_authenticated/servicos")({
   component: Servicos,
 });
 
+type ServiceRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  duration_min: number;
+  price: number;
+  commission_value: number;
+  commission_type: "percentual" | "fixo";
+  active: boolean;
+  online_booking: boolean;
+};
+
 function Servicos() {
   const { data: membership } = useMembership();
   const orgId = membership?.organization.id;
   const queryClient = useQueryClient();
   const [openService, setOpenService] = useState(false);
   const [openPackage, setOpenPackage] = useState(false);
+  const [openLibrary, setOpenLibrary] = useState(false);
 
   const data = useQuery({
     enabled: !!orgId,
     queryKey: ["services", orgId],
     queryFn: async () => {
-      const [services, packages] = await Promise.all([
+      const [services, packages, items] = await Promise.all([
         supabase.from("services").select("*").order("name"),
-        supabase.from("packages").select("*, services(name)").order("name"),
+        supabase.from("packages").select("*").order("name"),
+        supabase.from("package_items").select("package_id, service_id, sessions"),
       ]);
       if (services.error) throw services.error;
-      return { services: services.data, packages: packages.data ?? [] };
+      return {
+        services: (services.data ?? []) as unknown as ServiceRow[],
+        packages: packages.data ?? [],
+        items: items.data ?? [],
+      };
     },
   });
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["services"] });
+
+  async function toggleService(id: string, field: "active" | "online_booking", value: boolean) {
+    const { error } = await supabase
+      .from("services")
+      .update({ [field]: value })
+      .eq("id", id);
+    if (error) toast.error(error.message);
+    else refresh();
+  }
+
+  async function togglePackage(id: string, field: "active" | "online_booking", value: boolean) {
+    const { error } = await supabase
+      .from("packages")
+      .update({ [field]: value })
+      .eq("id", id);
+    if (error) toast.error(error.message);
+    else refresh();
+  }
+
+  const serviceName = (id: string) => data.data?.services.find((s) => s.id === id)?.name ?? "Procedimento";
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -78,26 +117,42 @@ function Servicos() {
         </TabsList>
 
         <TabsContent value="procedimentos" className="mt-4 space-y-4">
-          <Dialog open={openService} onOpenChange={setOpenService}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="size-4" /> Novo procedimento
-              </Button>
-            </DialogTrigger>
-            <ServiceDialog
-              onDone={() => {
-                setOpenService(false);
-                refresh();
-              }}
-            />
-          </Dialog>
+          <div className="flex flex-wrap gap-2">
+            <Dialog open={openService} onOpenChange={setOpenService}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="size-4" /> Novo procedimento
+                </Button>
+              </DialogTrigger>
+              <ServiceDialog
+                onDone={() => {
+                  setOpenService(false);
+                  refresh();
+                }}
+              />
+            </Dialog>
+            <Dialog open={openLibrary} onOpenChange={setOpenLibrary}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Sparkles className="size-4" /> Biblioteca pronta
+                </Button>
+              </DialogTrigger>
+              <LibraryDialog
+                existing={(data.data?.services ?? []).map((s) => s.name.toLowerCase())}
+                onDone={() => {
+                  setOpenLibrary(false);
+                  refresh();
+                }}
+              />
+            </Dialog>
+          </div>
 
           {data.isLoading ? (
             <SkeletonCard />
           ) : (data.data?.services.length ?? 0) === 0 ? (
             <EmptyState
               title="Nenhum procedimento cadastrado"
-              description="Cadastre limpeza de pele, botox, drenagem... com preço, duração e comissão."
+              description="Cadastre limpeza de pele, botox, drenagem... ou use a biblioteca pronta."
             />
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2">
@@ -115,9 +170,21 @@ function Servicos() {
                     </div>
                     <p className="font-display text-base font-semibold tabular-nums">{brl(Number(s.price))}</p>
                   </div>
-                  <div className="mt-3 flex gap-2">
-                    <Pill tone={s.active ? "success" : "neutral"}>{s.active ? "ativo" : "inativo"}</Pill>
-                    {s.online_booking ? <Pill tone="primary">agendamento online</Pill> : null}
+                  <div className="mt-3 grid gap-2 text-xs">
+                    <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
+                      Ativo
+                      <Switch
+                        checked={s.active}
+                        onCheckedChange={(v) => toggleService(s.id, "active", v)}
+                      />
+                    </label>
+                    <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
+                      Agendamento online
+                      <Switch
+                        checked={s.online_booking}
+                        onCheckedChange={(v) => toggleService(s.id, "online_booking", v)}
+                      />
+                    </label>
                   </div>
                 </li>
               ))}
@@ -148,20 +215,45 @@ function Servicos() {
             />
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2">
-              {data.data!.packages.map((p) => (
-                <li key={p.id} className="surface p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold">{p.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {p.sessions} sessões · {p.services?.name ?? "múltiplos serviços"} · validade{" "}
-                        {p.validity_days} dias
-                      </p>
+              {data.data!.packages.map((p) => {
+                const items = (data.data?.items ?? []).filter((i) => i.package_id === p.id);
+                return (
+                  <li key={p.id} className="surface p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold">{p.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {items.reduce((sum, i) => sum + i.sessions, 0) || p.sessions} sessões · validade{" "}
+                          {p.validity_days} dias
+                        </p>
+                      </div>
+                      <p className="font-display text-base font-semibold tabular-nums">{brl(Number(p.price))}</p>
                     </div>
-                    <p className="font-display text-base font-semibold tabular-nums">{brl(Number(p.price))}</p>
-                  </div>
-                </li>
-              ))}
+                    <ul className="mt-2 flex flex-wrap gap-1.5">
+                      {items.map((i) => (
+                        <li key={i.service_id}>
+                          <Pill tone="neutral">
+                            {i.sessions}x {serviceName(i.service_id)}
+                          </Pill>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-3 grid gap-2 text-xs">
+                      <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
+                        Ativo
+                        <Switch checked={p.active} onCheckedChange={(v) => togglePackage(p.id, "active", v)} />
+                      </label>
+                      <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
+                        Agendamento online
+                        <Switch
+                          checked={p.online_booking}
+                          onCheckedChange={(v) => togglePackage(p.id, "online_booking", v)}
+                        />
+                      </label>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </TabsContent>
@@ -306,6 +398,100 @@ function ServiceDialog({ onDone }: { onDone: () => void }) {
   );
 }
 
+/** Biblioteca pronta: procedimentos comuns por categoria, com preço e duração editáveis depois. */
+function LibraryDialog({ existing, onDone }: { existing: string[]; onDone: () => void }) {
+  const { data: membership } = useMembership();
+  const [saving, setSaving] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+
+  const library = useQuery({
+    queryKey: ["service-library"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("service_library")
+        .select("id, category, name, duration_min, position")
+        .order("category")
+        .order("position");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const grouped = (library.data ?? []).reduce<Record<string, typeof library.data>>((acc, item) => {
+    (acc[item.category] ??= [] as never)!.push(item as never);
+    return acc;
+  }, {});
+
+  async function save() {
+    if (!membership || picked.length === 0) return;
+    setSaving(true);
+    try {
+      const rows = (library.data ?? [])
+        .filter((l) => picked.includes(l.id))
+        .map((l) => ({
+          organization_id: membership.organization.id,
+          name: l.name,
+          duration_min: l.duration_min,
+          price: 0,
+          online_booking: true,
+        }));
+      const { error } = await supabase.from("services").insert(rows);
+      if (error) throw error;
+      toast.success("Procedimentos adicionados. Defina os preços em seguida.");
+      onDone();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle className="font-display">Biblioteca de procedimentos</DialogTitle>
+      </DialogHeader>
+      <p className="text-xs text-muted-foreground">
+        Selecione os procedimentos que sua clínica realiza. Eles entram com preço zerado — ajuste depois.
+      </p>
+      <div className="space-y-4">
+        {Object.entries(grouped).map(([category, items]) => (
+          <div key={category} className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{category}</p>
+            <ul className="grid gap-1.5">
+              {(items ?? []).map((item) => {
+                const already = existing.includes(item.name.toLowerCase());
+                return (
+                  <li key={item.id} className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm">
+                    <Checkbox
+                      id={`lib-${item.id}`}
+                      disabled={already}
+                      checked={picked.includes(item.id)}
+                      onCheckedChange={(v) =>
+                        setPicked((prev) => (v ? [...prev, item.id] : prev.filter((p) => p !== item.id)))
+                      }
+                    />
+                    <Label htmlFor={`lib-${item.id}`} className="flex-1 text-sm font-normal">
+                      {item.name}{" "}
+                      <span className="text-xs text-muted-foreground">· {item.duration_min} min</span>
+                    </Label>
+                    {already ? <span className="text-xs text-muted-foreground">já cadastrado</span> : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <DialogFooter>
+        <Button onClick={save} disabled={saving || picked.length === 0}>
+          {saving ? <Loader2 className="size-4 animate-spin" /> : null} Adicionar {picked.length || ""}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
+
 function PackageDialog({
   services,
   onDone,
@@ -315,28 +501,54 @@ function PackageDialog({
 }) {
   const { data: membership } = useMembership();
   const [saving, setSaving] = useState(false);
+  const [items, setItems] = useState<Record<string, number>>({});
   const [form, setForm] = useState({
     name: "",
-    service_id: "",
-    sessions: "10",
+    description: "",
     price: "",
     validity_days: "180",
+    online_booking: true,
   });
+
+  const totalSessions = Object.values(items).reduce((sum, n) => sum + n, 0);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!membership) return;
+    const entries = Object.entries(items).filter(([, n]) => n > 0);
+    if (entries.length === 0) {
+      toast.error("Selecione ao menos um procedimento para o pacote.");
+      return;
+    }
     setSaving(true);
     try {
-      const { error } = await supabase.from("packages").insert({
-        organization_id: membership.organization.id,
-        name: form.name,
-        service_id: form.service_id || null,
-        sessions: Number(form.sessions),
-        price: Number(form.price || 0),
-        validity_days: Number(form.validity_days),
-      });
+      const orgId = membership.organization.id;
+      const { data: created, error } = await supabase
+        .from("packages")
+        .insert({
+          organization_id: orgId,
+          name: form.name,
+          description: form.description || null,
+          service_id: entries[0]![0],
+          sessions: totalSessions,
+          price: Number(form.price || 0),
+          validity_days: Number(form.validity_days),
+          online_booking: form.online_booking,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+
+      const { error: itemsError } = await supabase.from("package_items").insert(
+        entries.map(([service_id, sessions]) => ({
+          organization_id: orgId,
+          package_id: created!.id,
+          service_id,
+          sessions,
+        })),
+      );
+      if (itemsError) throw itemsError;
+
       toast.success("Pacote criado.");
       onDone();
     } catch (err) {
@@ -347,7 +559,7 @@ function PackageDialog({
   }
 
   return (
-    <DialogContent>
+    <DialogContent className="max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle className="font-display">Novo pacote</DialogTitle>
       </DialogHeader>
@@ -358,36 +570,64 @@ function PackageDialog({
             id="p-name"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Drenagem 10 sessões"
+            placeholder="Pacote Corporal Completo"
             required
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Procedimento vinculado</Label>
-          <Select value={form.service_id} onValueChange={(v) => setForm({ ...form, service_id: v })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {services.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="p-desc">Descrição</Label>
+          <Textarea
+            id="p-desc"
+            rows={2}
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            placeholder="O que está incluído no pacote"
+          />
         </div>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="p-sessions">Sessões</Label>
-            <Input
-              id="p-sessions"
-              type="number"
-              min={1}
-              value={form.sessions}
-              onChange={(e) => setForm({ ...form, sessions: e.target.value })}
-            />
-          </div>
+
+        <div className="space-y-2">
+          <Label>Procedimentos incluídos ({totalSessions} sessões)</Label>
+          <ul className="grid max-h-56 gap-1.5 overflow-y-auto">
+            {services.map((s) => {
+              const checked = items[s.id] !== undefined;
+              return (
+                <li key={s.id} className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm">
+                  <Checkbox
+                    id={`pk-${s.id}`}
+                    checked={checked}
+                    onCheckedChange={(v) =>
+                      setItems((prev) => {
+                        const next = { ...prev };
+                        if (v) next[s.id] = 1;
+                        else delete next[s.id];
+                        return next;
+                      })
+                    }
+                  />
+                  <Label htmlFor={`pk-${s.id}`} className="flex-1 text-sm font-normal">
+                    {s.name}
+                  </Label>
+                  {checked ? (
+                    <Input
+                      type="number"
+                      min={1}
+                      className="h-8 w-20"
+                      value={items[s.id]}
+                      onChange={(e) =>
+                        setItems((prev) => ({ ...prev, [s.id]: Math.max(1, Number(e.target.value || 1)) }))
+                      }
+                    />
+                  ) : null}
+                </li>
+              );
+            })}
+            {services.length === 0 ? (
+              <li className="text-xs text-muted-foreground">Cadastre procedimentos antes de criar pacotes.</li>
+            ) : null}
+          </ul>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="p-price">Preço</Label>
             <Input
@@ -401,7 +641,7 @@ function PackageDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="p-validity">Validade</Label>
+            <Label htmlFor="p-validity">Validade (dias)</Label>
             <Input
               id="p-validity"
               type="number"
@@ -411,6 +651,18 @@ function PackageDialog({
             />
           </div>
         </div>
+
+        <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2.5">
+          <Label htmlFor="p-online" className="text-sm">
+            Disponível para agendamento online
+          </Label>
+          <Switch
+            id="p-online"
+            checked={form.online_booking}
+            onCheckedChange={(v) => setForm({ ...form, online_booking: v })}
+          />
+        </div>
+
         <DialogFooter>
           <Button type="submit" disabled={saving}>
             {saving ? <Loader2 className="size-4 animate-spin" /> : null} Criar pacote
