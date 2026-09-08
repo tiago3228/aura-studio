@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership, isAdminRole, roleLabel } from "@/lib/session";
 import { slugify } from "@/lib/format";
+import { resizeImage } from "@/lib/image";
 import { PageHeader, Surface, SkeletonCard } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
