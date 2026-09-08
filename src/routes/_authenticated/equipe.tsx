@@ -184,6 +184,8 @@ function ScheduleDialog({
   onDone: () => void;
 }) {
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
   const [form, setForm] = useState({
     work_days: (professional.work_days as number[]) ?? [1, 2, 3, 4, 5],
     work_start: professional.work_start.slice(0, 5),
@@ -195,7 +197,52 @@ function ScheduleDialog({
     slot_gap_min: String(professional.slot_gap_min),
     booking_horizon_days: String(professional.booking_horizon_days),
     online_booking: professional.online_booking,
+    specialty: professional.specialty ?? "",
+    bio: professional.bio ?? "",
+    certifications: professional.certifications ?? "",
+    photo_url: professional.photo_url ?? "",
   });
+
+  useEffect(() => {
+    let alive = true;
+    const path = form.photo_url;
+    if (!path) {
+      setPreview(null);
+      return;
+    }
+    if (path.startsWith("http")) {
+      setPreview(path);
+      return;
+    }
+    supabase.storage
+      .from("clinic-files")
+      .createSignedUrl(path, 3600)
+      .then(({ data }) => {
+        if (alive) setPreview(data?.signedUrl ?? null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [form.photo_url]);
+
+  async function uploadPhoto(file: File) {
+    setUploading(true);
+    try {
+      const resized = await resizeImage(file, 600);
+      const path = `${professional.organization_id}/professionals/${professional.id}-${Date.now()}.jpg`;
+      const { error } = await supabase.storage
+        .from("clinic-files")
+        .upload(path, resized, { contentType: "image/jpeg", upsert: true });
+      if (error) throw error;
+      setForm((f) => ({ ...f, photo_url: path }));
+      toast.success("Foto carregada. Salve para publicar.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao enviar a foto.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
 
   function toggleDay(i: number) {
     setForm((f) => ({
