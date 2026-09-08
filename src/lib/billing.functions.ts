@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-export const PRO_PRICE = 29.9;
+export const PRO_PRICE = 49.9;
 export const TRIAL_DAYS = 30;
 
 async function adminClient() {
