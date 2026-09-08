@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, CalendarClock } from "lucide-react";
@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { useMembership, roleLabel } from "@/lib/session";
 import { brl, initials } from "@/lib/format";
+import { resizeImage } from "@/lib/image";
+import { Textarea } from "@/components/ui/textarea";
 import { PageHeader, Pill, SkeletonCard, EmptyState } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
