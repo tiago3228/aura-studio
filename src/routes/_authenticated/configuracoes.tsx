@@ -138,6 +138,9 @@ function Configuracoes() {
           state: form.state || null,
           booking_slug: slugify(form.booking_slug || form.name),
           online_booking_enabled: form.online_booking_enabled,
+          logo_url: form.logo_url || null,
+          primary_color: form.primary_color,
+          secondary_color: form.secondary_color,
         })
         .eq("id", org.id);
       if (error) throw error;
