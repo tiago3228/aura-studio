@@ -2,7 +2,16 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, CalendarCheck, MapPin, Instagram, MessageCircle, Clock, Award } from "lucide-react";
+import {
+  Loader2,
+  CalendarCheck,
+  MapPin,
+  Instagram,
+  MessageCircle,
+  Clock,
+  Award,
+  Layers,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { getBookingPage, createPublicBooking, getAvailableSlots } from "@/lib/booking.functions";
@@ -16,9 +25,9 @@ export const Route = createFileRoute("/agendar/$slug")({
   head: () => ({
     meta: [
       { title: "Agendamento online — Aura" },
-      { name: "description", content: "Escolha seu procedimento e horário e solicite seu agendamento online." },
+      { name: "description", content: "Escolha seu procedimento ou pacote e solicite seu agendamento online." },
       { property: "og:title", content: "Agendamento online" },
-      { property: "og:description", content: "Escolha seu procedimento e horário em poucos toques." },
+      { property: "og:description", content: "Procedimentos e pacotes com horários em tempo real." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -27,6 +36,11 @@ export const Route = createFileRoute("/agendar/$slug")({
 });
 
 const onlyDigits = (v: string) => v.replace(/\D/g, "");
+
+function waLink(value: string) {
+  const digits = onlyDigits(value);
+  return `https://wa.me/${digits.startsWith("55") ? digits : `55${digits}`}`;
+}
 
 function instagramUrl(value: string) {
   if (value.startsWith("http")) return value;
@@ -44,18 +58,31 @@ function PublicBooking() {
     queryFn: () => load({ data: { slug } }),
   });
 
-  const [serviceId, setServiceId] = useState("");
   const [professionalId, setProfessionalId] = useState("");
+  const [tab, setTab] = useState<"procedimentos" | "pacotes">("procedimentos");
+  const [serviceId, setServiceId] = useState("");
+  const [packageId, setPackageId] = useState("");
   const [day, setDay] = useState("");
   const [time, setTime] = useState("");
   const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "" });
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
 
+  const hasChoice = !!serviceId || !!packageId;
+
   const slots = useQuery({
-    enabled: !!serviceId && !!professionalId && !!day,
-    queryKey: ["booking-slots", slug, serviceId, professionalId, day],
-    queryFn: () => loadSlots({ data: { slug, serviceId, professionalId, day } }),
+    enabled: hasChoice && !!professionalId && !!day,
+    queryKey: ["booking-slots", slug, serviceId, packageId, professionalId, day],
+    queryFn: () =>
+      loadSlots({
+        data: {
+          slug,
+          professionalId,
+          day,
+          ...(serviceId ? { serviceId } : {}),
+          ...(packageId ? { packageId } : {}),
+        },
+      }),
   });
 
   if (page.isLoading) {
@@ -82,8 +109,8 @@ function PublicBooking() {
 
   const brand = org.primary_color || "#1f6f5c";
   const accent = org.secondary_color || "#c9964f";
-  const services = page.data!.services;
   const professionals = page.data!.professionals;
+  const selectedPro = professionals.find((p) => p.id === professionalId) ?? null;
   const maxDay = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
   const addressLine = [org.address, [org.city, org.state].filter(Boolean).join(" — ")]
     .filter(Boolean)
@@ -93,10 +120,16 @@ function PublicBooking() {
     : null;
   const whatsapp = org.whatsapp || org.phone;
 
+  function resetChoice() {
+    setServiceId("");
+    setPackageId("");
+    setTime("");
+  }
+
   async function send(e: React.FormEvent) {
     e.preventDefault();
-    if (!serviceId || !professionalId || !day || !time) {
-      toast.error("Escolha profissional, procedimento, data e horário.");
+    if (!professionalId || !hasChoice || !day || !time) {
+      toast.error("Escolha profissional, serviço, data e horário.");
       return;
     }
     setSending(true);
@@ -104,7 +137,6 @@ function PublicBooking() {
       const result = await submit({
         data: {
           slug,
-          serviceId,
           professionalId,
           day,
           time,
@@ -112,6 +144,8 @@ function PublicBooking() {
           phone: form.phone,
           email: form.email,
           notes: form.notes,
+          ...(serviceId ? { serviceId } : {}),
+          ...(packageId ? { packageId } : {}),
         },
       });
       if (result.ok) setDone(true);
@@ -136,11 +170,34 @@ function PublicBooking() {
           >
             <CalendarCheck className="size-5" />
           </div>
-          <h1 className="mt-4 font-display text-xl font-semibold">Solicitação enviada</h1>
+          <h1 className="mt-4 font-display text-xl font-semibold">Agendamento realizado com sucesso!</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {org.name} vai confirmar seu horário em breve
-            {whatsapp ? ` pelo WhatsApp ${whatsapp}` : ""}.
+            {org.name} vai confirmar seu horário em breve.
           </p>
+          <div className="mt-6 flex flex-col gap-2">
+            {whatsapp ? (
+              <a
+                href={waLink(whatsapp)}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg px-4 py-2.5 text-sm font-semibold text-white"
+                style={{ backgroundColor: brand }}
+              >
+                Falar pelo WhatsApp
+              </a>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => {
+                setDone(false);
+                resetChoice();
+                setDay("");
+              }}
+              className="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold"
+            >
+              Voltar para a página da clínica
+            </button>
+          </div>
         </div>
       </main>
     );
@@ -174,7 +231,7 @@ function PublicBooking() {
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           {whatsapp ? (
             <a
-              href={`https://wa.me/55${onlyDigits(whatsapp)}`}
+              href={waLink(whatsapp)}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold"
@@ -197,7 +254,7 @@ function PublicBooking() {
 
       <form onSubmit={send} className="mx-auto max-w-2xl space-y-8 px-5 py-8">
         <section className="space-y-3">
-          <h2 className="font-display text-base font-semibold">Escolha o profissional</h2>
+          <h2 className="font-display text-base font-semibold">1. Escolha o profissional</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {professionals.map((p) => {
               const selected = professionalId === p.id;
@@ -207,7 +264,7 @@ function PublicBooking() {
                   key={p.id}
                   onClick={() => {
                     setProfessionalId(p.id);
-                    setTime("");
+                    resetChoice();
                   }}
                   className="surface p-4 text-left transition-shadow"
                   style={selected ? { boxShadow: `0 0 0 2px ${brand}` } : undefined}
@@ -262,42 +319,104 @@ function PublicBooking() {
           </div>
         </section>
 
-        <section className="space-y-3">
-          <h2 className="font-display text-base font-semibold">Escolha o procedimento</h2>
-          <div className="grid gap-2">
-            {services.map((s) => (
-              <button
-                type="button"
-                key={s.id}
-                onClick={() => {
-                  setServiceId(s.id);
-                  setTime("");
-                }}
-                className="surface flex items-start gap-3 p-4 text-left"
-                style={serviceId === s.id ? { boxShadow: `0 0 0 2px ${brand}` } : undefined}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">{s.name}</p>
-                  {s.description ? (
-                    <p className="mt-0.5 text-xs text-muted-foreground">{s.description}</p>
-                  ) : null}
-                  <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="size-3" /> {s.duration_min} min
+        {selectedPro ? (
+          <section className="space-y-3">
+            <h2 className="font-display text-base font-semibold">2. Escolha o serviço</h2>
+            <div className="flex rounded-lg bg-muted p-1">
+              {(["procedimentos", "pacotes"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => {
+                    setTab(t);
+                    resetChoice();
+                  }}
+                  className="flex-1 rounded-md px-3 py-2 text-xs font-semibold capitalize"
+                  style={tab === t ? { backgroundColor: "#fff", color: brand } : undefined}
+                >
+                  {t === "procedimentos" ? "Procedimentos" : "Pacotes"}
+                </button>
+              ))}
+            </div>
+
+            {tab === "procedimentos" ? (
+              <div className="grid gap-2">
+                {selectedPro.services.map((s) => (
+                  <button
+                    type="button"
+                    key={s.id}
+                    onClick={() => {
+                      setServiceId(s.id);
+                      setPackageId("");
+                      setTime("");
+                    }}
+                    className="surface flex items-start gap-3 p-4 text-left"
+                    style={serviceId === s.id ? { boxShadow: `0 0 0 2px ${brand}` } : undefined}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold">{s.name}</p>
+                      {s.description ? (
+                        <p className="mt-0.5 text-xs text-muted-foreground">{s.description}</p>
+                      ) : null}
+                      <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="size-3" /> {s.duration_min} min
+                      </p>
+                    </div>
+                    <span className="font-display text-sm font-semibold" style={{ color: brand }}>
+                      {brl(Number(s.promo_price ?? s.price))}
+                    </span>
+                  </button>
+                ))}
+                {selectedPro.services.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Este profissional não oferece procedimentos avulsos no momento. Veja a aba Pacotes.
                   </p>
-                </div>
-                <span className="font-display text-sm font-semibold" style={{ color: brand }}>
-                  {brl(Number(s.promo_price ?? s.price))}
-                </span>
-              </button>
-            ))}
-            {services.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum procedimento disponível online.</p>
-            ) : null}
-          </div>
-        </section>
+                ) : null}
+              </div>
+            ) : (
+              <div className="grid gap-2">
+                {selectedPro.packages.map((p) => (
+                  <button
+                    type="button"
+                    key={p.id}
+                    onClick={() => {
+                      setPackageId(p.id);
+                      setServiceId("");
+                      setTime("");
+                    }}
+                    className="surface flex items-start gap-3 p-4 text-left"
+                    style={packageId === p.id ? { boxShadow: `0 0 0 2px ${brand}` } : undefined}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="inline-flex items-center gap-1.5 text-sm font-semibold">
+                        <Layers className="size-3.5" style={{ color: accent }} /> {p.name}
+                      </p>
+                      {p.description ? (
+                        <p className="mt-0.5 text-xs text-muted-foreground">{p.description}</p>
+                      ) : null}
+                      <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                        {p.items.map((i) => (
+                          <li key={i.service_id}>
+                            {i.sessions}x {i.service_name}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <span className="font-display text-sm font-semibold" style={{ color: brand }}>
+                      {brl(Number(p.price))}
+                    </span>
+                  </button>
+                ))}
+                {selectedPro.packages.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum pacote disponível no momento.</p>
+                ) : null}
+              </div>
+            )}
+          </section>
+        ) : null}
 
         <section className="space-y-2">
-          <Label htmlFor="bk-date">Data</Label>
+          <Label htmlFor="bk-date">3. Data</Label>
           <Input
             id="bk-date"
             type="date"
@@ -313,10 +432,10 @@ function PublicBooking() {
         </section>
 
         <section className="space-y-2">
-          <Label>Horário</Label>
-          {!serviceId || !professionalId || !day ? (
+          <Label>4. Horário</Label>
+          {!hasChoice || !professionalId || !day ? (
             <p className="text-xs text-muted-foreground">
-              Escolha profissional, procedimento e data para ver os horários.
+              Escolha profissional, serviço e data para ver os horários.
             </p>
           ) : slots.isFetching ? (
             <Loader2 className="size-4 animate-spin text-muted-foreground" />
@@ -326,7 +445,7 @@ function PublicBooking() {
             </p>
           ) : (
             <div className="grid grid-cols-4 gap-2">
-              {slots.data!.slots.map((s) => (
+              {slots.data!.slots.map((s: string) => (
                 <button
                   type="button"
                   key={s}
