@@ -289,10 +289,75 @@ function ScheduleDialog({
   return (
     <DialogContent className="max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle className="font-display">Agenda de {professional.name}</DialogTitle>
+        <DialogTitle className="font-display">Perfil e agenda de {professional.name}</DialogTitle>
       </DialogHeader>
       <form onSubmit={save} className="space-y-4">
+        <div className="space-y-3 rounded-xl border border-border p-4">
+          <p className="text-sm font-semibold">Perfil público</p>
+          <div className="flex items-center gap-3">
+            {preview ? (
+              <img src={preview} alt={professional.name} className="size-16 rounded-full object-cover" />
+            ) : (
+              <span className="grid size-16 place-items-center rounded-full bg-muted text-xs text-muted-foreground">
+                sem foto
+              </span>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <label className="cursor-pointer rounded-lg border border-border px-3 py-1.5 text-xs font-semibold">
+                {uploading ? "Enviando..." : preview ? "Trocar foto" : "Enviar foto"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadPhoto(file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              {preview ? (
+                <button
+                  type="button"
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-destructive"
+                  onClick={() => setForm({ ...form, photo_url: "" })}
+                >
+                  Remover
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="sc-spec">Especialidades</Label>
+            <Input
+              id="sc-spec"
+              value={form.specialty}
+              placeholder="Estética facial e corporal"
+              onChange={(e) => setForm({ ...form, specialty: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="sc-bio">Descrição profissional</Label>
+            <Textarea
+              id="sc-bio"
+              rows={3}
+              value={form.bio}
+              placeholder="Especialista em estética facial e corporal, com formação em limpeza de pele..."
+              onChange={(e) => setForm({ ...form, bio: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="sc-cert">Cursos e certificações</Label>
+            <Textarea
+              id="sc-cert"
+              rows={2}
+              value={form.certifications}
+              onChange={(e) => setForm({ ...form, certifications: e.target.value })}
+            />
+          </div>
+        </div>
         <div className="space-y-2">
+
           <Label>Dias de atendimento</Label>
           <div className="flex flex-wrap gap-2">
             {DAY_LABELS.map((d, i) => (
