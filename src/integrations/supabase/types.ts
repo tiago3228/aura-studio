@@ -1012,6 +1012,67 @@ export type Database = {
           },
         ]
       }
+      message_logs: {
+        Row: {
+          appointment_id: string | null
+          body: string
+          channel: string
+          client_id: string | null
+          client_name: string | null
+          created_at: string
+          id: string
+          kind: string
+          organization_id: string
+          sent_by: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          body: string
+          channel?: string
+          client_id?: string | null
+          client_name?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          organization_id: string
+          sent_by?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          body?: string
+          channel?: string
+          client_id?: string | null
+          client_name?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          organization_id?: string
+          sent_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_logs_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_templates: {
         Row: {
           active: boolean
@@ -1204,12 +1265,63 @@ export type Database = {
         }
         Relationships: []
       }
+      package_items: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          package_id: string
+          service_id: string
+          sessions: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          package_id: string
+          service_id: string
+          sessions?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          package_id?: string
+          service_id?: string
+          sessions?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_items_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       packages: {
         Row: {
           active: boolean
           created_at: string
+          description: string | null
           id: string
           name: string
+          online_booking: boolean
           organization_id: string
           price: number
           service_id: string | null
@@ -1220,8 +1332,10 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          description?: string | null
           id?: string
           name: string
+          online_booking?: boolean
           organization_id: string
           price?: number
           service_id?: string | null
@@ -1232,8 +1346,10 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          description?: string | null
           id?: string
           name?: string
+          online_booking?: boolean
           organization_id?: string
           price?: number
           service_id?: string | null
@@ -1455,6 +1571,104 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_packages: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          organization_id: string
+          package_id: string
+          professional_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          organization_id: string
+          package_id: string
+          professional_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          organization_id?: string
+          package_id?: string
+          professional_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_packages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_packages_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_packages_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_services: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          organization_id: string
+          professional_id: string
+          service_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          organization_id: string
+          professional_id: string
+          service_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          organization_id?: string
+          professional_id?: string
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_services_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_services_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
             referencedColumns: ["id"]
           },
         ]
@@ -1770,6 +1984,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      service_library: {
+        Row: {
+          category: string
+          duration_min: number
+          id: string
+          name: string
+          position: number
+        }
+        Insert: {
+          category: string
+          duration_min?: number
+          id?: string
+          name: string
+          position?: number
+        }
+        Update: {
+          category?: string
+          duration_min?: number
+          id?: string
+          name?: string
+          position?: number
+        }
+        Relationships: []
       }
       service_products: {
         Row: {
