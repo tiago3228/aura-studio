@@ -109,6 +109,7 @@ function ClientDetail() {
       <Tabs defaultValue="historico">
         <TabsList>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
+          <TabsTrigger value="prontuario">Prontuário</TabsTrigger>
           <TabsTrigger value="pacotes">Pacotes</TabsTrigger>
           <TabsTrigger value="anamnese">Anamnese</TabsTrigger>
           <TabsTrigger value="dados">Dados</TabsTrigger>
