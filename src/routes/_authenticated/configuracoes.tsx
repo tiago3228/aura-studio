@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership, isAdminRole, roleLabel } from "@/lib/session";
 import { slugify } from "@/lib/format";
+import { resizeImage } from "@/lib/image";
 import { PageHeader, Surface, SkeletonCard } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,8 @@ function Configuracoes() {
   const { data: membership, isLoading } = useMembership();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -41,7 +44,11 @@ function Configuracoes() {
     state: "",
     booking_slug: "",
     online_booking_enabled: true,
+    logo_url: "",
+    primary_color: "#1f6f5c",
+    secondary_color: "#c9964f",
   });
+
 
   const org = membership?.organization;
 
@@ -58,8 +65,53 @@ function Configuracoes() {
       state: org.state ?? "",
       booking_slug: org.booking_slug ?? "",
       online_booking_enabled: org.online_booking_enabled ?? true,
+      logo_url: org.logo_url ?? "",
+      primary_color: org.primary_color || "#1f6f5c",
+      secondary_color: org.secondary_color || "#c9964f",
     });
   }, [org]);
+
+  useEffect(() => {
+    let alive = true;
+    const path = form.logo_url;
+    if (!path) {
+      setLogoPreview(null);
+      return;
+    }
+    if (path.startsWith("http")) {
+      setLogoPreview(path);
+      return;
+    }
+    supabase.storage
+      .from("clinic-files")
+      .createSignedUrl(path, 3600)
+      .then(({ data }) => {
+        if (alive) setLogoPreview(data?.signedUrl ?? null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [form.logo_url]);
+
+  async function uploadLogo(file: File) {
+    if (!org) return;
+    setUploading(true);
+    try {
+      const resized = await resizeImage(file, 512);
+      const path = `${org.id}/branding/logo-${Date.now()}.jpg`;
+      const { error } = await supabase.storage
+        .from("clinic-files")
+        .upload(path, resized, { contentType: "image/jpeg", upsert: true });
+      if (error) throw error;
+      setForm((f) => ({ ...f, logo_url: path }));
+      toast.success("Logo carregada. Salve para publicar.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao enviar a logo.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
 
   if (isLoading || !org) return <SkeletonCard />;
   const canEdit = isAdminRole(membership?.role);
@@ -86,6 +138,9 @@ function Configuracoes() {
           state: form.state || null,
           booking_slug: slugify(form.booking_slug || form.name),
           online_booking_enabled: form.online_booking_enabled,
+          logo_url: form.logo_url || null,
+          primary_color: form.primary_color,
+          secondary_color: form.secondary_color,
         })
         .eq("id", org.id);
       if (error) throw error;
@@ -162,16 +217,144 @@ function Configuracoes() {
               />
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cfg-addr">Endereço</Label>
-            <Input
-              id="cfg-addr"
-              value={form.address}
-              disabled={!canEdit}
-              onChange={(e) => setForm({ ...form, address: e.target.value })}
-            />
+          <div className="grid gap-4 sm:grid-cols-[1fr_120px]">
+            <div className="space-y-1.5">
+              <Label htmlFor="cfg-addr">Endereço</Label>
+              <Input
+                id="cfg-addr"
+                value={form.address}
+                disabled={!canEdit}
+                placeholder="Rua X, nº 100 — Centro"
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cfg-state">Estado</Label>
+              <Input
+                id="cfg-state"
+                value={form.state}
+                maxLength={2}
+                disabled={!canEdit}
+                placeholder="ES"
+                onChange={(e) => setForm({ ...form, state: e.target.value.toUpperCase() })}
+              />
+            </div>
           </div>
         </Surface>
+
+        <Surface className="space-y-4 p-5">
+          <div>
+            <h2 className="font-display text-base font-semibold">Personalização do link público</h2>
+            <p className="text-xs text-muted-foreground">
+              Logo e cores aparecem só na página pública — o sistema interno não muda.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {logoPreview ? (
+              <img src={logoPreview} alt="Logo da clínica" className="size-16 rounded-xl object-cover" />
+            ) : (
+              <span className="grid size-16 place-items-center rounded-xl bg-muted text-xs text-muted-foreground">
+                sem logo
+              </span>
+            )}
+            {canEdit ? (
+              <div className="flex flex-wrap gap-2">
+                <label className="cursor-pointer rounded-lg border border-border px-3 py-1.5 text-xs font-semibold">
+                  {uploading ? "Enviando..." : logoPreview ? "Trocar logo" : "Enviar logo"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadLogo(file);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                {logoPreview ? (
+                  <button
+                    type="button"
+                    className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-destructive"
+                    onClick={() => setForm({ ...form, logo_url: "" })}
+                  >
+                    Remover
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="cfg-primary">Cor principal</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="cfg-primary"
+                  type="color"
+                  className="h-9 w-12 cursor-pointer rounded border border-border bg-transparent"
+                  value={form.primary_color}
+                  disabled={!canEdit}
+                  onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
+                />
+                <Input
+                  value={form.primary_color}
+                  disabled={!canEdit}
+                  onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cfg-secondary">Cor de destaque</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="cfg-secondary"
+                  type="color"
+                  className="h-9 w-12 cursor-pointer rounded border border-border bg-transparent"
+                  value={form.secondary_color}
+                  disabled={!canEdit}
+                  onChange={(e) => setForm({ ...form, secondary_color: e.target.value })}
+                />
+                <Input
+                  value={form.secondary_color}
+                  disabled={!canEdit}
+                  onChange={(e) => setForm({ ...form, secondary_color: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-border">
+            <div className="p-5 text-center text-white" style={{ backgroundColor: form.primary_color }}>
+              {logoPreview ? (
+                <img
+                  src={logoPreview}
+                  alt=""
+                  className="mx-auto size-12 rounded-full border border-white/40 object-cover"
+                />
+              ) : null}
+              <p className="mt-2 font-display text-base font-semibold">{form.name || "Sua clínica"}</p>
+              {form.address || form.city ? (
+                <p className="mt-1 text-xs text-white/80">
+                  {[form.address, [form.city, form.state].filter(Boolean).join(" — ")]
+                    .filter(Boolean)
+                    .join(", ")}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex items-center justify-between gap-3 bg-card px-4 py-3">
+              <span className="text-xs text-muted-foreground">Prévia da página pública</span>
+              <span
+                className="rounded-full px-3 py-1 text-xs font-semibold text-white"
+                style={{ backgroundColor: form.secondary_color }}
+              >
+                Agendar
+              </span>
+            </div>
+          </div>
+        </Surface>
+
 
         <Surface className="space-y-4 p-5">
           <div className="flex items-center justify-between gap-4">

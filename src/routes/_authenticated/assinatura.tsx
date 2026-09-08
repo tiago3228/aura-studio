@@ -16,9 +16,9 @@ export const Route = createFileRoute("/_authenticated/assinatura")({
   head: () => ({
     meta: [
       { title: "Assinatura PRO — Aura Clínicas" },
-      { name: "description", content: "Plano PRO por R$ 29,90/mês com 30 dias grátis e cancelamento livre." },
+      { name: "description", content: "Plano PRO por R$ 49,90/mês com 30 dias grátis e cancelamento livre." },
       { property: "og:title", content: "Assinatura PRO — Aura Clínicas" },
-      { property: "og:description", content: "Gestão completa da clínica por R$ 29,90 por mês." },
+      { property: "og:description", content: "Gestão completa da clínica por R$ 49,90 por mês." },
     ],
   }),
   component: Assinatura,
@@ -118,14 +118,14 @@ function Assinatura() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PageHeader title="Assinatura" subtitle="Plano PRO — R$ 29,90/mês com 30 dias grátis." />
+      <PageHeader title="Assinatura" subtitle="Plano PRO — R$ 49,90/mês com 30 dias grátis." />
 
       <Surface className="space-y-5 p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-display text-lg font-semibold">Aura PRO</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {brl(29.9)} por mês · acesso ilimitado a todos os módulos
+              {brl(49.9)} por mês · acesso ilimitado a todos os módulos
             </p>
           </div>
           <Pill tone={status.tone}>{status.label}</Pill>
@@ -186,7 +186,7 @@ function Assinatura() {
               <QrCode className="size-5 text-primary" /> Pagar via Pix
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Copie a chave, pague {brl(pix.data?.amount ?? 29.9)} e avise: a liberação é feita manualmente
+              Copie a chave, pague {brl(pix.data?.amount ?? 49.9)} e avise: a liberação é feita manualmente
               pela administração.
             </p>
           </div>

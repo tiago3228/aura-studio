@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, CalendarClock } from "lucide-react";
@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { useMembership, roleLabel } from "@/lib/session";
 import { brl, initials } from "@/lib/format";
+import { resizeImage } from "@/lib/image";
+import { Textarea } from "@/components/ui/textarea";
 import { PageHeader, Pill, SkeletonCard, EmptyState } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -184,6 +186,8 @@ function ScheduleDialog({
   onDone: () => void;
 }) {
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
   const [form, setForm] = useState({
     work_days: (professional.work_days as number[]) ?? [1, 2, 3, 4, 5],
     work_start: professional.work_start.slice(0, 5),
@@ -195,7 +199,52 @@ function ScheduleDialog({
     slot_gap_min: String(professional.slot_gap_min),
     booking_horizon_days: String(professional.booking_horizon_days),
     online_booking: professional.online_booking,
+    specialty: professional.specialty ?? "",
+    bio: professional.bio ?? "",
+    certifications: professional.certifications ?? "",
+    photo_url: professional.photo_url ?? "",
   });
+
+  useEffect(() => {
+    let alive = true;
+    const path = form.photo_url;
+    if (!path) {
+      setPreview(null);
+      return;
+    }
+    if (path.startsWith("http")) {
+      setPreview(path);
+      return;
+    }
+    supabase.storage
+      .from("clinic-files")
+      .createSignedUrl(path, 3600)
+      .then(({ data }) => {
+        if (alive) setPreview(data?.signedUrl ?? null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [form.photo_url]);
+
+  async function uploadPhoto(file: File) {
+    setUploading(true);
+    try {
+      const resized = await resizeImage(file, 600);
+      const path = `${professional.organization_id}/professionals/${professional.id}-${Date.now()}.jpg`;
+      const { error } = await supabase.storage
+        .from("clinic-files")
+        .upload(path, resized, { contentType: "image/jpeg", upsert: true });
+      if (error) throw error;
+      setForm((f) => ({ ...f, photo_url: path }));
+      toast.success("Foto carregada. Salve para publicar.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao enviar a foto.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
 
   function toggleDay(i: number) {
     setForm((f) => ({
@@ -221,10 +270,14 @@ function ScheduleDialog({
           slot_gap_min: Number(form.slot_gap_min || 0),
           booking_horizon_days: Number(form.booking_horizon_days || 30),
           online_booking: form.online_booking,
+          specialty: form.specialty || null,
+          bio: form.bio || null,
+          certifications: form.certifications || null,
+          photo_url: form.photo_url || null,
         })
         .eq("id", professional.id);
       if (error) throw error;
-      toast.success("Agenda atualizada.");
+      toast.success("Perfil e agenda atualizados.");
       onDone();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao salvar.");
@@ -236,10 +289,75 @@ function ScheduleDialog({
   return (
     <DialogContent className="max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle className="font-display">Agenda de {professional.name}</DialogTitle>
+        <DialogTitle className="font-display">Perfil e agenda de {professional.name}</DialogTitle>
       </DialogHeader>
       <form onSubmit={save} className="space-y-4">
+        <div className="space-y-3 rounded-xl border border-border p-4">
+          <p className="text-sm font-semibold">Perfil público</p>
+          <div className="flex items-center gap-3">
+            {preview ? (
+              <img src={preview} alt={professional.name} className="size-16 rounded-full object-cover" />
+            ) : (
+              <span className="grid size-16 place-items-center rounded-full bg-muted text-xs text-muted-foreground">
+                sem foto
+              </span>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <label className="cursor-pointer rounded-lg border border-border px-3 py-1.5 text-xs font-semibold">
+                {uploading ? "Enviando..." : preview ? "Trocar foto" : "Enviar foto"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadPhoto(file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              {preview ? (
+                <button
+                  type="button"
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-destructive"
+                  onClick={() => setForm({ ...form, photo_url: "" })}
+                >
+                  Remover
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="sc-spec">Especialidades</Label>
+            <Input
+              id="sc-spec"
+              value={form.specialty}
+              placeholder="Estética facial e corporal"
+              onChange={(e) => setForm({ ...form, specialty: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="sc-bio">Descrição profissional</Label>
+            <Textarea
+              id="sc-bio"
+              rows={3}
+              value={form.bio}
+              placeholder="Especialista em estética facial e corporal, com formação em limpeza de pele..."
+              onChange={(e) => setForm({ ...form, bio: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="sc-cert">Cursos e certificações</Label>
+            <Textarea
+              id="sc-cert"
+              rows={2}
+              value={form.certifications}
+              onChange={(e) => setForm({ ...form, certifications: e.target.value })}
+            />
+          </div>
+        </div>
         <div className="space-y-2">
+
           <Label>Dias de atendimento</Label>
           <div className="flex flex-wrap gap-2">
             {DAY_LABELS.map((d, i) => (

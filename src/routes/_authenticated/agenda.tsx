@@ -38,17 +38,34 @@ const STATUSES: Status[] = [
   "atendido",
   "cancelado",
   "faltou",
+  "reagendado",
 ];
 
-const statusTone = {
-  agendado: "neutral",
-  confirmado: "primary",
-  aguardando: "gold",
-  atendido: "success",
-  cancelado: "danger",
-  faltou: "danger",
-  reagendado: "gold",
-} as const;
+/** Cor e rótulo por status — usados na agenda e na legenda. */
+const STATUS_META: Record<Status, { label: string; dot: string; bar: string; text: string }> = {
+  agendado: { label: "Agendado", dot: "bg-amber-400", bar: "bg-amber-400", text: "text-amber-700" },
+  confirmado: { label: "Confirmado", dot: "bg-blue-500", bar: "bg-blue-500", text: "text-blue-700" },
+  aguardando: { label: "Aguardando", dot: "bg-orange-500", bar: "bg-orange-500", text: "text-orange-700" },
+  atendido: { label: "Atendido", dot: "bg-emerald-500", bar: "bg-emerald-500", text: "text-emerald-700" },
+  cancelado: { label: "Cancelado", dot: "bg-red-500", bar: "bg-red-500", text: "text-red-700" },
+  faltou: { label: "Faltou", dot: "bg-neutral-700", bar: "bg-neutral-700", text: "text-neutral-700" },
+  reagendado: { label: "Reagendado", dot: "bg-violet-500", bar: "bg-violet-500", text: "text-violet-700" },
+};
+
+function StatusLegend() {
+  return (
+    <div className="surface mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 p-3">
+      <span className="text-xs font-semibold text-muted-foreground">Legenda:</span>
+      {STATUSES.map((s) => (
+        <span key={s} className="inline-flex items-center gap-1.5 text-xs">
+          <span className={`size-2.5 rounded-full ${STATUS_META[s].dot}`} aria-hidden />
+          {STATUS_META[s].label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 
 export const Route = createFileRoute("/_authenticated/agenda")({
   head: () => ({
@@ -187,6 +204,8 @@ function Agenda() {
         </div>
       </div>
 
+      <StatusLegend />
+
       {appointments.isLoading ? (
         <SkeletonCard />
       ) : (appointments.data?.length ?? 0) === 0 ? (
@@ -215,10 +234,23 @@ function Agenda() {
                 ) : (
                   <ul className="space-y-2">
                     {items.map((a) => (
-                      <li key={a.id} className="rounded-lg bg-muted/60 p-2 text-xs">
-                        <span className="font-semibold tabular-nums">{timeFmt(a.starts_at)}</span>{" "}
-                        {a.clients?.name ?? a.guest_name ?? "Cliente"}
-                        <span className="block text-muted-foreground">{a.services?.name}</span>
+                      <li
+                        key={a.id}
+                        title={STATUS_META[a.status].label}
+                        className="flex gap-2 rounded-lg bg-muted/60 p-2 text-xs"
+                      >
+                        <span
+                          className={`w-1 shrink-0 rounded-full ${STATUS_META[a.status].bar}`}
+                          aria-hidden
+                        />
+                        <span className="min-w-0">
+                          <span className="font-semibold tabular-nums">{timeFmt(a.starts_at)}</span>{" "}
+                          {a.clients?.name ?? a.guest_name ?? "Cliente"}
+                          <span className="block text-muted-foreground">{a.services?.name}</span>
+                          <span className={`block font-semibold ${STATUS_META[a.status].text}`}>
+                            {STATUS_META[a.status].label}
+                          </span>
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -249,9 +281,14 @@ type AppointmentRowProps = {
 };
 
 function AppointmentRow({ appointment: a, onStatus }: AppointmentRowProps) {
+  const meta = STATUS_META[a.status];
   return (
-    <article className="surface surface-hover flex flex-wrap items-center gap-4 p-4">
-      <div className="w-16 shrink-0">
+    <article
+      className="surface surface-hover flex flex-wrap items-center gap-4 p-4"
+      title={`Status: ${meta.label}`}
+    >
+      <span className={`h-10 w-1.5 shrink-0 rounded-full ${meta.bar}`} aria-hidden />
+      <div className="w-14 shrink-0">
         <p className="font-display text-base font-semibold tabular-nums">{timeFmt(a.starts_at)}</p>
         <p className="text-[11px] text-muted-foreground tabular-nums">{timeFmt(a.ends_at)}</p>
       </div>
@@ -263,15 +300,18 @@ function AppointmentRow({ appointment: a, onStatus }: AppointmentRowProps) {
         {a.notes ? <p className="mt-1 text-xs text-muted-foreground italic">{a.notes}</p> : null}
       </div>
       <span className="text-sm font-semibold tabular-nums">{brl(Number(a.price))}</span>
-      <Pill tone={statusTone[a.status]}>{a.status}</Pill>
+      <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
+        <span className={`size-2.5 rounded-full ${meta.dot}`} aria-hidden />
+        {meta.label}
+      </span>
       <Select value={a.status} onValueChange={(status) => onStatus({ id: a.id, status: status as Status })}>
         <SelectTrigger className="w-36" aria-label="Alterar status">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {STATUSES.map((s) => (
-            <SelectItem key={s} value={s} className="capitalize">
-              {s}
+            <SelectItem key={s} value={s}>
+              {STATUS_META[s].label}
             </SelectItem>
           ))}
         </SelectContent>
