@@ -270,10 +270,14 @@ function ScheduleDialog({
           slot_gap_min: Number(form.slot_gap_min || 0),
           booking_horizon_days: Number(form.booking_horizon_days || 30),
           online_booking: form.online_booking,
+          specialty: form.specialty || null,
+          bio: form.bio || null,
+          certifications: form.certifications || null,
+          photo_url: form.photo_url || null,
         })
         .eq("id", professional.id);
       if (error) throw error;
-      toast.success("Agenda atualizada.");
+      toast.success("Perfil e agenda atualizados.");
       onDone();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao salvar.");
