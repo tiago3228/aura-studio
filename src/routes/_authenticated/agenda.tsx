@@ -281,9 +281,14 @@ type AppointmentRowProps = {
 };
 
 function AppointmentRow({ appointment: a, onStatus }: AppointmentRowProps) {
+  const meta = STATUS_META[a.status];
   return (
-    <article className="surface surface-hover flex flex-wrap items-center gap-4 p-4">
-      <div className="w-16 shrink-0">
+    <article
+      className="surface surface-hover flex flex-wrap items-center gap-4 p-4"
+      title={`Status: ${meta.label}`}
+    >
+      <span className={`h-10 w-1.5 shrink-0 rounded-full ${meta.bar}`} aria-hidden />
+      <div className="w-14 shrink-0">
         <p className="font-display text-base font-semibold tabular-nums">{timeFmt(a.starts_at)}</p>
         <p className="text-[11px] text-muted-foreground tabular-nums">{timeFmt(a.ends_at)}</p>
       </div>
@@ -295,18 +300,23 @@ function AppointmentRow({ appointment: a, onStatus }: AppointmentRowProps) {
         {a.notes ? <p className="mt-1 text-xs text-muted-foreground italic">{a.notes}</p> : null}
       </div>
       <span className="text-sm font-semibold tabular-nums">{brl(Number(a.price))}</span>
-      <Pill tone={statusTone[a.status]}>{a.status}</Pill>
+      <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
+        <span className={`size-2.5 rounded-full ${meta.dot}`} aria-hidden />
+        {meta.label}
+      </span>
       <Select value={a.status} onValueChange={(status) => onStatus({ id: a.id, status: status as Status })}>
         <SelectTrigger className="w-36" aria-label="Alterar status">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {STATUSES.map((s) => (
-            <SelectItem key={s} value={s} className="capitalize">
-              {s}
+            <SelectItem key={s} value={s}>
+              {STATUS_META[s].label}
             </SelectItem>
           ))}
         </SelectContent>
+      </Select>
+
       </Select>
     </article>
   );
