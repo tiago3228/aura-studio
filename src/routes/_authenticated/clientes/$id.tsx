@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/lib/session";
 import { brl, dateFmt, initials, timeFmt } from "@/lib/format";
 import { PageHeader, Pill, SkeletonCard, EmptyState, StatCard } from "@/components/ui-kit";
+import { TreatmentRecords } from "@/components/treatment-records";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -109,6 +110,7 @@ function ClientDetail() {
       <Tabs defaultValue="historico">
         <TabsList>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
+          <TabsTrigger value="prontuario">Prontuário</TabsTrigger>
           <TabsTrigger value="pacotes">Pacotes</TabsTrigger>
           <TabsTrigger value="anamnese">Anamnese</TabsTrigger>
           <TabsTrigger value="dados">Dados</TabsTrigger>
@@ -134,6 +136,10 @@ function ClientDetail() {
               ))}
             </ul>
           )}
+        </TabsContent>
+
+        <TabsContent value="prontuario" className="mt-4">
+          <TreatmentRecords clientId={id} />
         </TabsContent>
 
         <TabsContent value="pacotes" className="mt-4 space-y-3">
