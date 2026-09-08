@@ -1462,7 +1462,9 @@ export type Database = {
       professionals: {
         Row: {
           active: boolean
+          bio: string | null
           booking_horizon_days: number
+          certifications: string | null
           commission_default: number
           commission_type: Database["public"]["Enums"]["commission_type"]
           created_at: string
@@ -1487,7 +1489,9 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          bio?: string | null
           booking_horizon_days?: number
+          certifications?: string | null
           commission_default?: number
           commission_type?: Database["public"]["Enums"]["commission_type"]
           created_at?: string
@@ -1512,7 +1516,9 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          bio?: string | null
           booking_horizon_days?: number
+          certifications?: string | null
           commission_default?: number
           commission_type?: Database["public"]["Enums"]["commission_type"]
           created_at?: string
