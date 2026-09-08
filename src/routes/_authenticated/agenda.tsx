@@ -258,10 +258,6 @@ function Agenda() {
               </section>
             );
           })}
-
-              </section>
-            );
-          })}
         </div>
       )}
     </div>
