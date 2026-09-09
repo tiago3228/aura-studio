@@ -134,14 +134,14 @@ function Equipe() {
                     : brl(Number(p.commission_default))}
                 </span>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3 w-full"
-                onClick={() => setEditing(p)}
-              >
-                <CalendarClock className="size-4" /> Configurar agenda
-              </Button>
+              <div className="mt-3 grid gap-2">
+                <Button variant="outline" size="sm" onClick={() => setEditing(p)}>
+                  <CalendarClock className="size-4" /> Configurar agenda
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setOfferingFor(p)}>
+                  <ListChecks className="size-4" /> Serviços e pacotes
+                </Button>
+              </div>
             </li>
           ))}
         </ul>
