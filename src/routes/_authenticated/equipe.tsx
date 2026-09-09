@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, CalendarClock } from "lucide-react";
+import { Loader2, Plus, CalendarClock, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ import { useMembership, roleLabel } from "@/lib/session";
 import { brl, initials } from "@/lib/format";
 import { resizeImage } from "@/lib/image";
 import { Textarea } from "@/components/ui/textarea";
+import { ProfessionalOfferings } from "@/components/professional-offerings";
 import { PageHeader, Pill, SkeletonCard, EmptyState } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,7 @@ function Equipe() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Tables<"professionals"> | null>(null);
+  const [offeringFor, setOfferingFor] = useState<Tables<"professionals"> | null>(null);
 
   const data = useQuery({
     enabled: !!orgId,
