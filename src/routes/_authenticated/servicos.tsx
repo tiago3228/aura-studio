@@ -84,19 +84,15 @@ function Servicos() {
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["services"] });
 
   async function toggleService(id: string, field: "active" | "online_booking", value: boolean) {
-    const { error } = await supabase
-      .from("services")
-      .update({ [field]: value })
-      .eq("id", id);
+    const patch = field === "active" ? { active: value } : { online_booking: value };
+    const { error } = await supabase.from("services").update(patch).eq("id", id);
     if (error) toast.error(error.message);
     else refresh();
   }
 
   async function togglePackage(id: string, field: "active" | "online_booking", value: boolean) {
-    const { error } = await supabase
-      .from("packages")
-      .update({ [field]: value })
-      .eq("id", id);
+    const patch = field === "active" ? { active: value } : { online_booking: value };
+    const { error } = await supabase.from("packages").update(patch).eq("id", id);
     if (error) toast.error(error.message);
     else refresh();
   }

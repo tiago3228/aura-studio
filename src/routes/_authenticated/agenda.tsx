@@ -272,16 +272,37 @@ type AppointmentRowProps = {
     status: Status;
     price: number;
     notes: string | null;
+    client_id: string | null;
     guest_name: string | null;
-    clients: { name: string } | null;
+    guest_phone: string | null;
+    clients: { name: string; phone: string | null } | null;
     services: { name: string } | null;
     professionals: { name: string } | null;
   };
   onStatus: (input: { id: string; status: Status }) => void;
+  onMessage: (target: MessageTarget) => void;
 };
 
-function AppointmentRow({ appointment: a, onStatus }: AppointmentRowProps) {
+const SUGGESTED: Partial<Record<Status, MessageEvent>> = {
+  confirmado: "confirmacao",
+  cancelado: "cancelamento",
+  reagendado: "reagendamento",
+  atendido: "agradecimento",
+};
+
+function AppointmentRow({ appointment: a, onStatus, onMessage }: AppointmentRowProps) {
   const meta = STATUS_META[a.status];
+  const target: MessageTarget = {
+    appointmentId: a.id,
+    clientId: a.client_id,
+    clientName: a.clients?.name ?? a.guest_name ?? "Cliente",
+    phone: a.clients?.phone ?? a.guest_phone,
+    serviceName: a.services?.name ?? "atendimento",
+    professionalName: a.professionals?.name ?? "nossa equipe",
+    startsAt: a.starts_at,
+    ...(SUGGESTED[a.status] ? { suggested: SUGGESTED[a.status]! } : {}),
+  };
+
   return (
     <article
       className="surface surface-hover flex flex-wrap items-center gap-4 p-4"
@@ -304,6 +325,15 @@ function AppointmentRow({ appointment: a, onStatus }: AppointmentRowProps) {
         <span className={`size-2.5 rounded-full ${meta.dot}`} aria-hidden />
         {meta.label}
       </span>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onMessage(target)}
+        disabled={!target.phone}
+        title={target.phone ? "Enviar mensagem ao cliente" : "Cliente sem WhatsApp cadastrado"}
+      >
+        <MessageCircle className="size-4" /> Mensagem
+      </Button>
       <Select value={a.status} onValueChange={(status) => onStatus({ id: a.id, status: status as Status })}>
         <SelectTrigger className="w-36" aria-label="Alterar status">
           <SelectValue />
