@@ -174,6 +174,18 @@ function Equipe() {
           />
         ) : null}
       </Dialog>
+
+      <Dialog open={!!offeringFor} onOpenChange={(v) => !v && setOfferingFor(null)}>
+        {offeringFor ? (
+          <ProfessionalOfferings
+            professional={offeringFor}
+            onDone={() => {
+              setOfferingFor(null);
+              queryClient.invalidateQueries({ queryKey: ["team"] });
+            }}
+          />
+        ) : null}
+      </Dialog>
     </div>
   );
 }
