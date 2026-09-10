@@ -132,6 +132,26 @@ function Agenda() {
     mutationFn: async ({ id, status }: { id: string; status: Status }) => {
       const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
       if (error) throw error;
+
+      // Sessão de pacote só é consumida quando o atendimento acontece.
+      if (status !== "atendido") return;
+      const { data: appt } = await supabase
+        .from("appointments")
+        .select("client_package_id")
+        .eq("id", id)
+        .maybeSingle();
+      if (!appt?.client_package_id) return;
+      const { data: pack } = await supabase
+        .from("client_packages")
+        .select("sessions_used, sessions_total")
+        .eq("id", appt.client_package_id)
+        .maybeSingle();
+      if (!pack) return;
+      const used = Math.min(pack.sessions_used + 1, pack.sessions_total);
+      await supabase
+        .from("client_packages")
+        .update({ sessions_used: used, active: used < pack.sessions_total })
+        .eq("id", appt.client_package_id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
@@ -269,6 +289,12 @@ function Agenda() {
           })}
         </div>
       )}
+
+      <Dialog open={!!messageTarget} onOpenChange={(v) => !v && setMessageTarget(null)}>
+        {messageTarget ? (
+          <MessageDialog target={messageTarget} onDone={() => setMessageTarget(null)} />
+        ) : null}
+      </Dialog>
     </div>
   );
 }
