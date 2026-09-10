@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Loader2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { MessageDialog, type MessageTarget } from "@/components/message-dialog";
+import type { MessageEvent as MsgEvent } from "@/lib/messages";
 import {
   Dialog,
   DialogContent,
@@ -86,6 +88,7 @@ function Agenda() {
   const [anchor, setAnchor] = useState(() => isoDay(new Date()));
   const [view, setView] = useState<"dia" | "semana">("dia");
   const [open, setOpen] = useState(false);
+  const [messageTarget, setMessageTarget] = useState<MessageTarget | null>(null);
 
   const range = useMemo(() => {
     const from = view === "dia" ? anchor : startOfWeek(anchor);
@@ -129,6 +132,26 @@ function Agenda() {
     mutationFn: async ({ id, status }: { id: string; status: Status }) => {
       const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
       if (error) throw error;
+
+      // Sessão de pacote só é consumida quando o atendimento acontece.
+      if (status !== "atendido") return;
+      const { data: appt } = await supabase
+        .from("appointments")
+        .select("client_package_id")
+        .eq("id", id)
+        .maybeSingle();
+      if (!appt?.client_package_id) return;
+      const { data: pack } = await supabase
+        .from("client_packages")
+        .select("sessions_used, sessions_total")
+        .eq("id", appt.client_package_id)
+        .maybeSingle();
+      if (!pack) return;
+      const used = Math.min(pack.sessions_used + 1, pack.sessions_total);
+      await supabase
+        .from("client_packages")
+        .update({ sessions_used: used, active: used < pack.sessions_total })
+        .eq("id", appt.client_package_id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
@@ -221,7 +244,13 @@ function Agenda() {
             );
             if (view === "dia") {
               return items.map((a) => (
-                <AppointmentRow key={a.id} appointment={a} onStatus={setStatus.mutate} />
+                <AppointmentRow
+                  key={a.id}
+                  appointment={a}
+                  onStatus={setStatus.mutate}
+                  onMessage={setMessageTarget}
+                />
+
               ));
             }
             return (
@@ -260,6 +289,12 @@ function Agenda() {
           })}
         </div>
       )}
+
+      <Dialog open={!!messageTarget} onOpenChange={(v) => !v && setMessageTarget(null)}>
+        {messageTarget ? (
+          <MessageDialog target={messageTarget} onDone={() => setMessageTarget(null)} />
+        ) : null}
+      </Dialog>
     </div>
   );
 }
@@ -283,7 +318,7 @@ type AppointmentRowProps = {
   onMessage: (target: MessageTarget) => void;
 };
 
-const SUGGESTED: Partial<Record<Status, MessageEvent>> = {
+const SUGGESTED: Partial<Record<Status, MsgEvent>> = {
   confirmado: "confirmacao",
   cancelado: "cancelamento",
   reagendado: "reagendamento",
