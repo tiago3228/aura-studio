@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Copy } from "lucide-react";
 import { toast } from "sonner";
 
@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { DEFAULT_TEMPLATES, MESSAGE_EVENTS, MESSAGE_VARIABLES } from "@/lib/messages";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   head: () => ({
@@ -409,6 +410,110 @@ function Configuracoes() {
           </p>
         )}
       </form>
+
+      <MessageTemplates canEdit={canEdit} orgId={org?.id} />
     </div>
+  );
+}
+
+/** Ajustes → Mensagens: modelos usados no envio manual pelo WhatsApp. */
+function MessageTemplates({ canEdit, orgId }: { canEdit: boolean; orgId?: string }) {
+  const [bodies, setBodies] = useState<Record<string, string>>({});
+  const [actives, setActives] = useState<Record<string, boolean>>({});
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+
+  const templates = useQuery({
+    enabled: !!orgId,
+    queryKey: ["message-templates", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("message_templates").select("id, event, body, active");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  useEffect(() => {
+    if (!templates.data) return;
+    const b: Record<string, string> = {};
+    const a: Record<string, boolean> = {};
+    for (const e of MESSAGE_EVENTS) {
+      const found = templates.data.find((t) => t.event === e.value);
+      b[e.value] = found?.body ?? DEFAULT_TEMPLATES[e.value];
+      a[e.value] = found ? found.active : true;
+    }
+    setBodies(b);
+    setActives(a);
+  }, [templates.data]);
+
+  async function save(event: string) {
+    if (!orgId) return;
+    setSavingKey(event);
+    try {
+      const existing = templates.data?.find((t) => t.event === event);
+      const payload = {
+        organization_id: orgId,
+        event,
+        name: MESSAGE_EVENTS.find((e) => e.value === event)?.label ?? event,
+        body: bodies[event] ?? "",
+        active: actives[event] ?? true,
+      };
+      const { error } = existing
+        ? await supabase.from("message_templates").update(payload).eq("id", existing.id)
+        : await supabase.from("message_templates").insert(payload);
+      if (error) throw error;
+      toast.success("Modelo salvo.");
+      templates.refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar.");
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
+  return (
+    <Surface className="mt-6 space-y-5 p-5">
+      <div>
+        <h2 className="font-display text-base font-semibold">Mensagens</h2>
+        <p className="text-xs text-muted-foreground">
+          Modelos usados no botão “Mensagem” da agenda. Nada é enviado automaticamente — você revisa antes.
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">Variáveis: {MESSAGE_VARIABLES.join("  ")}</p>
+      </div>
+
+      {MESSAGE_EVENTS.map((e) => (
+        <div key={e.value} className="space-y-2 rounded-xl border border-border p-4">
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor={`tpl-${e.value}`}>{e.label}</Label>
+            <Switch
+              checked={actives[e.value] ?? true}
+              disabled={!canEdit}
+              onCheckedChange={(v) => setActives((prev) => ({ ...prev, [e.value]: v }))}
+            />
+          </div>
+          <Textarea
+            id={`tpl-${e.value}`}
+            rows={3}
+            disabled={!canEdit}
+            value={bodies[e.value] ?? ""}
+            onChange={(evt) => setBodies((prev) => ({ ...prev, [e.value]: evt.target.value }))}
+          />
+          {canEdit ? (
+            <div className="flex gap-2">
+              <Button type="button" size="sm" disabled={savingKey === e.value} onClick={() => save(e.value)}>
+                {savingKey === e.value ? <Loader2 className="size-4 animate-spin" /> : null} Salvar modelo
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setBodies((prev) => ({ ...prev, [e.value]: DEFAULT_TEMPLATES[e.value] }))}
+              >
+                Restaurar padrão
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      ))}
+    </Surface>
   );
 }
