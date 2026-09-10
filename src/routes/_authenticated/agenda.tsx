@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Loader2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { MessageDialog, type MessageTarget } from "@/components/message-dialog";
+import type { MessageEvent as MsgEvent } from "@/lib/messages";
 import {
   Dialog,
   DialogContent,
@@ -86,6 +88,7 @@ function Agenda() {
   const [anchor, setAnchor] = useState(() => isoDay(new Date()));
   const [view, setView] = useState<"dia" | "semana">("dia");
   const [open, setOpen] = useState(false);
+  const [messageTarget, setMessageTarget] = useState<MessageTarget | null>(null);
 
   const range = useMemo(() => {
     const from = view === "dia" ? anchor : startOfWeek(anchor);
@@ -221,7 +224,13 @@ function Agenda() {
             );
             if (view === "dia") {
               return items.map((a) => (
-                <AppointmentRow key={a.id} appointment={a} onStatus={setStatus.mutate} />
+                <AppointmentRow
+                  key={a.id}
+                  appointment={a}
+                  onStatus={setStatus.mutate}
+                  onMessage={setMessageTarget}
+                />
+
               ));
             }
             return (
@@ -283,7 +292,7 @@ type AppointmentRowProps = {
   onMessage: (target: MessageTarget) => void;
 };
 
-const SUGGESTED: Partial<Record<Status, MessageEvent>> = {
+const SUGGESTED: Partial<Record<Status, MsgEvent>> = {
   confirmado: "confirmacao",
   cancelado: "cancelamento",
   reagendado: "reagendamento",
