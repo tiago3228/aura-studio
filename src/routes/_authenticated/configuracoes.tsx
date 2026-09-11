@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership, isAdminRole, roleLabel } from "@/lib/session";
 import { slugify } from "@/lib/format";
+import { publicAppUrl } from "@/lib/public-url";
 import { resizeImage } from "@/lib/image";
 import { PageHeader, Surface, SkeletonCard } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
@@ -122,8 +123,8 @@ function Configuracoes() {
   if (isLoading || !org) return <SkeletonCard />;
   const canEdit = isAdminRole(membership?.role);
   const bookingUrl =
-    typeof window !== "undefined" && form.booking_slug
-      ? `${window.location.origin}/agendar/${form.booking_slug}`
+    form.booking_slug
+      ? publicAppUrl(`/agendar/${form.booking_slug}`)
       : "";
 
   async function save(e: React.FormEvent) {
@@ -463,9 +464,8 @@ function Configuracoes() {
             </div>
           ) : null}
           <p className="text-xs text-muted-foreground">
-            Compartilhe este link no site publicado da clínica. No endereço de pré-visualização do
-            editor ele pede login — no domínio publicado a página abre livremente para suas
-            clientes.
+            Este link usa o endereço público publicado e abre para suas clientes sem exigir acesso
+            ao projeto.
           </p>
         </Surface>
 

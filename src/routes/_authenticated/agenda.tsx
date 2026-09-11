@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/lib/session";
 import { addDays, brl, isoDay, longDate, startOfWeek, timeFmt, dateFmt } from "@/lib/format";
+import { publicAppUrl } from "@/lib/public-url";
 import { PageHeader, Pill, SkeletonCard, EmptyState } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,8 +127,8 @@ function Agenda() {
   const [open, setOpen] = useState(false);
   const [messageTarget, setMessageTarget] = useState<MessageTarget | null>(null);
   const bookingUrl =
-    typeof window !== "undefined" && membership?.organization.booking_slug
-      ? `${window.location.origin}/agendar/${membership.organization.booking_slug}`
+    membership?.organization.booking_slug
+      ? publicAppUrl(`/agendar/${membership.organization.booking_slug}`)
       : "";
 
   const range = useMemo(() => {
@@ -242,7 +243,7 @@ function Agenda() {
             </DialogTrigger>
             <NewAppointmentDialog
               lists={lists.data}
-              locationId={locationId || undefined}
+              {...(locationId ? { locationId } : {})}
               onDone={() => {
                 setOpen(false);
                 queryClient.invalidateQueries({ queryKey: ["appointments"] });
