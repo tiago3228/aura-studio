@@ -22,6 +22,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedEquipeRouteImport } from './routes/_authenticated/equipe'
 import { Route as AuthenticatedEstoqueRouteImport } from './routes/_authenticated/estoque'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
+import { Route as AuthenticatedGatewaysRouteImport } from './routes/_authenticated/gateways'
 import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedPixAdminRouteImport } from './routes/_authenticated/pix-admin'
@@ -98,6 +99,11 @@ const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
   path: '/financeiro',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedGatewaysRoute = AuthenticatedGatewaysRouteImport.update({
+  id: '/gateways',
+  path: '/gateways',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedMarketingRoute = AuthenticatedMarketingRouteImport.update({
   id: '/marketing',
   path: '/marketing',
@@ -165,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/equipe': typeof AuthenticatedEquipeRoute
   '/estoque': typeof AuthenticatedEstoqueRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/gateways': typeof AuthenticatedGatewaysRoute
   '/marketing': typeof AuthenticatedMarketingRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pix-admin': typeof AuthenticatedPixAdminRoute
@@ -189,6 +196,7 @@ export interface FileRoutesByTo {
   '/equipe': typeof AuthenticatedEquipeRoute
   '/estoque': typeof AuthenticatedEstoqueRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/gateways': typeof AuthenticatedGatewaysRoute
   '/marketing': typeof AuthenticatedMarketingRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pix-admin': typeof AuthenticatedPixAdminRoute
@@ -215,6 +223,7 @@ export interface FileRoutesById {
   '/_authenticated/equipe': typeof AuthenticatedEquipeRoute
   '/_authenticated/estoque': typeof AuthenticatedEstoqueRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/_authenticated/gateways': typeof AuthenticatedGatewaysRoute
   '/_authenticated/marketing': typeof AuthenticatedMarketingRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/pix-admin': typeof AuthenticatedPixAdminRoute
@@ -241,6 +250,7 @@ export interface FileRouteTypes {
     | '/equipe'
     | '/estoque'
     | '/financeiro'
+    | '/gateways'
     | '/marketing'
     | '/onboarding'
     | '/pix-admin'
@@ -265,6 +275,7 @@ export interface FileRouteTypes {
     | '/equipe'
     | '/estoque'
     | '/financeiro'
+    | '/gateways'
     | '/marketing'
     | '/onboarding'
     | '/pix-admin'
@@ -290,6 +301,7 @@ export interface FileRouteTypes {
     | '/_authenticated/equipe'
     | '/_authenticated/estoque'
     | '/_authenticated/financeiro'
+    | '/_authenticated/gateways'
     | '/_authenticated/marketing'
     | '/_authenticated/onboarding'
     | '/_authenticated/pix-admin'
@@ -403,6 +415,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFinanceiroRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/gateways': {
+      id: '/_authenticated/gateways'
+      path: '/gateways'
+      fullPath: '/gateways'
+      preLoaderRoute: typeof AuthenticatedGatewaysRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/marketing': {
       id: '/_authenticated/marketing'
       path: '/marketing'
@@ -487,6 +506,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedEquipeRoute: typeof AuthenticatedEquipeRoute
   AuthenticatedEstoqueRoute: typeof AuthenticatedEstoqueRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
+  AuthenticatedGatewaysRoute: typeof AuthenticatedGatewaysRoute
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPixAdminRoute: typeof AuthenticatedPixAdminRoute
@@ -508,6 +528,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedEquipeRoute: AuthenticatedEquipeRoute,
   AuthenticatedEstoqueRoute: AuthenticatedEstoqueRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
+  AuthenticatedGatewaysRoute: AuthenticatedGatewaysRoute,
   AuthenticatedMarketingRoute: AuthenticatedMarketingRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPixAdminRoute: AuthenticatedPixAdminRoute,
