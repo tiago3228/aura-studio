@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -66,6 +66,7 @@ function Servicos() {
   const orgId = membership?.organization.id;
   const queryClient = useQueryClient();
   const [openService, setOpenService] = useState(false);
+  const [editingService, setEditingService] = useState<ServiceRow | null>(null);
   const [openPackage, setOpenPackage] = useState(false);
   const [openLibrary, setOpenLibrary] = useState(false);
 
@@ -209,6 +210,14 @@ function Servicos() {
                       type="button"
                       variant="outline"
                       size="sm"
+                      onClick={() => setEditingService(s)}
+                    >
+                      <Pencil className="size-3.5" /> Editar procedimento
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
                       className="w-full justify-center text-destructive hover:text-destructive"
                       onClick={() => deleteService(s)}
                     >
@@ -292,21 +301,32 @@ function Servicos() {
           )}
         </TabsContent>
       </Tabs>
+      <Dialog open={!!editingService} onOpenChange={(value) => !value && setEditingService(null)}>
+        {editingService ? (
+          <ServiceDialog
+            service={editingService}
+            onDone={() => {
+              setEditingService(null);
+              refresh();
+            }}
+          />
+        ) : null}
+      </Dialog>
     </div>
   );
 }
 
-function ServiceDialog({ onDone }: { onDone: () => void }) {
+function ServiceDialog({ onDone, service }: { onDone: () => void; service?: ServiceRow }) {
   const { data: membership } = useMembership();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    name: "",
-    description: "",
-    duration_min: "60",
-    price: "",
-    commission_value: "30",
-    commission_type: "percentual" as "percentual" | "fixo",
-    online_booking: true,
+    name: service?.name ?? "",
+    description: service?.description ?? "",
+    duration_min: String(service?.duration_min ?? 60),
+    price: service ? String(service.price) : "",
+    commission_value: String(service?.commission_value ?? 30),
+    commission_type: service?.commission_type ?? ("percentual" as "percentual" | "fixo"),
+    online_booking: service?.online_booking ?? true,
   });
 
   async function save(e: React.FormEvent) {
@@ -314,7 +334,7 @@ function ServiceDialog({ onDone }: { onDone: () => void }) {
     if (!membership) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from("services").insert({
+      const values = {
         organization_id: membership.organization.id,
         name: form.name,
         description: form.description || null,
@@ -323,9 +343,12 @@ function ServiceDialog({ onDone }: { onDone: () => void }) {
         commission_value: Number(form.commission_value || 0),
         commission_type: form.commission_type,
         online_booking: form.online_booking,
-      });
+      };
+      const { error } = service
+        ? await supabase.from("services").update(values).eq("id", service.id)
+        : await supabase.from("services").insert(values);
       if (error) throw error;
-      toast.success("Procedimento cadastrado.");
+      toast.success(service ? "Procedimento atualizado." : "Procedimento cadastrado.");
       onDone();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao salvar.");
@@ -337,7 +360,9 @@ function ServiceDialog({ onDone }: { onDone: () => void }) {
   return (
     <DialogContent className="max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle className="font-display">Novo procedimento</DialogTitle>
+        <DialogTitle className="font-display">
+          {service ? "Editar procedimento" : "Novo procedimento"}
+        </DialogTitle>
       </DialogHeader>
       <form onSubmit={save} className="space-y-4">
         <div className="space-y-1.5">
