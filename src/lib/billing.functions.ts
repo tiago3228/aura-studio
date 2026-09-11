@@ -5,11 +5,6 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const PRO_PRICE = 49.9;
 export const TRIAL_DAYS = 30;
 
-async function adminClient() {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  return supabaseAdmin;
-}
-
 async function currentOrg(supabase: {
   from: (t: string) => any;
 }): Promise<{ id: string; role: string } | null> {
@@ -24,13 +19,12 @@ async function currentOrg(supabase: {
 }
 
 /** Garante que a clínica tenha uma assinatura (inicia em teste de 30 dias). */
-async function ensureSubscription(orgId: string, userId: string) {
-  const admin = await adminClient();
-  const existing = await admin.from("subscriptions").select("*").eq("organization_id", orgId).maybeSingle();
+async function ensureSubscription(supabase: any, orgId: string, userId: string) {
+  const existing = await supabase.from("subscriptions").select("*").eq("organization_id", orgId).maybeSingle();
   if (existing.data) return existing.data;
 
   const trialEnd = new Date(Date.now() + TRIAL_DAYS * 86400000).toISOString();
-  const created = await admin
+  const created = await supabase
     .from("subscriptions")
     .insert({
       organization_id: orgId,
@@ -52,9 +46,8 @@ export const getBilling = createServerFn({ method: "GET" })
     const org = await currentOrg(context.supabase as never);
     if (!org) return { subscription: null, events: [], configured: false };
 
-    const subscription = await ensureSubscription(org.id, context.userId);
-    const admin = await adminClient();
-    const events = await admin
+    const subscription = await ensureSubscription(context.supabase, org.id, context.userId);
+    const events = await context.supabase
       .from("subscription_events")
       .select("id, kind, amount, status, created_at")
       .eq("organization_id", org.id)
@@ -84,7 +77,7 @@ export const startProSubscription = createServerFn({ method: "POST" })
     if (org.role !== "owner" && org.role !== "manager")
       return { ok: false as const, message: "Apenas proprietária ou gerente pode assinar." };
 
-    const sub = await ensureSubscription(org.id, context.userId);
+    const sub = await ensureSubscription(context.supabase, org.id, context.userId);
     if (sub?.mp_preapproval_id && ["authorized", "active"].includes(sub.status))
       return { ok: false as const, message: "Já existe uma assinatura ativa." };
     if (sub?.mp_preapproval_id && sub.mp_init_point && sub.status === "pending")
@@ -133,9 +126,9 @@ export const startProSubscription = createServerFn({ method: "POST" })
       return { ok: false as const, message: json.message ?? "Não foi possível iniciar a assinatura." };
     }
 
-    const url = json.init_point ?? json.sandbox_init_point!;
-    const admin = await adminClient();
-    await admin
+    const url = json.init_point ?? json.sandbox_init_point;
+    if (!url) return { ok: false as const, message: "Link de pagamento não recebido." };
+    await context.supabase
       .from("subscriptions")
       .update({
         status: "pending",
@@ -144,7 +137,7 @@ export const startProSubscription = createServerFn({ method: "POST" })
         mp_payer_email: email,
       })
       .eq("organization_id", org.id);
-    await admin.from("subscription_events").insert({
+    await context.supabase.from("subscription_events").insert({
       organization_id: org.id,
       subscription_id: sub?.id ?? null,
       kind: "checkout_criado",
@@ -164,8 +157,7 @@ export const cancelProSubscription = createServerFn({ method: "POST" })
     if (org.role !== "owner" && org.role !== "manager")
       return { ok: false as const, message: "Apenas proprietária ou gerente pode cancelar." };
 
-    const admin = await adminClient();
-    const sub = await admin.from("subscriptions").select("*").eq("organization_id", org.id).maybeSingle();
+    const sub = await context.supabase.from("subscriptions").select("*").eq("organization_id", org.id).maybeSingle();
     if (!sub.data) return { ok: false as const, message: "Assinatura não encontrada." };
 
     const token = process.env["MERCADOPAGO_PROD_ACCESS_TOKEN"] ?? process.env["MERCADOPAGO_ACCESS_TOKEN"];
@@ -178,11 +170,11 @@ export const cancelProSubscription = createServerFn({ method: "POST" })
       if (!res.ok) console.error("mercadopago cancel error", res.status, await res.text());
     }
 
-    await admin
+    await context.supabase
       .from("subscriptions")
       .update({ status: "canceled", canceled_at: new Date().toISOString() })
       .eq("organization_id", org.id);
-    await admin.from("subscription_events").insert({
+    await context.supabase.from("subscription_events").insert({
       organization_id: org.id,
       subscription_id: sub.data.id,
       kind: "cancelamento",
