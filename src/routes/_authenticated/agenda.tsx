@@ -46,12 +46,37 @@ const STATUSES: Status[] = [
 /** Cor e rótulo por status — usados na agenda e na legenda. */
 const STATUS_META: Record<Status, { label: string; dot: string; bar: string; text: string }> = {
   agendado: { label: "Agendado", dot: "bg-amber-400", bar: "bg-amber-400", text: "text-amber-700" },
-  confirmado: { label: "Confirmado", dot: "bg-blue-500", bar: "bg-blue-500", text: "text-blue-700" },
-  aguardando: { label: "Aguardando", dot: "bg-orange-500", bar: "bg-orange-500", text: "text-orange-700" },
-  atendido: { label: "Atendido", dot: "bg-emerald-500", bar: "bg-emerald-500", text: "text-emerald-700" },
+  confirmado: {
+    label: "Confirmado",
+    dot: "bg-blue-500",
+    bar: "bg-blue-500",
+    text: "text-blue-700",
+  },
+  aguardando: {
+    label: "Aguardando",
+    dot: "bg-orange-500",
+    bar: "bg-orange-500",
+    text: "text-orange-700",
+  },
+  atendido: {
+    label: "Atendido",
+    dot: "bg-emerald-500",
+    bar: "bg-emerald-500",
+    text: "text-emerald-700",
+  },
   cancelado: { label: "Cancelado", dot: "bg-red-500", bar: "bg-red-500", text: "text-red-700" },
-  faltou: { label: "Faltou", dot: "bg-neutral-700", bar: "bg-neutral-700", text: "text-neutral-700" },
-  reagendado: { label: "Reagendado", dot: "bg-violet-500", bar: "bg-violet-500", text: "text-violet-700" },
+  faltou: {
+    label: "Faltou",
+    dot: "bg-neutral-700",
+    bar: "bg-neutral-700",
+    text: "text-neutral-700",
+  },
+  reagendado: {
+    label: "Reagendado",
+    dot: "bg-violet-500",
+    bar: "bg-violet-500",
+    text: "text-violet-700",
+  },
 };
 
 function StatusLegend() {
@@ -68,12 +93,14 @@ function StatusLegend() {
   );
 }
 
-
 export const Route = createFileRoute("/_authenticated/agenda")({
   head: () => ({
     meta: [
       { title: "Agenda — Aura Clínicas" },
-      { name: "description", content: "Agenda por dia e semana com bloqueio automático de conflitos." },
+      {
+        name: "description",
+        content: "Agenda por dia e semana com bloqueio automático de conflitos.",
+      },
       { property: "og:title", content: "Agenda — Aura Clínicas" },
       { property: "og:description", content: "Agenda por dia e semana da sua clínica." },
     ],
@@ -116,8 +143,16 @@ function Agenda() {
     queryKey: ["agenda-lists", orgId],
     queryFn: async () => {
       const [clients, services, professionals] = await Promise.all([
-        supabase.from("clients").select("id, name").is("deleted_at", null).order("name"),
-        supabase.from("services").select("id, name, duration_min, price").eq("active", true).order("name"),
+        supabase
+          .from("clients")
+          .select("id, name, phone, email")
+          .is("deleted_at", null)
+          .order("name"),
+        supabase
+          .from("services")
+          .select("id, name, duration_min, price")
+          .eq("active", true)
+          .order("name"),
         supabase.from("professionals").select("id, name").eq("active", true).order("name"),
       ]);
       return {
@@ -160,7 +195,8 @@ function Agenda() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const days = view === "dia" ? [range.from] : Array.from({ length: 7 }, (_, i) => addDays(range.from, i));
+  const days =
+    view === "dia" ? [range.from] : Array.from({ length: 7 }, (_, i) => addDays(range.from, i));
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -237,7 +273,9 @@ function Agenda() {
           description="Clique em Agendar para criar o primeiro atendimento — o sistema valida horários automaticamente."
         />
       ) : (
-        <div className={view === "semana" ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3" : "space-y-3"}>
+        <div
+          className={view === "semana" ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3" : "space-y-3"}
+        >
           {days.map((day) => {
             const items = (appointments.data ?? []).filter(
               (a) => isoDay(new Date(a.starts_at)).getTime() === day.getTime(),
@@ -250,7 +288,6 @@ function Agenda() {
                   onStatus={setStatus.mutate}
                   onMessage={setMessageTarget}
                 />
-
               ));
             }
             return (
@@ -349,7 +386,9 @@ function AppointmentRow({ appointment: a, onStatus, onMessage }: AppointmentRowP
         <p className="text-[11px] text-muted-foreground tabular-nums">{timeFmt(a.ends_at)}</p>
       </div>
       <div className="min-w-40 flex-1">
-        <p className="text-sm font-semibold">{a.clients?.name ?? a.guest_name ?? "Cliente avulso"}</p>
+        <p className="text-sm font-semibold">
+          {a.clients?.name ?? a.guest_name ?? "Cliente avulso"}
+        </p>
         <p className="text-xs text-muted-foreground">
           {a.services?.name ?? "Serviço"} · {a.professionals?.name ?? "Sem profissional"}
         </p>
@@ -369,7 +408,10 @@ function AppointmentRow({ appointment: a, onStatus, onMessage }: AppointmentRowP
       >
         <MessageCircle className="size-4" /> Mensagem
       </Button>
-      <Select value={a.status} onValueChange={(status) => onStatus({ id: a.id, status: status as Status })}>
+      <Select
+        value={a.status}
+        onValueChange={(status) => onStatus({ id: a.id, status: status as Status })}
+      >
         <SelectTrigger className="w-36" aria-label="Alterar status">
           <SelectValue />
         </SelectTrigger>
@@ -386,7 +428,7 @@ function AppointmentRow({ appointment: a, onStatus, onMessage }: AppointmentRowP
 }
 
 type Lists = {
-  clients: { id: string; name: string }[];
+  clients: { id: string; name: string; phone: string | null; email: string | null }[];
   services: { id: string; name: string; duration_min: number; price: number }[];
   professionals: { id: string; name: string }[];
 };
@@ -400,10 +442,14 @@ function NewAppointmentDialog({ lists, onDone }: { lists: Lists | undefined; onD
     date: new Date().toISOString().slice(0, 10),
     time: "09:00",
     notes: "",
+    new_client_name: "",
+    new_client_phone: "",
+    new_client_email: "",
   });
   const [saving, setSaving] = useState(false);
 
   const service = lists?.services.find((s) => s.id === form.service_id);
+  const isNewClient = form.client_id === "__new__";
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -412,9 +458,43 @@ function NewAppointmentDialog({ lists, onDone }: { lists: Lists | undefined; onD
     try {
       const starts = new Date(`${form.date}T${form.time}:00`);
       const ends = new Date(starts.getTime() + (service?.duration_min ?? 60) * 60000);
+      let clientId = form.client_id && form.client_id !== "__new__" ? form.client_id : null;
+      if (isNewClient) {
+        const name = form.new_client_name.trim();
+        const phone = form.new_client_phone.trim();
+        const email = form.new_client_email.trim().toLowerCase();
+        if (!name) throw new Error("Informe o nome do cliente.");
+        const normalizedPhone = phone.replace(/\D/g, "");
+        const duplicate = lists?.clients.find(
+          (client) =>
+            (normalizedPhone && (client.phone ?? "").replace(/\D/g, "") === normalizedPhone) ||
+            (email && (client.email ?? "").toLowerCase() === email),
+        );
+        if (duplicate) {
+          clientId = duplicate.id;
+          toast.info(
+            `Cliente já cadastrado: ${duplicate.name}. O agendamento será vinculado a ele.`,
+          );
+        } else {
+          const { data: created, error: clientError } = await supabase
+            .from("clients")
+            .insert({
+              organization_id: membership.organization.id,
+              name,
+              phone: phone || null,
+              whatsapp: phone || null,
+              email: email || null,
+              notes: form.notes || null,
+            })
+            .select("id")
+            .single();
+          if (clientError) throw clientError;
+          clientId = created.id;
+        }
+      }
       const { error } = await supabase.from("appointments").insert({
         organization_id: membership.organization.id,
-        client_id: form.client_id || null,
+        client_id: clientId,
         service_id: form.service_id || null,
         professional_id: form.professional_id || null,
         starts_at: starts.toISOString(),
@@ -446,6 +526,7 @@ function NewAppointmentDialog({ lists, onDone }: { lists: Lists | undefined; onD
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="__new__">+ Novo cliente neste agendamento</SelectItem>
               {lists?.clients.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name}
@@ -454,9 +535,45 @@ function NewAppointmentDialog({ lists, onDone }: { lists: Lists | undefined; onD
             </SelectContent>
           </Select>
         </div>
+        {isNewClient ? (
+          <div className="space-y-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3">
+            <p className="text-xs font-semibold text-primary">Cadastro rápido do cliente</p>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-client-name">Nome completo</Label>
+              <Input
+                id="new-client-name"
+                value={form.new_client_name}
+                onChange={(e) => setForm({ ...form, new_client_name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="new-client-phone">WhatsApp</Label>
+                <Input
+                  id="new-client-phone"
+                  value={form.new_client_phone}
+                  onChange={(e) => setForm({ ...form, new_client_phone: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-client-email">E-mail</Label>
+                <Input
+                  id="new-client-email"
+                  type="email"
+                  value={form.new_client_email}
+                  onChange={(e) => setForm({ ...form, new_client_email: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
         <div className="space-y-1.5">
           <Label>Procedimento</Label>
-          <Select value={form.service_id} onValueChange={(v) => setForm({ ...form, service_id: v })}>
+          <Select
+            value={form.service_id}
+            onValueChange={(v) => setForm({ ...form, service_id: v })}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
