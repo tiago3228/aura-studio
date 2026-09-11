@@ -412,8 +412,20 @@ function Configuracoes() {
               id="cfg-slug"
               value={form.booking_slug}
               disabled={!canEdit}
-              onChange={(e) => setForm({ ...form, booking_slug: e.target.value })}
+              placeholder="cardoso"
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  booking_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
+                })
+              }
+              onBlur={() => setForm({ ...form, booking_slug: slugify(form.booking_slug) })}
             />
+            <p className="text-xs text-muted-foreground">
+              Use apenas um nome curto, sem espaços ou acentos. Exemplo: <strong>cardoso</strong>. O
+              domínio longo é o endereço de prévia do Lovable; com um domínio próprio configurado,
+              ele também ficará curto.
+            </p>
           </div>
           {bookingUrl ? (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
