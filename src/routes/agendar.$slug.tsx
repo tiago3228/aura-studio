@@ -75,13 +75,6 @@ function PublicBooking() {
   const [done, setDone] = useState(false);
 
   const hasChoice = serviceIds.length > 0 || !!packageId;
-  const selectedServices =
-    selectedPro?.services.filter((service) => serviceIds.includes(service.id)) ?? [];
-  const selectedDuration = selectedServices.reduce((sum, service) => sum + service.duration_min, 0);
-  const selectedPrice = selectedServices.reduce(
-    (sum, service) => sum + Number(service.promo_price ?? service.price),
-    0,
-  );
 
   const slots = useQuery({
     enabled: hasChoice && !!professionalId && !!day,
@@ -124,6 +117,13 @@ function PublicBooking() {
   const accent = org.secondary_color || "#c9964f";
   const professionals = page.data!.professionals;
   const selectedPro = professionals.find((p) => p.id === professionalId) ?? null;
+  const selectedServices =
+    selectedPro?.services.filter((service) => serviceIds.includes(service.id)) ?? [];
+  const selectedDuration = selectedServices.reduce((sum, service) => sum + service.duration_min, 0);
+  const selectedPrice = selectedServices.reduce(
+    (sum, service) => sum + Number(service.promo_price ?? service.price),
+    0,
+  );
   const maxDay = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
   const addressLine = [org.address, [org.city, org.state].filter(Boolean).join(" — ")]
     .filter(Boolean)
