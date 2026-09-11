@@ -580,6 +580,16 @@ function PublicBooking() {
           {sending ? <Loader2 className="size-4 animate-spin" /> : null} Confirmar agendamento
         </Button>
       </form>
+      <footer className="px-5 pb-8 text-center">
+        <a
+          href="https://clinica-estetica-br.lovable.app"
+          target="_blank"
+          rel="noreferrer"
+          className="text-[11px] text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+        >
+          Conheça o Aura para sua clínica
+        </a>
+      </footer>
     </main>
   );
 }
