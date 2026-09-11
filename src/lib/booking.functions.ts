@@ -206,6 +206,7 @@ async function loadContext(
   packageId: string | undefined,
 ) {
   const supabase = publicClient();
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const org = await supabase
     .from("organizations")
     .select("id")
@@ -234,9 +235,9 @@ async function loadContext(
 
   if (packageId) {
     pkg = offer.packages.find((p) => p.id === packageId) ?? null;
-    if (!pkg) {
+    if (!pkg || pkg.items.length === 0) {
       const [packageResult, itemResult] = await Promise.all([
-        supabase
+        supabaseAdmin
           .from("packages")
           .select("id, name, description, sessions, price, validity_days")
           .eq("id", packageId)
@@ -244,7 +245,7 @@ async function loadContext(
           .eq("active", true)
           .eq("online_booking", true)
           .maybeSingle(),
-        supabase
+        supabaseAdmin
           .from("package_items")
           .select("service_id, sessions, services(name)")
           .eq("package_id", packageId)
@@ -271,7 +272,7 @@ async function loadContext(
     return { error: "Procedimento indisponível para este profissional." as const };
   }
 
-  const service = await supabase
+  const service = await supabaseAdmin
     .from("services")
     .select("id, duration_min, buffer_min, price, promo_price")
     .eq("id", targetServiceId)
