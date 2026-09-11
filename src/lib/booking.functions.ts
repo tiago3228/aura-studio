@@ -234,6 +234,34 @@ async function loadContext(
 
   if (packageId) {
     pkg = offer.packages.find((p) => p.id === packageId) ?? null;
+    if (!pkg) {
+      const [packageResult, itemResult] = await Promise.all([
+        supabase
+          .from("packages")
+          .select("id, name, description, sessions, price, validity_days")
+          .eq("id", packageId)
+          .eq("organization_id", org.data.id)
+          .eq("active", true)
+          .eq("online_booking", true)
+          .maybeSingle(),
+        supabase
+          .from("package_items")
+          .select("service_id, sessions, services(name)")
+          .eq("package_id", packageId)
+          .eq("organization_id", org.data.id),
+      ]);
+      if (packageResult.data) {
+        pkg = {
+          ...packageResult.data,
+          price: Number(packageResult.data.price),
+          items: (itemResult.data ?? []).map((item) => ({
+            service_id: item.service_id,
+            service_name: item.services?.name ?? "Procedimento",
+            sessions: item.sessions,
+          })),
+        };
+      }
+    }
     if (!pkg) return { error: "Pacote indisponível para este profissional." as const };
     const first = pkg.items[0];
     if (!first) return { error: "Este pacote ainda não tem procedimentos vinculados." as const };
