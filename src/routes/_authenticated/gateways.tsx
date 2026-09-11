@@ -14,9 +14,10 @@ export const Route = createFileRoute("/_authenticated/gateways")({
   component: GatewaysPage,
 });
 const providers = [
-  { id: "mercado_pago", label: "Mercado Pago" },
-  { id: "asaas", label: "Asaas" },
-  { id: "stripe", label: "Stripe" },
+  { id: "mercado_pago", label: "Mercado Pago", capabilities: "Pix · cartão · link · webhook" },
+  { id: "stripe", label: "Stripe", capabilities: "Cartão · parcelamento · link · webhook" },
+  { id: "pagbank", label: "PagBank", capabilities: "Pix · cartão · boleto · webhook" },
+  { id: "asaas", label: "Asaas", capabilities: "Pix · boleto · cartão · webhook" },
   { id: "pix_manual", label: "Pix manual" },
 ];
 function GatewaysPage() {
@@ -25,6 +26,7 @@ function GatewaysPage() {
   const queryClient = useQueryClient();
   const [provider, setProvider] = useState("mercado_pago");
   const [saving, setSaving] = useState(false);
+  const selectedProvider = providers.find((item) => item.id === provider);
   const data = useQuery({
     enabled: !!orgId,
     queryKey: ["payment-gateways", orgId],
@@ -88,7 +90,7 @@ function GatewaysPage() {
               <LockKeyhole className="size-5" />
             </div>
             <div>
-              <h2 className="font-display text-lg font-semibold">Adicionar gateway</h2>
+              <h2 className="font-display text-lg font-semibold">Central de Integrações</h2>
               <p className="text-xs text-muted-foreground">
                 O checkout só deve ser ativado após configurar a credencial no servidor.
               </p>
@@ -105,6 +107,11 @@ function GatewaysPage() {
               </option>
             ))}
           </select>
+          {selectedProvider?.capabilities ? (
+            <p className="text-xs text-muted-foreground">
+              Recursos previstos: {selectedProvider.capabilities}
+            </p>
+          ) : null}
           <Button onClick={connect} disabled={saving}>
             {saving ? (
               <Loader2 className="size-4 animate-spin" />

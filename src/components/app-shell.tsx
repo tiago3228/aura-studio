@@ -54,7 +54,7 @@ const NAV: NavItem[] = [
   { to: "/financeiro", label: "Financeiro", area: "financeiro", icon: Wallet, mobile: true },
   { to: "/pagamentos", label: "Pagamentos", area: "financeiro", icon: CreditCard, mobile: true },
   { to: "/relatorios", label: "Relatórios avançados", area: "financeiro", icon: BarChart3 },
-  { to: "/gateways", label: "Gateways de pagamento", area: "financeiro", icon: CreditCard },
+  { to: "/gateways", label: "Integrações de pagamento", area: "financeiro", icon: CreditCard },
   { to: "/estoque", label: "Estoque", area: "estoque", icon: Package },
   { to: "/comissoes", label: "Comissões", area: "comissoes", icon: Percent },
   { to: "/assistente", label: "Assistente IA", area: "assistente", icon: Bot, mobile: true },
