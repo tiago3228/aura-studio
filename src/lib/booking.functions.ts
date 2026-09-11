@@ -206,6 +206,7 @@ async function loadContext(
   serviceId: string | undefined,
   serviceIds: string[] | undefined,
   packageId: string | undefined,
+  packageIds: string[] | undefined,
 ) {
   const supabase = publicClient();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -232,57 +233,34 @@ async function loadContext(
   const offerFor = await loadCatalog(org.data.id);
   const offer = offerFor(professionalId);
 
-  let pkg: OfferPackage | null = null;
+  let packages: OfferPackage[] = [];
   let targetServiceIds = serviceIds?.length ? serviceIds : serviceId ? [serviceId] : [];
 
-  if (packageId) {
-    pkg = offer.packages.find((p) => p.id === packageId) ?? null;
-    if (!pkg || pkg.items.length === 0) {
-      const [packageResult, itemResult] = await Promise.all([
-        supabaseAdmin
-          .from("packages")
-          .select("id, name, description, sessions, price, validity_days")
-          .eq("id", packageId)
-          .eq("organization_id", org.data.id)
-          .eq("active", true)
-          .eq("online_booking", true)
-          .maybeSingle(),
-        supabaseAdmin
-          .from("package_items")
-          .select("service_id, sessions, services(name)")
-          .eq("package_id", packageId)
-          .eq("organization_id", org.data.id),
-      ]);
-      if (packageResult.data) {
-        pkg = {
-          ...packageResult.data,
-          price: Number(packageResult.data.price),
-          items: (itemResult.data ?? []).map((item) => ({
-            service_id: item.service_id,
-            service_name: item.services?.name ?? "Procedimento",
-            sessions: item.sessions,
-          })),
-        };
-      }
+  const selectedPackageIds = packageIds?.length ? packageIds : packageId ? [packageId] : [];
+  if (selectedPackageIds.length) {
+    packages = selectedPackageIds
+      .map((id) => offer.packages.find((p) => p.id === id))
+      .filter((p): p is OfferPackage => !!p && p.items.length > 0);
+    if (packages.length !== selectedPackageIds.length) {
+      return { error: "Um dos pacotes selecionados está indisponível." as const };
     }
-    if (!pkg) return { error: "Pacote indisponível para este profissional." as const };
-    const first = pkg.items[0];
-    if (!first) return { error: "Este pacote ainda não tem procedimentos vinculados." as const };
-    targetServiceIds = [
-      serviceId && pkg.items.some((i) => i.service_id === serviceId) ? serviceId : first.service_id,
-    ];
+    const packageServiceIds = packages
+      .map((p) => p.items[0]?.service_id)
+      .filter((id): id is string => !!id);
+    targetServiceIds = [...new Set(packageServiceIds)];
   } else if (!targetServiceIds.length) {
     return { error: "Escolha pelo menos um procedimento." as const };
   }
 
+  const uniqueTargetServiceIds = [...new Set(targetServiceIds)];
   const service = await supabaseAdmin
     .from("services")
     .select("id, name, duration_min, buffer_min, price, promo_price")
-    .in("id", targetServiceIds)
+    .in("id", uniqueTargetServiceIds)
     .eq("organization_id", org.data.id)
     .eq("active", true)
     .eq("online_booking", true);
-  if (!service.data?.length || service.data.length !== targetServiceIds.length) {
+  if (!service.data?.length || service.data.length !== uniqueTargetServiceIds.length) {
     return { error: "Um dos procedimentos selecionados está indisponível." as const };
   }
   const orderedServices = targetServiceIds
@@ -308,7 +286,7 @@ async function loadContext(
   };
   return {
     ctx,
-    pkg,
+    packages,
     price: orderedServices.reduce((sum, item) => sum + Number(item.promo_price ?? item.price), 0),
   };
 }
@@ -362,6 +340,7 @@ export const getAvailableSlots = createServerFn({ method: "GET" })
         serviceId: z.string().uuid().optional(),
         serviceIds: z.array(z.string().uuid()).max(20).optional(),
         packageId: z.string().uuid().optional(),
+        packageIds: z.array(z.string().uuid()).max(10).optional(),
         day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       })
       .parse(input),
@@ -373,6 +352,7 @@ export const getAvailableSlots = createServerFn({ method: "GET" })
       data.serviceId,
       data.serviceIds,
       data.packageId,
+      data.packageIds,
     );
     if ("error" in loaded) return { slots: [] as string[], message: loaded.error };
     const { ctx } = loaded;
@@ -393,6 +373,7 @@ export const createPublicBooking = createServerFn({ method: "POST" })
         serviceId: z.string().uuid().optional(),
         serviceIds: z.array(z.string().uuid()).max(20).optional(),
         packageId: z.string().uuid().optional(),
+        packageIds: z.array(z.string().uuid()).max(10).optional(),
         professionalId: z.string().uuid(),
         day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         time: z.string().regex(/^\d{2}:\d{2}$/),
@@ -410,9 +391,10 @@ export const createPublicBooking = createServerFn({ method: "POST" })
       data.serviceId,
       data.serviceIds,
       data.packageId,
+      data.packageIds,
     );
     if ("error" in loaded) return { ok: false as const, message: loaded.error };
-    const { ctx, pkg, price } = loaded;
+    const { ctx, packages, price } = loaded;
 
     const busy = await busyRanges(ctx.orgId, data.professionalId, data.day);
     const slots = buildSlots(data.day, ctx.cfg, ctx.duration, busy);
@@ -459,30 +441,34 @@ export const createPublicBooking = createServerFn({ method: "POST" })
 
     if (!clientId) return { ok: false as const, message: "Não foi possível cadastrar o cliente." };
 
-    if (pkg) {
-      const totalSessions = pkg.items.reduce((sum, i) => sum + i.sessions, 0) || pkg.sessions;
-      const expires = new Date(Date.now() + (pkg.validity_days || 180) * 86400000)
-        .toISOString()
-        .slice(0, 10);
-      const cp = await supabaseAdmin
-        .from("client_packages")
-        .insert({
-          organization_id: ctx.orgId,
-          client_id: clientId,
-          package_id: pkg.id,
-          name: pkg.name,
-          service_id: pkg.items[0]?.service_id ?? null,
-          sessions_total: totalSessions,
-          sessions_used: 0,
-          price: pkg.price,
-          expires_at: expires,
-        })
-        .select("id")
-        .single();
-      if (cp.error) return { ok: false as const, message: cp.error.message };
-      clientPackageId = cp.data?.id ?? null;
+    if (packages.length) {
+      const createdPackageIds: string[] = [];
+      for (const pkg of packages) {
+        const totalSessions = pkg.items.reduce((sum, i) => sum + i.sessions, 0) || pkg.sessions;
+        const expires = new Date(Date.now() + (pkg.validity_days || 180) * 86400000)
+          .toISOString()
+          .slice(0, 10);
+        const cp = await supabaseAdmin
+          .from("client_packages")
+          .insert({
+            organization_id: ctx.orgId,
+            client_id: clientId,
+            package_id: pkg.id,
+            name: pkg.name,
+            service_id: pkg.items[0]?.service_id ?? null,
+            sessions_total: totalSessions,
+            sessions_used: 0,
+            price: pkg.price,
+            expires_at: expires,
+          })
+          .select("id")
+          .single();
+        if (cp.error) return { ok: false as const, message: cp.error.message };
+        if (cp.data?.id) createdPackageIds.push(cp.data.id);
+      }
+      clientPackageId = createdPackageIds[0] ?? null;
       appointmentPrice = 0;
-      notes = [`Pacote: ${pkg.name} — sessão 1 de ${totalSessions}`, data.notes]
+      notes = [`Pacotes: ${packages.map((pkg) => pkg.name).join(", ")}`, data.notes]
         .filter(Boolean)
         .join(" · ");
     } else {

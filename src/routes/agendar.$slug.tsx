@@ -67,18 +67,25 @@ function PublicBooking() {
   const [professionalId, setProfessionalId] = useState("");
   const [tab, setTab] = useState<"procedimentos" | "pacotes">("procedimentos");
   const [serviceIds, setServiceIds] = useState<string[]>([]);
-  const [packageId, setPackageId] = useState("");
+  const [packageIds, setPackageIds] = useState<string[]>([]);
   const [day, setDay] = useState("");
   const [time, setTime] = useState("");
   const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "" });
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
 
-  const hasChoice = serviceIds.length > 0 || !!packageId;
+  const hasChoice = serviceIds.length > 0 || packageIds.length > 0;
 
   const slots = useQuery({
     enabled: hasChoice && !!professionalId && !!day,
-    queryKey: ["booking-slots", slug, serviceIds.join(","), packageId, professionalId, day],
+    queryKey: [
+      "booking-slots",
+      slug,
+      serviceIds.join(","),
+      packageIds.join(","),
+      professionalId,
+      day,
+    ],
     queryFn: () =>
       loadSlots({
         data: {
@@ -86,7 +93,7 @@ function PublicBooking() {
           professionalId,
           day,
           ...(serviceIds.length ? { serviceIds } : {}),
-          ...(packageId ? { packageId } : {}),
+          ...(packageIds.length ? { packageIds } : {}),
         },
       }),
   });
@@ -124,6 +131,8 @@ function PublicBooking() {
     (sum, service) => sum + Number(service.promo_price ?? service.price),
     0,
   );
+  const selectedPackages = selectedPro?.packages.filter((pkg) => packageIds.includes(pkg.id)) ?? [];
+  const selectedPackagePrice = selectedPackages.reduce((sum, pkg) => sum + Number(pkg.price), 0);
   const maxDay = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
   const addressLine = [org.address, [org.city, org.state].filter(Boolean).join(" — ")]
     .filter(Boolean)
@@ -135,7 +144,7 @@ function PublicBooking() {
 
   function resetChoice() {
     setServiceIds([]);
-    setPackageId("");
+    setPackageIds([]);
     setTime("");
   }
 
@@ -158,7 +167,7 @@ function PublicBooking() {
           email: form.email,
           notes: form.notes,
           ...(serviceIds.length ? { serviceIds } : {}),
-          ...(packageId ? { packageId } : {}),
+          ...(packageIds.length ? { packageIds } : {}),
         },
       });
       if (result.ok) setDone(true);
@@ -368,7 +377,7 @@ function PublicBooking() {
                           ? current.filter((id) => id !== s.id)
                           : [...current, s.id],
                       );
-                      setPackageId("");
+                      setPackageIds([]);
                       setTime("");
                     }}
                     className="surface flex items-start gap-3 p-4 text-left"
@@ -419,12 +428,18 @@ function PublicBooking() {
                     type="button"
                     key={p.id}
                     onClick={() => {
-                      setPackageId(p.id);
-                      setServiceId("");
+                      setPackageIds((current) =>
+                        current.includes(p.id)
+                          ? current.filter((id) => id !== p.id)
+                          : [...current, p.id],
+                      );
+                      setServiceIds([]);
                       setTime("");
                     }}
                     className="surface flex items-start gap-3 p-4 text-left"
-                    style={packageId === p.id ? { boxShadow: `0 0 0 2px ${brand}` } : undefined}
+                    style={
+                      packageIds.includes(p.id) ? { boxShadow: `0 0 0 2px ${brand}` } : undefined
+                    }
                   >
                     <div className="min-w-0 flex-1">
                       <p className="inline-flex items-center gap-1.5 text-sm font-semibold">
@@ -446,6 +461,18 @@ function PublicBooking() {
                     </span>
                   </button>
                 ))}
+                {selectedPackages.length > 0 ? (
+                  <div className="mt-2 flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+                    <span>
+                      <strong>{selectedPackages.length}</strong> pacote(s) selecionado(s)
+                    </span>
+                    <strong style={{ color: brand }}>{brl(selectedPackagePrice)}</strong>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Você pode selecionar mais de um pacote.
+                  </p>
+                )}
                 {selectedPro.packages.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     Nenhum pacote disponível no momento.
