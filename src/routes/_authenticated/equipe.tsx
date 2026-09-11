@@ -106,14 +106,19 @@ function Equipe() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{p.name}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {p.specialty ?? "Profissional"} · {p.work_start.slice(0, 5)}–{p.work_end.slice(0, 5)}
+                    {p.specialty ?? "Profissional"} · {p.work_start.slice(0, 5)}–
+                    {p.work_end.slice(0, 5)}
                   </p>
                 </div>
-                <Pill tone={p.active ? "success" : "neutral"}>{p.active ? "ativo" : "inativo"}</Pill>
+                <Pill tone={p.active ? "success" : "neutral"}>
+                  {p.active ? "ativo" : "inativo"}
+                </Pill>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
                 Sessão {p.slot_minutes} min
-                {p.lunch_enabled ? ` · almoço ${p.lunch_start.slice(0, 5)}–${p.lunch_end.slice(0, 5)}` : ""}
+                {p.lunch_enabled
+                  ? ` · almoço ${p.lunch_start.slice(0, 5)}–${p.lunch_end.slice(0, 5)}`
+                  : ""}
                 {` · agenda até ${p.booking_horizon_days} dias`}
                 {p.online_booking ? " · online ativo" : " · online desligado"}
               </p>
@@ -259,11 +264,12 @@ function ScheduleDialog({
     }
   }
 
-
   function toggleDay(i: number) {
     setForm((f) => ({
       ...f,
-      work_days: f.work_days.includes(i) ? f.work_days.filter((d) => d !== i) : [...f.work_days, i].sort(),
+      work_days: f.work_days.includes(i)
+        ? f.work_days.filter((d) => d !== i)
+        : [...f.work_days, i].sort(),
     }));
   }
 
@@ -310,7 +316,11 @@ function ScheduleDialog({
           <p className="text-sm font-semibold">Perfil público</p>
           <div className="flex items-center gap-3">
             {preview ? (
-              <img src={preview} alt={professional.name} className="size-16 rounded-full object-cover" />
+              <img
+                src={preview}
+                alt={professional.name}
+                className="size-16 rounded-full object-cover"
+              />
             ) : (
               <span className="grid size-16 place-items-center rounded-full bg-muted text-xs text-muted-foreground">
                 sem foto
@@ -371,7 +381,6 @@ function ScheduleDialog({
           </div>
         </div>
         <div className="space-y-2">
-
           <Label>Dias de atendimento</Label>
           <div className="flex flex-wrap gap-2">
             {DAY_LABELS.map((d, i) => (
@@ -499,9 +508,13 @@ function ScheduleDialog({
 function ProfessionalDialog({ onDone }: { onDone: () => void }) {
   const { data: membership } = useMembership();
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [form, setForm] = useState({
     name: "",
     specialty: "",
+    bio: "",
+    certifications: "",
     phone: "",
     commission_default: "40",
     commission_type: "percentual" as "percentual" | "fixo",
@@ -514,10 +527,12 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
     if (!membership) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from("professionals").insert({
+      const { data: professional, error } = await supabase.from("professionals").insert({
         organization_id: membership.organization.id,
         name: form.name,
         specialty: form.specialty || null,
+        bio: form.bio || null,
+        certifications: form.certifications || null,
         phone: form.phone || null,
         commission_default: Number(form.commission_default || 0),
         commission_type: form.commission_type,
@@ -525,11 +540,26 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
         work_end: form.work_end,
       });
       if (error) throw error;
+      if (photoFile && professional) {
+        setUploading(true);
+        const resized = await resizeImage(photoFile, 600);
+        const path = `${membership.organization.id}/professionals/${professional.id}-${Date.now()}.jpg`;
+        const upload = await supabase.storage
+          .from("clinic-files")
+          .upload(path, resized, { contentType: "image/jpeg", upsert: true });
+        if (upload.error) throw upload.error;
+        const update = await supabase
+          .from("professionals")
+          .update({ photo_url: path })
+          .eq("id", professional.id);
+        if (update.error) throw update.error;
+      }
       toast.success("Profissional cadastrado.");
       onDone();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao salvar.");
     } finally {
+      setUploading(false);
       setSaving(false);
     }
   }
@@ -568,6 +598,38 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
             />
           </div>
         </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="pro-bio">Descrição profissional</Label>
+          <Textarea
+            id="pro-bio"
+            rows={3}
+            value={form.bio}
+            placeholder="Apresente a experiência e o estilo de atendimento..."
+            onChange={(e) => setForm({ ...form, bio: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="pro-certifications">Cursos e certificações</Label>
+          <Textarea
+            id="pro-certifications"
+            rows={2}
+            placeholder="Ex.: Curso de limpeza de pele, especialização em estética corporal..."
+            value={form.certifications}
+            onChange={(e) => setForm({ ...form, certifications: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="pro-photo">Foto profissional</Label>
+          <Input
+            id="pro-photo"
+            type="file"
+            accept="image/*"
+            onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
+          />
+          <p className="text-xs text-muted-foreground">
+            A foto será redimensionada e armazenada com isolamento da clínica.
+          </p>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="pro-comm">Comissão padrão</Label>
@@ -584,7 +646,9 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
             <Label>Tipo</Label>
             <Select
               value={form.commission_type}
-              onValueChange={(v) => setForm({ ...form, commission_type: v as "percentual" | "fixo" })}
+              onValueChange={(v) =>
+                setForm({ ...form, commission_type: v as "percentual" | "fixo" })
+              }
             >
               <SelectTrigger>
                 <SelectValue />
