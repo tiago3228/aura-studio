@@ -407,7 +407,24 @@ function Configuracoes() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="cfg-slug">Link personalizado</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="cfg-slug">Link personalizado</Label>
+              {canEdit ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setForm({
+                      ...form,
+                      booking_slug: slugify(form.name.split(/\s+/)[0] || "clinica"),
+                    })
+                  }
+                >
+                  Usar slug curto
+                </Button>
+              ) : null}
+            </div>
             <Input
               id="cfg-slug"
               value={form.booking_slug}
