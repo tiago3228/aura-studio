@@ -196,6 +196,7 @@ type Ctx = {
   cfg: SlotConfig;
   duration: number;
   serviceId: string;
+  serviceNames: string[];
 };
 
 /** Resolve organização, profissional e o procedimento a ser agendado (avulso ou 1ª sessão do pacote). */
@@ -203,6 +204,7 @@ async function loadContext(
   slug: string,
   professionalId: string,
   serviceId: string | undefined,
+  serviceIds: string[] | undefined,
   packageId: string | undefined,
 ) {
   const supabase = publicClient();
@@ -231,7 +233,7 @@ async function loadContext(
   const offer = offerFor(professionalId);
 
   let pkg: OfferPackage | null = null;
-  let targetServiceId = serviceId ?? "";
+  let targetServiceIds = serviceIds?.length ? serviceIds : serviceId ? [serviceId] : [];
 
   if (packageId) {
     pkg = offer.packages.find((p) => p.id === packageId) ?? null;
@@ -266,24 +268,32 @@ async function loadContext(
     if (!pkg) return { error: "Pacote indisponível para este profissional." as const };
     const first = pkg.items[0];
     if (!first) return { error: "Este pacote ainda não tem procedimentos vinculados." as const };
-    targetServiceId =
-      serviceId && pkg.items.some((i) => i.service_id === serviceId) ? serviceId : first.service_id;
-  } else if (!offer.services.some((s) => s.id === targetServiceId)) {
-    return { error: "Procedimento indisponível para este profissional." as const };
+    targetServiceIds = [
+      serviceId && pkg.items.some((i) => i.service_id === serviceId) ? serviceId : first.service_id,
+    ];
+  } else if (!targetServiceIds.length) {
+    return { error: "Escolha pelo menos um procedimento." as const };
   }
 
   const service = await supabaseAdmin
     .from("services")
-    .select("id, duration_min, buffer_min, price, promo_price")
-    .eq("id", targetServiceId)
+    .select("id, name, duration_min, buffer_min, price, promo_price")
+    .in("id", targetServiceIds)
     .eq("organization_id", org.data.id)
-    .maybeSingle();
-  if (!service.data) return { error: "Procedimento indisponível." as const };
+    .eq("active", true)
+    .eq("online_booking", true);
+  if (!service.data?.length || service.data.length !== targetServiceIds.length) {
+    return { error: "Um dos procedimentos selecionados está indisponível." as const };
+  }
+  const orderedServices = targetServiceIds
+    .map((id) => service.data.find((item) => item.id === id))
+    .filter((item): item is NonNullable<typeof item> => !!item);
 
   const ctx: Ctx = {
     orgId: org.data.id,
-    serviceId: service.data.id,
-    duration: service.data.duration_min + service.data.buffer_min,
+    serviceId: orderedServices[0].id,
+    serviceNames: orderedServices.map((item) => item.name),
+    duration: orderedServices.reduce((sum, item) => sum + item.duration_min + item.buffer_min, 0),
     cfg: {
       workDays: (pro.data.work_days as number[]) ?? [1, 2, 3, 4, 5],
       workStart: pro.data.work_start,
@@ -296,7 +306,11 @@ async function loadContext(
       horizonDays: pro.data.booking_horizon_days,
     },
   };
-  return { ctx, pkg, price: Number(service.data.promo_price ?? service.data.price) };
+  return {
+    ctx,
+    pkg,
+    price: orderedServices.reduce((sum, item) => sum + Number(item.promo_price ?? item.price), 0),
+  };
 }
 
 async function busyRanges(
@@ -346,6 +360,7 @@ export const getAvailableSlots = createServerFn({ method: "GET" })
         slug: z.string().min(1),
         professionalId: z.string().uuid(),
         serviceId: z.string().uuid().optional(),
+        serviceIds: z.array(z.string().uuid()).max(20).optional(),
         packageId: z.string().uuid().optional(),
         day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       })
@@ -356,6 +371,7 @@ export const getAvailableSlots = createServerFn({ method: "GET" })
       data.slug,
       data.professionalId,
       data.serviceId,
+      data.serviceIds,
       data.packageId,
     );
     if ("error" in loaded) return { slots: [] as string[], message: loaded.error };
@@ -375,6 +391,7 @@ export const createPublicBooking = createServerFn({ method: "POST" })
       .object({
         slug: z.string().min(1),
         serviceId: z.string().uuid().optional(),
+        serviceIds: z.array(z.string().uuid()).max(20).optional(),
         packageId: z.string().uuid().optional(),
         professionalId: z.string().uuid(),
         day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -391,6 +408,7 @@ export const createPublicBooking = createServerFn({ method: "POST" })
       data.slug,
       data.professionalId,
       data.serviceId,
+      data.serviceIds,
       data.packageId,
     );
     if ("error" in loaded) return { ok: false as const, message: loaded.error };
@@ -465,6 +483,10 @@ export const createPublicBooking = createServerFn({ method: "POST" })
       clientPackageId = cp.data?.id ?? null;
       appointmentPrice = 0;
       notes = [`Pacote: ${pkg.name} — sessão 1 de ${totalSessions}`, data.notes]
+        .filter(Boolean)
+        .join(" · ");
+    } else {
+      notes = [`Procedimentos: ${ctx.serviceNames.join(", ")}`, data.notes]
         .filter(Boolean)
         .join(" · ");
     }

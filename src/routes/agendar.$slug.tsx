@@ -25,9 +25,15 @@ export const Route = createFileRoute("/agendar/$slug")({
   head: () => ({
     meta: [
       { title: "Agendamento online — Aura" },
-      { name: "description", content: "Escolha seu procedimento ou pacote e solicite seu agendamento online." },
+      {
+        name: "description",
+        content: "Escolha seu procedimento ou pacote e solicite seu agendamento online.",
+      },
       { property: "og:title", content: "Agendamento online" },
-      { property: "og:description", content: "Procedimentos e pacotes com horários em tempo real." },
+      {
+        property: "og:description",
+        content: "Procedimentos e pacotes com horários em tempo real.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -60,7 +66,7 @@ function PublicBooking() {
 
   const [professionalId, setProfessionalId] = useState("");
   const [tab, setTab] = useState<"procedimentos" | "pacotes">("procedimentos");
-  const [serviceId, setServiceId] = useState("");
+  const [serviceIds, setServiceIds] = useState<string[]>([]);
   const [packageId, setPackageId] = useState("");
   const [day, setDay] = useState("");
   const [time, setTime] = useState("");
@@ -68,18 +74,25 @@ function PublicBooking() {
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
 
-  const hasChoice = !!serviceId || !!packageId;
+  const hasChoice = serviceIds.length > 0 || !!packageId;
+  const selectedServices =
+    selectedPro?.services.filter((service) => serviceIds.includes(service.id)) ?? [];
+  const selectedDuration = selectedServices.reduce((sum, service) => sum + service.duration_min, 0);
+  const selectedPrice = selectedServices.reduce(
+    (sum, service) => sum + Number(service.promo_price ?? service.price),
+    0,
+  );
 
   const slots = useQuery({
     enabled: hasChoice && !!professionalId && !!day,
-    queryKey: ["booking-slots", slug, serviceId, packageId, professionalId, day],
+    queryKey: ["booking-slots", slug, serviceIds.join(","), packageId, professionalId, day],
     queryFn: () =>
       loadSlots({
         data: {
           slug,
           professionalId,
           day,
-          ...(serviceId ? { serviceId } : {}),
+          ...(serviceIds.length ? { serviceIds } : {}),
           ...(packageId ? { packageId } : {}),
         },
       }),
@@ -121,7 +134,7 @@ function PublicBooking() {
   const whatsapp = org.whatsapp || org.phone;
 
   function resetChoice() {
-    setServiceId("");
+    setServiceIds([]);
     setPackageId("");
     setTime("");
   }
@@ -144,7 +157,7 @@ function PublicBooking() {
           phone: form.phone,
           email: form.email,
           notes: form.notes,
-          ...(serviceId ? { serviceId } : {}),
+          ...(serviceIds.length ? { serviceIds } : {}),
           ...(packageId ? { packageId } : {}),
         },
       });
@@ -170,7 +183,9 @@ function PublicBooking() {
           >
             <CalendarCheck className="size-5" />
           </div>
-          <h1 className="mt-4 font-display text-xl font-semibold">Agendamento realizado com sucesso!</h1>
+          <h1 className="mt-4 font-display text-xl font-semibold">
+            Agendamento realizado com sucesso!
+          </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {org.name} vai confirmar seu horário em breve.
           </p>
@@ -314,7 +329,9 @@ function PublicBooking() {
               );
             })}
             {professionals.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum profissional disponível online.</p>
+              <p className="text-sm text-muted-foreground">
+                Nenhum profissional disponível online.
+              </p>
             ) : null}
           </div>
         </section>
@@ -346,12 +363,18 @@ function PublicBooking() {
                     type="button"
                     key={s.id}
                     onClick={() => {
-                      setServiceId(s.id);
+                      setServiceIds((current) =>
+                        current.includes(s.id)
+                          ? current.filter((id) => id !== s.id)
+                          : [...current, s.id],
+                      );
                       setPackageId("");
                       setTime("");
                     }}
                     className="surface flex items-start gap-3 p-4 text-left"
-                    style={serviceId === s.id ? { boxShadow: `0 0 0 2px ${brand}` } : undefined}
+                    style={
+                      serviceIds.includes(s.id) ? { boxShadow: `0 0 0 2px ${brand}` } : undefined
+                    }
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold">{s.name}</p>
@@ -363,13 +386,29 @@ function PublicBooking() {
                       </p>
                     </div>
                     <span className="font-display text-sm font-semibold" style={{ color: brand }}>
-                      {brl(Number(s.promo_price ?? s.price))}
+                      <span>{brl(Number(s.promo_price ?? s.price))}</span>
                     </span>
                   </button>
                 ))}
+                {selectedServices.length > 0 ? (
+                  <div className="mt-2 flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+                    <span>
+                      <strong>{selectedServices.length}</strong> procedimento(s) selecionado(s)
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {selectedDuration} min
+                      </span>
+                    </span>
+                    <strong style={{ color: brand }}>{brl(selectedPrice)}</strong>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Você pode selecionar mais de um procedimento.
+                  </p>
+                )}
                 {selectedPro.services.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Este profissional não oferece procedimentos avulsos no momento. Veja a aba Pacotes.
+                    Este profissional não oferece procedimentos avulsos no momento. Veja a aba
+                    Pacotes.
                   </p>
                 ) : null}
               </div>
@@ -408,7 +447,9 @@ function PublicBooking() {
                   </button>
                 ))}
                 {selectedPro.packages.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nenhum pacote disponível no momento.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum pacote disponível no momento.
+                  </p>
                 ) : null}
               </div>
             )}
@@ -451,7 +492,11 @@ function PublicBooking() {
                   key={s}
                   onClick={() => setTime(s)}
                   className="rounded-lg border border-border px-2 py-2 text-xs font-semibold"
-                  style={time === s ? { backgroundColor: brand, color: "#fff", borderColor: brand } : undefined}
+                  style={
+                    time === s
+                      ? { backgroundColor: brand, color: "#fff", borderColor: brand }
+                      : undefined
+                  }
                 >
                   {s}
                 </button>

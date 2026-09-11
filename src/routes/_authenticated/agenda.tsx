@@ -133,6 +133,16 @@ function Agenda() {
   const [locationId, setLocationId] = useState("");
   const [open, setOpen] = useState(false);
   const [messageTarget, setMessageTarget] = useState<MessageTarget | null>(null);
+  const [dismissedOnlineIds, setDismissedOnlineIds] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      return JSON.parse(
+        window.localStorage.getItem("aura-dismissed-online-alerts") ?? "[]",
+      ) as string[];
+    } catch {
+      return [];
+    }
+  });
   const bookingUrl = membership?.organization.booking_slug
     ? publicAppUrl(`/agendar/${membership.organization.booking_slug}`)
     : "";
@@ -179,6 +189,9 @@ function Agenda() {
   });
 
   const pendingOnline = onlineAlerts.data ?? [];
+  const visibleOnline = pendingOnline.filter(
+    (appointment) => !dismissedOnlineIds.includes(appointment.id),
+  );
 
   const locations = useQuery({
     enabled: !!orgId,
@@ -279,7 +292,7 @@ function Agenda() {
         }
       />
 
-      {pendingOnline.length > 0 ? (
+      {visibleOnline.length > 0 ? (
         <section className="mb-5 overflow-hidden rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 shadow-sm">
           <div className="flex flex-wrap items-center gap-3">
             <span className="relative grid size-10 shrink-0 place-items-center rounded-full bg-amber-400 text-white">
@@ -288,7 +301,7 @@ function Agenda() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="font-semibold">
-                {pendingOnline.length} agendamento(s) online aguardando confirmação
+                {visibleOnline.length} agendamento(s) online aguardando confirmação
               </p>
               <p className="text-xs text-amber-800">
                 A Agenda verifica novos pedidos automaticamente a cada 30 segundos.
@@ -299,15 +312,30 @@ function Agenda() {
               variant="outline"
               className="border-amber-400 bg-white text-amber-900 hover:bg-amber-100"
               onClick={() => {
-                setAnchor(isoDay(new Date(pendingOnline[0].starts_at)));
+                setAnchor(isoDay(new Date(visibleOnline[0].starts_at)));
                 setView("dia");
               }}
             >
               Ver primeiro
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-400 bg-white text-amber-900 hover:bg-amber-100"
+              onClick={() => {
+                const ids = [
+                  ...new Set([...dismissedOnlineIds, ...visibleOnline.map((item) => item.id)]),
+                ];
+                setDismissedOnlineIds(ids);
+                window.localStorage.setItem("aura-dismissed-online-alerts", JSON.stringify(ids));
+                toast.success("Alertas limpos. Novos agendamentos continuarão aparecendo.");
+              }}
+            >
+              Limpar alerta
+            </Button>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            {pendingOnline.slice(0, 5).map((appointment: OnlineAlert) => {
+            {visibleOnline.slice(0, 5).map((appointment: OnlineAlert) => {
               const date = new Date(appointment.starts_at);
               return (
                 <button
