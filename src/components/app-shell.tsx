@@ -49,6 +49,7 @@ const NAV: NavItem[] = [
   { to: "/servicos", label: "Procedimentos", area: "procedimentos", icon: Sparkles },
   { to: "/equipe", label: "Equipe", area: "equipe", icon: UserCog },
   { to: "/financeiro", label: "Financeiro", area: "financeiro", icon: Wallet, mobile: true },
+  { to: "/relatorios", label: "Relatórios avançados", area: "financeiro", icon: BarChart3 },
   { to: "/estoque", label: "Estoque", area: "estoque", icon: Package },
   { to: "/comissoes", label: "Comissões", area: "comissoes", icon: Percent },
   { to: "/assistente", label: "Assistente IA", area: "assistente", icon: Bot, mobile: true },
