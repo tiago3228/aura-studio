@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,7 +21,10 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
   head: () => ({
     meta: [
       { title: "Configurações — Aura Clínicas" },
-      { name: "description", content: "Dados da clínica, link de agendamento online e preferências." },
+      {
+        name: "description",
+        content: "Dados da clínica, link de agendamento online e preferências.",
+      },
       { property: "og:title", content: "Configurações — Aura Clínicas" },
       { property: "og:description", content: "Ajuste os dados e o agendamento online da clínica." },
     ],
@@ -44,12 +48,12 @@ function Configuracoes() {
     city: "",
     state: "",
     booking_slug: "",
+    google_review_url: "",
     online_booking_enabled: true,
     logo_url: "",
     primary_color: "#1f6f5c",
     secondary_color: "#c9964f",
   });
-
 
   const org = membership?.organization;
 
@@ -65,6 +69,8 @@ function Configuracoes() {
       city: org.city ?? "",
       state: org.state ?? "",
       booking_slug: org.booking_slug ?? "",
+      google_review_url:
+        (org as typeof org & { google_review_url?: string }).google_review_url ?? "",
       online_booking_enabled: org.online_booking_enabled ?? true,
       logo_url: org.logo_url ?? "",
       primary_color: org.primary_color || "#1f6f5c",
@@ -113,7 +119,6 @@ function Configuracoes() {
     }
   }
 
-
   if (isLoading || !org) return <SkeletonCard />;
   const canEdit = isAdminRole(membership?.role);
   const bookingUrl =
@@ -126,7 +131,7 @@ function Configuracoes() {
     if (!org) return;
     setSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("organizations")
         .update({
           name: form.name,
@@ -138,6 +143,7 @@ function Configuracoes() {
           city: form.city || null,
           state: form.state || null,
           booking_slug: slugify(form.booking_slug || form.name),
+          google_review_url: form.google_review_url || null,
           online_booking_enabled: form.online_booking_enabled,
           logo_url: form.logo_url || null,
           primary_color: form.primary_color,
@@ -245,6 +251,27 @@ function Configuracoes() {
 
         <Surface className="space-y-4 p-5">
           <div>
+            <h2 className="font-display text-base font-semibold">Avaliações no Google</h2>
+            <p className="text-xs text-muted-foreground">
+              Cole o link da sua página de avaliações. Ele será usado na mensagem de satisfação
+              pós-atendimento.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="cfg-google-review">Link de avaliação do Google</Label>
+            <Input
+              id="cfg-google-review"
+              type="url"
+              placeholder="https://g.page/r/.../review"
+              value={form.google_review_url}
+              disabled={!canEdit}
+              onChange={(e) => setForm({ ...form, google_review_url: e.target.value })}
+            />
+          </div>
+        </Surface>
+
+        <Surface className="space-y-4 p-5">
+          <div>
             <h2 className="font-display text-base font-semibold">Personalização do link público</h2>
             <p className="text-xs text-muted-foreground">
               Logo e cores aparecem só na página pública — o sistema interno não muda.
@@ -253,7 +280,11 @@ function Configuracoes() {
 
           <div className="flex items-center gap-3">
             {logoPreview ? (
-              <img src={logoPreview} alt="Logo da clínica" className="size-16 rounded-xl object-cover" />
+              <img
+                src={logoPreview}
+                alt="Logo da clínica"
+                className="size-16 rounded-xl object-cover"
+              />
             ) : (
               <span className="grid size-16 place-items-center rounded-xl bg-muted text-xs text-muted-foreground">
                 sem logo
@@ -327,7 +358,10 @@ function Configuracoes() {
           </div>
 
           <div className="overflow-hidden rounded-xl border border-border">
-            <div className="p-5 text-center text-white" style={{ backgroundColor: form.primary_color }}>
+            <div
+              className="p-5 text-center text-white"
+              style={{ backgroundColor: form.primary_color }}
+            >
               {logoPreview ? (
                 <img
                   src={logoPreview}
@@ -335,7 +369,9 @@ function Configuracoes() {
                   className="mx-auto size-12 rounded-full border border-white/40 object-cover"
                 />
               ) : null}
-              <p className="mt-2 font-display text-base font-semibold">{form.name || "Sua clínica"}</p>
+              <p className="mt-2 font-display text-base font-semibold">
+                {form.name || "Sua clínica"}
+              </p>
               {form.address || form.city ? (
                 <p className="mt-1 text-xs text-white/80">
                   {[form.address, [form.city, form.state].filter(Boolean).join(" — ")]
@@ -356,12 +392,13 @@ function Configuracoes() {
           </div>
         </Surface>
 
-
         <Surface className="space-y-4 p-5">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="font-display text-base font-semibold">Agendamento online</h2>
-              <p className="text-xs text-muted-foreground">Página pública para clientes marcarem sozinhos.</p>
+              <p className="text-xs text-muted-foreground">
+                Página pública para clientes marcarem sozinhos.
+              </p>
             </div>
             <Switch
               checked={form.online_booking_enabled}
@@ -380,7 +417,9 @@ function Configuracoes() {
           </div>
           {bookingUrl ? (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
-              <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{bookingUrl}</span>
+              <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                {bookingUrl}
+              </span>
               <Button
                 type="button"
                 size="sm"
@@ -395,8 +434,9 @@ function Configuracoes() {
             </div>
           ) : null}
           <p className="text-xs text-muted-foreground">
-            Compartilhe este link no site publicado da clínica. No endereço de pré-visualização do editor
-            ele pede login — no domínio publicado a página abre livremente para suas clientes.
+            Compartilhe este link no site publicado da clínica. No endereço de pré-visualização do
+            editor ele pede login — no domínio publicado a página abre livremente para suas
+            clientes.
           </p>
         </Surface>
 
@@ -426,7 +466,9 @@ function MessageTemplates({ canEdit, orgId }: { canEdit: boolean; orgId?: string
     enabled: !!orgId,
     queryKey: ["message-templates", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("message_templates").select("id, event, body, active");
+      const { data, error } = await supabase
+        .from("message_templates")
+        .select("id, event, body, active");
       if (error) throw error;
       return data ?? [];
     },
@@ -475,9 +517,12 @@ function MessageTemplates({ canEdit, orgId }: { canEdit: boolean; orgId?: string
       <div>
         <h2 className="font-display text-base font-semibold">Mensagens</h2>
         <p className="text-xs text-muted-foreground">
-          Modelos usados no botão “Mensagem” da agenda. Nada é enviado automaticamente — você revisa antes.
+          Modelos usados no botão “Mensagem” da agenda. Nada é enviado automaticamente — você revisa
+          antes.
         </p>
-        <p className="mt-1 text-xs text-muted-foreground">Variáveis: {MESSAGE_VARIABLES.join("  ")}</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Variáveis: {MESSAGE_VARIABLES.join("  ")}
+        </p>
       </div>
 
       {MESSAGE_EVENTS.map((e) => (
@@ -499,14 +544,22 @@ function MessageTemplates({ canEdit, orgId }: { canEdit: boolean; orgId?: string
           />
           {canEdit ? (
             <div className="flex gap-2">
-              <Button type="button" size="sm" disabled={savingKey === e.value} onClick={() => save(e.value)}>
-                {savingKey === e.value ? <Loader2 className="size-4 animate-spin" /> : null} Salvar modelo
+              <Button
+                type="button"
+                size="sm"
+                disabled={savingKey === e.value}
+                onClick={() => save(e.value)}
+              >
+                {savingKey === e.value ? <Loader2 className="size-4 animate-spin" /> : null} Salvar
+                modelo
               </Button>
               <Button
                 type="button"
                 size="sm"
                 variant="ghost"
-                onClick={() => setBodies((prev) => ({ ...prev, [e.value]: DEFAULT_TEMPLATES[e.value] }))}
+                onClick={() =>
+                  setBodies((prev) => ({ ...prev, [e.value]: DEFAULT_TEMPLATES[e.value] }))
+                }
               >
                 Restaurar padrão
               </Button>

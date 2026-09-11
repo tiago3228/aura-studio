@@ -62,6 +62,9 @@ export function MessageDialog({ target, onDone }: { target: MessageTarget; onDon
     procedimento: target.serviceName,
     profissional: target.professionalName,
     clinica: membership?.organization.name ?? "",
+    google_avaliacao:
+      (membership?.organization as { google_review_url?: string } | undefined)?.google_review_url ??
+      "(link não configurado)",
   };
 
   useEffect(() => {

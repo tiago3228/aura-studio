@@ -435,7 +435,7 @@ const SUGGESTED: Partial<Record<Status, MsgEvent>> = {
   confirmado: "confirmacao",
   cancelado: "cancelamento",
   reagendado: "reagendamento",
-  atendido: "agradecimento",
+  atendido: "satisfacao",
 };
 
 function AppointmentRow({ appointment: a, onStatus, onMessage }: AppointmentRowProps) {
