@@ -12,6 +12,7 @@ import {
   Settings,
   LayoutDashboard,
   UserCog,
+  BarChart3,
   CreditCard,
   LogOut,
   Menu,
@@ -34,9 +35,16 @@ type NavItem = {
 };
 
 const NAV: NavItem[] = [
-  { to: "/dashboard", label: "Visão geral", area: "dashboard", icon: LayoutDashboard, mobile: true },
+  {
+    to: "/dashboard",
+    label: "Visão geral",
+    area: "dashboard",
+    icon: LayoutDashboard,
+    mobile: true,
+  },
   { to: "/agenda", label: "Agenda", area: "agenda", icon: CalendarDays, mobile: true },
   { to: "/clientes", label: "Clientes", area: "clientes", icon: Users, mobile: true },
+  { to: "/crm", label: "CRM · em construção", area: "crm", icon: BarChart3, mobile: true },
   { to: "/servicos", label: "Procedimentos", area: "procedimentos", icon: Sparkles },
   { to: "/equipe", label: "Equipe", area: "equipe", icon: UserCog },
   { to: "/financeiro", label: "Financeiro", area: "financeiro", icon: Wallet, mobile: true },
@@ -112,7 +120,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             {membership ? roleLabel[membership.role] : "—"}
           </p>
         </div>
-        <button onClick={signOut} aria-label="Sair" className="text-muted-foreground hover:text-destructive">
+        <button
+          onClick={signOut}
+          aria-label="Sair"
+          className="text-muted-foreground hover:text-destructive"
+        >
           <LogOut className="size-4" />
         </button>
       </div>
