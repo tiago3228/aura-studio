@@ -119,6 +119,21 @@ function Servicos() {
     }
   }
 
+  async function deletePackage(pkg: { id: string; name: string }) {
+    if (
+      !window.confirm(
+        `Excluir o pacote “${pkg.name}”? As vendas e sessões já realizadas serão preservadas.`,
+      )
+    )
+      return;
+    const { error } = await supabase.from("packages").delete().eq("id", pkg.id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Pacote excluído.");
+      refresh();
+    }
+  }
+
   const serviceName = (id: string) =>
     data.data?.services.find((s) => s.id === id)?.name ?? "Procedimento";
 
@@ -293,6 +308,15 @@ function Servicos() {
                           onCheckedChange={(v) => togglePackage(p.id, "online_booking", v)}
                         />
                       </label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-center text-destructive hover:text-destructive"
+                        onClick={() => deletePackage(p)}
+                      >
+                        <Trash2 className="size-3.5" /> Excluir pacote
+                      </Button>
                     </div>
                   </li>
                 );

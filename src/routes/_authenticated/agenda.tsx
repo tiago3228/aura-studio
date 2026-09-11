@@ -122,6 +122,7 @@ function Agenda() {
   const queryClient = useQueryClient();
   const [anchor, setAnchor] = useState(() => isoDay(new Date()));
   const [view, setView] = useState<"dia" | "semana">("dia");
+  const [locationId, setLocationId] = useState("");
   const [open, setOpen] = useState(false);
   const [messageTarget, setMessageTarget] = useState<MessageTarget | null>(null);
   const bookingUrl =
@@ -137,16 +138,33 @@ function Agenda() {
 
   const appointments = useQuery({
     enabled: !!orgId,
-    queryKey: ["appointments", orgId, range.from.toISOString(), view],
+    queryKey: ["appointments", orgId, range.from.toISOString(), view, locationId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("appointments")
         .select("*, clients(name, phone), services(name), professionals(name)")
         .gte("starts_at", range.from.toISOString())
         .lt("starts_at", range.to.toISOString())
         .order("starts_at");
+      if (locationId) query = query.eq("location_id", locationId);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
+    },
+  });
+
+  const locations = useQuery({
+    enabled: !!orgId,
+    queryKey: ["agenda-locations", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organization_locations")
+        .select("id, name")
+        .eq("active", true)
+        .order("is_main", { ascending: false })
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
     },
   });
 
@@ -224,6 +242,7 @@ function Agenda() {
             </DialogTrigger>
             <NewAppointmentDialog
               lists={lists.data}
+              locationId={locationId || undefined}
               onDone={() => {
                 setOpen(false);
                 queryClient.invalidateQueries({ queryKey: ["appointments"] });
@@ -267,6 +286,18 @@ function Agenda() {
       </div>
 
       <div className="surface mb-5 flex flex-wrap items-center justify-between gap-3 p-3">
+        <select
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+          value={locationId}
+          onChange={(e) => setLocationId(e.target.value)}
+        >
+          <option value="">Todas as filiais</option>
+          {locations.data?.map((location) => (
+            <option value={location.id} key={location.id}>
+              {location.name}
+            </option>
+          ))}
+        </select>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -478,7 +509,15 @@ type Lists = {
   professionals: { id: string; name: string }[];
 };
 
-function NewAppointmentDialog({ lists, onDone }: { lists: Lists | undefined; onDone: () => void }) {
+function NewAppointmentDialog({
+  lists,
+  locationId,
+  onDone,
+}: {
+  lists: Lists | undefined;
+  locationId?: string;
+  onDone: () => void;
+}) {
   const { data: membership } = useMembership();
   const [form, setForm] = useState({
     client_id: "",
@@ -525,6 +564,7 @@ function NewAppointmentDialog({ lists, onDone }: { lists: Lists | undefined; onD
             .from("clients")
             .insert({
               organization_id: membership.organization.id,
+              location_id: locationId || null,
               name,
               phone: phone || null,
               whatsapp: phone || null,
@@ -539,6 +579,7 @@ function NewAppointmentDialog({ lists, onDone }: { lists: Lists | undefined; onD
       }
       const { error } = await supabase.from("appointments").insert({
         organization_id: membership.organization.id,
+        location_id: locationId || null,
         client_id: clientId,
         service_id: form.service_id || null,
         professional_id: form.professional_id || null,
