@@ -6,6 +6,7 @@ import { Globe2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/lib/session";
+import { useLanguage, type LanguageCode } from "@/lib/language";
 import { PageHeader, Surface } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,7 @@ const defaults = {
 };
 function GlobalizacaoPage() {
   const { data: membership } = useMembership();
+  const { setLanguage } = useLanguage();
   const orgId = membership?.organization.id;
   const [form, setForm] = useState(defaults);
   const [saving, setSaving] = useState(false);
@@ -55,7 +57,10 @@ function GlobalizacaoPage() {
       );
     setSaving(false);
     if (error) toast.error(error.message);
-    else toast.success("Preferências globais salvas.");
+    else {
+      setLanguage(form.language_code as LanguageCode);
+      toast.success("Preferências globais salvas.");
+    }
   }
   return (
     <div className="mx-auto max-w-2xl">
@@ -83,9 +88,8 @@ function GlobalizacaoPage() {
             onChange={(value) => setForm({ ...form, language_code: value })}
             options={[
               ["pt-BR", "Português (Brasil)"],
+              ["pt-PT", "Português (Portugal)"],
               ["en-US", "English (United States)"],
-              ["es-ES", "Español"],
-              ["fr-FR", "Français"],
             ]}
           />
           <Field

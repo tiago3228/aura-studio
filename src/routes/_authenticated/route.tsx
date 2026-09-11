@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/app-shell";
 import { useMembership } from "@/lib/session";
 import { SkeletonCard } from "@/components/ui-kit";
+import { LanguageProvider } from "@/lib/language";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -69,8 +70,10 @@ function AuthenticatedLayout() {
   }
 
   return (
-    <AppShell>
-      <Outlet />
-    </AppShell>
+    <LanguageProvider>
+      <AppShell>
+        <Outlet />
+      </AppShell>
+    </LanguageProvider>
   );
 }

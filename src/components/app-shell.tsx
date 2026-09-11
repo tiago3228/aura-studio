@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { can, roleLabel, useMembership, useSession } from "@/lib/session";
 import { initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { LANGUAGE_OPTIONS, useLanguage } from "@/lib/language";
 import { Button } from "@/components/ui/button";
 
 type NavItem = {
@@ -78,6 +79,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { language, setLanguage, navLabel } = useLanguage();
 
   const items = NAV.filter((item) => can(membership?.role, item.area));
   const isPlatformAdmin = user?.email?.toLowerCase() === "tiago3228@yahoo.com.br";
@@ -133,7 +135,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               )}
             >
               <Icon className="size-4 shrink-0" />
-              {item.label}
+              {navLabel(item.label.replace(" · em construção", ""))}
+              {item.label.includes("em construção") ? " · em construção" : ""}
             </Link>
           );
         })}
@@ -156,6 +159,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           <LogOut className="size-4" />
         </button>
+        <select
+          aria-label="Idioma"
+          className="h-8 rounded-md border border-border bg-transparent px-1.5 text-[11px]"
+          value={language}
+          onChange={(event) => setLanguage(event.target.value as typeof language)}
+        >
+          {LANGUAGE_OPTIONS.map((option) => (
+            <option value={option.value} key={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   );
@@ -187,9 +202,23 @@ export function AppShell({ children }: { children: ReactNode }) {
         <span className="font-display text-base font-semibold">
           Aura<span className="text-gold">.</span>
         </span>
-        <Button size="sm" variant="ghost" onClick={signOut} aria-label="Sair">
-          <LogOut className="size-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <select
+            aria-label="Idioma"
+            className="h-8 max-w-24 rounded-md border border-border bg-transparent px-1 text-[10px]"
+            value={language}
+            onChange={(event) => setLanguage(event.target.value as typeof language)}
+          >
+            {LANGUAGE_OPTIONS.map((option) => (
+              <option value={option.value} key={option.value}>
+                {option.value}
+              </option>
+            ))}
+          </select>
+          <Button size="sm" variant="ghost" onClick={signOut} aria-label="Sair">
+            <LogOut className="size-4" />
+          </Button>
+        </div>
       </header>
 
       <main className="px-4 pt-6 pb-28 lg:ml-64 lg:px-8 lg:pb-10">{children}</main>
