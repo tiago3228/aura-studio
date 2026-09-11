@@ -19,6 +19,7 @@ import {
   ArrowLeft,
   X,
   ShieldCheck,
+  Globe2,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +64,7 @@ const NAV: NavItem[] = [
   },
   { to: "/assinatura", label: "Assinatura", area: "assinatura", icon: CreditCard },
   { to: "/configuracoes", label: "Ajustes", area: "configuracoes", icon: Settings },
+  { to: "/globalizacao", label: "Idioma e moeda", area: "configuracoes", icon: Globe2 },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
