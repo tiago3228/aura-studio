@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
+  Bell,
   CheckCircle2,
   Loader2,
   MessageSquare,
@@ -55,6 +56,14 @@ type FollowUp = {
   lead_id: string | null;
   client_id: string | null;
 };
+type RetentionClient = {
+  id: string;
+  name: string;
+  phone: string | null;
+  last_attended: string | null;
+  last_service: string | null;
+  total_spent: number;
+};
 const STAGES = [
   ["novo_lead", "Novo lead"],
   ["primeiro_contato", "Primeiro contato"],
@@ -103,6 +112,64 @@ function CrmPage() {
       return (data ?? []) as FollowUp[];
     },
   });
+  const retention = useQuery({
+    enabled: !!orgId,
+    queryKey: ["crm-retention", orgId],
+    queryFn: async () => {
+      const [clientsResult, settingsResult, appointmentsResult] = await Promise.all([
+        (supabase as any)
+          .from("clients")
+          .select("id,name,phone")
+          .is("deleted_at", null)
+          .order("name"),
+        (supabase as any)
+          .from("crm_retention_settings")
+          .select("inactivity_days,return_days")
+          .maybeSingle(),
+        supabase
+          .from("appointments")
+          .select("client_id,starts_at,status,price,services(name)")
+          .eq("status", "atendido")
+          .order("starts_at", { ascending: false }),
+      ]);
+      if (clientsResult.error) throw clientsResult.error;
+      const inactivityDays = settingsResult.data?.inactivity_days ?? 60;
+      const returnDays = settingsResult.data?.return_days ?? 30;
+      const cutoff = Date.now() - inactivityDays * 86400000;
+      const returnCutoff = Date.now() - returnDays * 86400000;
+      const byClient = new Map<string, any[]>();
+      for (const appointment of appointmentsResult.data ?? []) {
+        if (!appointment.client_id) continue;
+        const list = byClient.get(appointment.client_id) ?? [];
+        list.push(appointment);
+        byClient.set(appointment.client_id, list);
+      }
+      const toRetentionClient = (client: any, history: any[]): RetentionClient => ({
+        id: client.id,
+        name: client.name,
+        phone: client.phone,
+        last_attended: history[0].starts_at,
+        last_service: history[0].services?.name ?? null,
+        total_spent: history.reduce((sum, item) => sum + Number(item.price), 0),
+      });
+      const inactive = (clientsResult.data ?? []).flatMap((client: any) => {
+        const history = byClient.get(client.id) ?? [];
+        const last = history[0];
+        return last && new Date(last.starts_at).getTime() <= cutoff
+          ? [toRetentionClient(client, history)]
+          : [];
+      });
+      const pendingReturns = (clientsResult.data ?? []).flatMap((client: any) => {
+        const history = byClient.get(client.id) ?? [];
+        const last = history[0];
+        const date = last ? new Date(last.starts_at).getTime() : 0;
+        return last && date <= returnCutoff && date > cutoff
+          ? [toRetentionClient(client, history)]
+          : [];
+      });
+      return { inactive, pendingReturns, inactivityDays, returnDays };
+    },
+  });
   const filteredLeads = (leads.data ?? []).filter((lead) =>
     `${lead.name} ${lead.whatsapp ?? ""} ${lead.email ?? ""} ${lead.source ?? ""}`
       .toLowerCase()
@@ -147,6 +214,28 @@ function CrmPage() {
     toast.success("Follow-up concluído.");
     invalidate();
   }
+  function openReactivation(client: RetentionClient) {
+    if (!client.phone) return toast.error("Este cliente não possui telefone cadastrado.");
+    const message = `Olá, ${client.name}! Sentimos sua falta. Já faz um tempo desde seu último atendimento. Gostaria de verificar nossos horários disponíveis?`;
+    window.open(
+      `https://wa.me/${client.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  }
+  async function createRetentionFollowUp(client: RetentionClient) {
+    if (!orgId) return;
+    const { error } = await (supabase as any).from("crm_follow_ups").insert({
+      organization_id: orgId,
+      client_id: client.id,
+      title: `Reativar ${client.name}`,
+      description: `Retorno recomendado após ${client.last_service ?? "último atendimento"}.`,
+      due_at: new Date().toISOString(),
+    });
+    if (error) return toast.error(error.message);
+    toast.success("Follow-up de reativação criado.");
+    invalidate();
+  }
   return (
     <div className="mx-auto max-w-7xl">
       <PageHeader
@@ -168,11 +257,12 @@ function CrmPage() {
         nesta etapa.
       </div>
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="mb-5 grid w-full grid-cols-4 sm:w-auto">
+        <TabsList className="mb-5 grid w-full grid-cols-5 sm:w-auto">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="leads">Leads</TabsTrigger>
           <TabsTrigger value="funil">Funil</TabsTrigger>
           <TabsTrigger value="followups">Follow-ups</TabsTrigger>
+          <TabsTrigger value="retencao">Retenção</TabsTrigger>
         </TabsList>
         <TabsContent value="dashboard" className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -346,6 +436,70 @@ function CrmPage() {
             ) : null}
           </div>
         </TabsContent>
+        <TabsContent value="retencao" className="space-y-5">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="surface p-4">
+              <p className="text-xs text-muted-foreground">Clientes inativos</p>
+              <p className="mt-2 text-2xl font-semibold">{retention.data?.inactive.length ?? 0}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Sem atendimento há {retention.data?.inactivityDays ?? 60} dias
+              </p>
+            </div>
+            <div className="surface p-4">
+              <p className="text-xs text-muted-foreground">Retornos recomendados</p>
+              <p className="mt-2 text-2xl font-semibold">
+                {retention.data?.pendingReturns.length ?? 0}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Após {retention.data?.returnDays ?? 30} dias do atendimento
+              </p>
+            </div>
+          </div>
+          <div className="surface p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <Bell className="size-5 text-gold" />
+              <div>
+                <h2 className="font-display text-lg font-semibold">Clientes inativos</h2>
+                <p className="text-sm text-muted-foreground">
+                  Inicie uma ação de reativação ou crie um acompanhamento.
+                </p>
+              </div>
+            </div>
+            {retention.isLoading ? (
+              <SkeletonCard />
+            ) : (
+              retention.data?.inactive.map((client) => (
+                <RetentionRow
+                  client={client}
+                  key={client.id}
+                  onWhatsApp={openReactivation}
+                  onFollowUp={createRetentionFollowUp}
+                />
+              ))
+            )}
+            {!retention.isLoading && !retention.data?.inactive.length ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                Nenhum cliente inativo no período configurado.
+              </p>
+            ) : null}
+          </div>
+          <div className="surface p-5">
+            <h2 className="mb-4 font-display text-lg font-semibold">Retornos pendentes</h2>
+            {retention.data?.pendingReturns.map((client) => (
+              <RetentionRow
+                client={client}
+                key={client.id}
+                onWhatsApp={openReactivation}
+                onFollowUp={createRetentionFollowUp}
+              />
+            ))}
+            {!retention.data?.pendingReturns.length ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                Nenhum retorno pendente.
+              </p>
+            ) : null}
+          </div>
+        </TabsContent>
       </Tabs>
       <Dialog open={leadDialog} onOpenChange={setLeadDialog}>
         <LeadDialog
@@ -381,6 +535,35 @@ function CrmPage() {
           />
         ) : null}
       </Dialog>
+    </div>
+  );
+}
+
+function RetentionRow({
+  client,
+  onWhatsApp,
+  onFollowUp,
+}: {
+  client: RetentionClient;
+  onWhatsApp: (client: RetentionClient) => void;
+  onFollowUp: (client: RetentionClient) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 border-t border-border py-3 first:border-t-0">
+      <div className="min-w-44 flex-1">
+        <p className="font-medium">{client.name}</p>
+        <p className="text-xs text-muted-foreground">
+          Último atendimento: {new Date(client.last_attended).toLocaleDateString("pt-BR")} ·{" "}
+          {client.last_service ?? "Procedimento"}
+        </p>
+      </div>
+      <Pill tone="gold">R$ {client.total_spent.toFixed(2).replace(".", ",")} acumulado</Pill>
+      <Button size="sm" variant="outline" onClick={() => onWhatsApp(client)}>
+        <MessageSquare className="size-4" /> WhatsApp
+      </Button>
+      <Button size="sm" onClick={() => onFollowUp(client)}>
+        Criar follow-up
+      </Button>
     </div>
   );
 }
