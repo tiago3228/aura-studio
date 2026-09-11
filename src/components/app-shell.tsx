@@ -52,6 +52,13 @@ const NAV: NavItem[] = [
   { to: "/estoque", label: "Estoque", area: "estoque", icon: Package },
   { to: "/comissoes", label: "Comissões", area: "comissoes", icon: Percent },
   { to: "/assistente", label: "Assistente IA", area: "assistente", icon: Bot, mobile: true },
+  {
+    to: "/marketing",
+    label: "Aura IA · Marketing",
+    area: "assistente",
+    icon: Sparkles,
+    mobile: true,
+  },
   { to: "/assinatura", label: "Assinatura", area: "assinatura", icon: CreditCard },
   { to: "/configuracoes", label: "Ajustes", area: "configuracoes", icon: Settings },
 ];
