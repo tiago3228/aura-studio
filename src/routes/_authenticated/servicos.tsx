@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Sparkles } from "lucide-react";
+import { Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -35,9 +35,15 @@ export const Route = createFileRoute("/_authenticated/servicos")({
   head: () => ({
     meta: [
       { title: "Procedimentos e pacotes — Aura Clínicas" },
-      { name: "description", content: "Cadastro de procedimentos, preços, comissões e pacotes de sessões." },
+      {
+        name: "description",
+        content: "Cadastro de procedimentos, preços, comissões e pacotes de sessões.",
+      },
       { property: "og:title", content: "Procedimentos e pacotes — Aura Clínicas" },
-      { property: "og:description", content: "Preços, duração, comissões e pacotes da sua clínica." },
+      {
+        property: "og:description",
+        content: "Preços, duração, comissões e pacotes da sua clínica.",
+      },
     ],
   }),
   component: Servicos,
@@ -97,7 +103,23 @@ function Servicos() {
     else refresh();
   }
 
-  const serviceName = (id: string) => data.data?.services.find((s) => s.id === id)?.name ?? "Procedimento";
+  async function deleteService(service: ServiceRow) {
+    if (
+      !window.confirm(
+        `Excluir o procedimento “${service.name}”? O histórico de agendamentos e vendas será preservado, mas o procedimento sairá da lista.`,
+      )
+    )
+      return;
+    const { error } = await supabase.from("services").delete().eq("id", service.id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Procedimento excluído.");
+      refresh();
+    }
+  }
+
+  const serviceName = (id: string) =>
+    data.data?.services.find((s) => s.id === id)?.name ?? "Procedimento";
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -164,7 +186,9 @@ function Servicos() {
                           : brl(Number(s.commission_value))}
                       </p>
                     </div>
-                    <p className="font-display text-base font-semibold tabular-nums">{brl(Number(s.price))}</p>
+                    <p className="font-display text-base font-semibold tabular-nums">
+                      {brl(Number(s.price))}
+                    </p>
                   </div>
                   <div className="mt-3 grid gap-2 text-xs">
                     <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
@@ -181,6 +205,15 @@ function Servicos() {
                         onCheckedChange={(v) => toggleService(s.id, "online_booking", v)}
                       />
                     </label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-center text-destructive hover:text-destructive"
+                      onClick={() => deleteService(s)}
+                    >
+                      <Trash2 className="size-3.5" /> Excluir procedimento
+                    </Button>
                   </div>
                 </li>
               ))}
@@ -219,11 +252,13 @@ function Servicos() {
                       <div>
                         <p className="text-sm font-semibold">{p.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {items.reduce((sum, i) => sum + i.sessions, 0) || p.sessions} sessões · validade{" "}
-                          {p.validity_days} dias
+                          {items.reduce((sum, i) => sum + i.sessions, 0) || p.sessions} sessões ·
+                          validade {p.validity_days} dias
                         </p>
                       </div>
-                      <p className="font-display text-base font-semibold tabular-nums">{brl(Number(p.price))}</p>
+                      <p className="font-display text-base font-semibold tabular-nums">
+                        {brl(Number(p.price))}
+                      </p>
                     </div>
                     <ul className="mt-2 flex flex-wrap gap-1.5">
                       {items.map((i) => (
@@ -237,7 +272,10 @@ function Servicos() {
                     <div className="mt-3 grid gap-2 text-xs">
                       <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
                         Ativo
-                        <Switch checked={p.active} onCheckedChange={(v) => togglePackage(p.id, "active", v)} />
+                        <Switch
+                          checked={p.active}
+                          onCheckedChange={(v) => togglePackage(p.id, "active", v)}
+                        />
                       </label>
                       <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
                         Agendamento online
@@ -353,7 +391,9 @@ function ServiceDialog({ onDone }: { onDone: () => void }) {
             <Label>Tipo</Label>
             <Select
               value={form.commission_type}
-              onValueChange={(v) => setForm({ ...form, commission_type: v as "percentual" | "fixo" })}
+              onValueChange={(v) =>
+                setForm({ ...form, commission_type: v as "percentual" | "fixo" })
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -448,30 +488,42 @@ function LibraryDialog({ existing, onDone }: { existing: string[]; onDone: () =>
         <DialogTitle className="font-display">Biblioteca de procedimentos</DialogTitle>
       </DialogHeader>
       <p className="text-xs text-muted-foreground">
-        Selecione os procedimentos que sua clínica realiza. Eles entram com preço zerado — ajuste depois.
+        Selecione os procedimentos que sua clínica realiza. Eles entram com preço zerado — ajuste
+        depois.
       </p>
       <div className="space-y-4">
         {Object.entries(grouped).map(([category, items]) => (
           <div key={category} className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{category}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {category}
+            </p>
             <ul className="grid gap-1.5">
               {(items ?? []).map((item) => {
                 const already = existing.includes(item.name.toLowerCase());
                 return (
-                  <li key={item.id} className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm">
+                  <li
+                    key={item.id}
+                    className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm"
+                  >
                     <Checkbox
                       id={`lib-${item.id}`}
                       disabled={already}
                       checked={picked.includes(item.id)}
                       onCheckedChange={(v) =>
-                        setPicked((prev) => (v ? [...prev, item.id] : prev.filter((p) => p !== item.id)))
+                        setPicked((prev) =>
+                          v ? [...prev, item.id] : prev.filter((p) => p !== item.id),
+                        )
                       }
                     />
                     <Label htmlFor={`lib-${item.id}`} className="flex-1 text-sm font-normal">
                       {item.name}{" "}
-                      <span className="text-xs text-muted-foreground">· {item.duration_min} min</span>
+                      <span className="text-xs text-muted-foreground">
+                        · {item.duration_min} min
+                      </span>
                     </Label>
-                    {already ? <span className="text-xs text-muted-foreground">já cadastrado</span> : null}
+                    {already ? (
+                      <span className="text-xs text-muted-foreground">já cadastrado</span>
+                    ) : null}
                   </li>
                 );
               })}
@@ -481,7 +533,8 @@ function LibraryDialog({ existing, onDone }: { existing: string[]; onDone: () =>
       </div>
       <DialogFooter>
         <Button onClick={save} disabled={saving || picked.length === 0}>
-          {saving ? <Loader2 className="size-4 animate-spin" /> : null} Adicionar {picked.length || ""}
+          {saving ? <Loader2 className="size-4 animate-spin" /> : null} Adicionar{" "}
+          {picked.length || ""}
         </Button>
       </DialogFooter>
     </DialogContent>
@@ -587,7 +640,10 @@ function PackageDialog({
             {services.map((s) => {
               const checked = items[s.id] !== undefined;
               return (
-                <li key={s.id} className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm">
+                <li
+                  key={s.id}
+                  className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm"
+                >
                   <Checkbox
                     id={`pk-${s.id}`}
                     checked={checked}
@@ -610,7 +666,10 @@ function PackageDialog({
                       className="h-8 w-20"
                       value={items[s.id]}
                       onChange={(e) =>
-                        setItems((prev) => ({ ...prev, [s.id]: Math.max(1, Number(e.target.value || 1)) }))
+                        setItems((prev) => ({
+                          ...prev,
+                          [s.id]: Math.max(1, Number(e.target.value || 1)),
+                        }))
                       }
                     />
                   ) : null}
@@ -618,7 +677,9 @@ function PackageDialog({
               );
             })}
             {services.length === 0 ? (
-              <li className="text-xs text-muted-foreground">Cadastre procedimentos antes de criar pacotes.</li>
+              <li className="text-xs text-muted-foreground">
+                Cadastre procedimentos antes de criar pacotes.
+              </li>
             ) : null}
           </ul>
         </div>
