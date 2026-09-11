@@ -24,6 +24,7 @@ import { Route as AuthenticatedEstoqueRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedPixAdminRouteImport } from './routes/_authenticated/pix-admin'
+import { Route as AuthenticatedPlatformAdminRouteImport } from './routes/_authenticated/platform-admin'
 import { Route as AuthenticatedServicosRouteImport } from './routes/_authenticated/servicos'
 import { Route as AgendarSlugRouteImport } from './routes/agendar.$slug'
 import { Route as AuthenticatedClientesIndexRouteImport } from './routes/_authenticated/clientes/index'
@@ -105,6 +106,12 @@ const AuthenticatedPixAdminRoute = AuthenticatedPixAdminRouteImport.update({
   path: '/pix-admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPlatformAdminRoute =
+  AuthenticatedPlatformAdminRouteImport.update({
+    id: '/platform-admin',
+    path: '/platform-admin',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedServicosRoute = AuthenticatedServicosRouteImport.update({
   id: '/servicos',
   path: '/servicos',
@@ -148,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pix-admin': typeof AuthenticatedPixAdminRoute
+  '/platform-admin': typeof AuthenticatedPlatformAdminRoute
   '/servicos': typeof AuthenticatedServicosRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -169,6 +177,7 @@ export interface FileRoutesByTo {
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pix-admin': typeof AuthenticatedPixAdminRoute
+  '/platform-admin': typeof AuthenticatedPlatformAdminRoute
   '/servicos': typeof AuthenticatedServicosRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -192,6 +201,7 @@ export interface FileRoutesById {
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/pix-admin': typeof AuthenticatedPixAdminRoute
+  '/_authenticated/platform-admin': typeof AuthenticatedPlatformAdminRoute
   '/_authenticated/servicos': typeof AuthenticatedServicosRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/_authenticated/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/onboarding'
     | '/pix-admin'
+    | '/platform-admin'
     | '/servicos'
     | '/agendar/$slug'
     | '/clientes/$id'
@@ -236,6 +247,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/onboarding'
     | '/pix-admin'
+    | '/platform-admin'
     | '/servicos'
     | '/agendar/$slug'
     | '/clientes/$id'
@@ -258,6 +270,7 @@ export interface FileRouteTypes {
     | '/_authenticated/financeiro'
     | '/_authenticated/onboarding'
     | '/_authenticated/pix-admin'
+    | '/_authenticated/platform-admin'
     | '/_authenticated/servicos'
     | '/agendar/$slug'
     | '/_authenticated/clientes/$id'
@@ -380,6 +393,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPixAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/platform-admin': {
+      id: '/_authenticated/platform-admin'
+      path: '/platform-admin'
+      fullPath: '/platform-admin'
+      preLoaderRoute: typeof AuthenticatedPlatformAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/servicos': {
       id: '/_authenticated/servicos'
       path: '/servicos'
@@ -431,6 +451,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPixAdminRoute: typeof AuthenticatedPixAdminRoute
+  AuthenticatedPlatformAdminRoute: typeof AuthenticatedPlatformAdminRoute
   AuthenticatedServicosRoute: typeof AuthenticatedServicosRoute
   AuthenticatedClientesIdRoute: typeof AuthenticatedClientesIdRoute
   AuthenticatedClientesIndexRoute: typeof AuthenticatedClientesIndexRoute
@@ -449,6 +470,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPixAdminRoute: AuthenticatedPixAdminRoute,
+  AuthenticatedPlatformAdminRoute: AuthenticatedPlatformAdminRoute,
   AuthenticatedServicosRoute: AuthenticatedServicosRoute,
   AuthenticatedClientesIdRoute: AuthenticatedClientesIdRoute,
   AuthenticatedClientesIndexRoute: AuthenticatedClientesIndexRoute,

@@ -18,10 +18,11 @@ import {
   Menu,
   ArrowLeft,
   X,
+  ShieldCheck,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
-import { can, roleLabel, useMembership } from "@/lib/session";
+import { can, roleLabel, useMembership, useSession } from "@/lib/session";
 import { initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ const NAV: NavItem[] = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { data: membership } = useMembership();
+  const { user } = useSession();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const router = useRouter();
@@ -64,6 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const items = NAV.filter((item) => can(membership?.role, item.area));
+  const isPlatformAdmin = user?.email?.toLowerCase() === "tiago3228@yahoo.com.br";
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -88,7 +91,19 @@ export function AppShell({ children }: { children: ReactNode }) {
       </p>
 
       <nav className="flex-1 space-y-0.5">
-        {items.map((item) => {
+        {[
+          ...items,
+          ...(isPlatformAdmin
+            ? [
+                {
+                  to: "/platform-admin",
+                  label: "Administração master",
+                  area: "platform-admin",
+                  icon: ShieldCheck,
+                },
+              ]
+            : []),
+        ].map((item) => {
           const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
           const Icon = item.icon;
           return (

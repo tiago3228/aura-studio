@@ -22,6 +22,34 @@ function AuthenticatedLayout() {
   const pathname = typeof window !== "undefined" ? window.location.pathname : "";
 
   useEffect(() => {
+    if (!membership || typeof window === "undefined") return;
+    const key = "aura-platform-session-id";
+    const existing = window.localStorage.getItem(key);
+    const sessionId = existing ?? crypto.randomUUID();
+    window.localStorage.setItem(key, sessionId);
+    const send = (eventType: "entered" | "heartbeat" | "left") => {
+      void supabase.rpc(
+        "platform_touch_session" as never,
+        {
+          _session_id: sessionId,
+          _organization_id: membership.organization.id,
+          _event_type: eventType,
+          _user_agent: navigator.userAgent,
+        } as never,
+      );
+    };
+    send(existing ? "heartbeat" : "entered");
+    const interval = window.setInterval(() => send("heartbeat"), 30_000);
+    const onLeave = () => send("left");
+    window.addEventListener("pagehide", onLeave);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("pagehide", onLeave);
+      send("left");
+    };
+  }, [membership]);
+
+  useEffect(() => {
     if (!isLoading && membership === null && pathname !== "/onboarding") {
       navigate({ to: "/onboarding", replace: true });
     }
