@@ -3711,6 +3711,35 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      declare_pix_payment: {
+        Args: {
+          _amount?: number
+          _months?: number
+          _note?: string
+          _pix_key?: string
+        }
+        Returns: {
+          admin_note: string | null
+          amount: number
+          created_at: string
+          id: string
+          months: number
+          organization_id: string
+          payer_note: string | null
+          pix_key: string
+          requested_by: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          subscription_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pix_payments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_financial_intelligence: {
         Args: { _from: string; _location_id?: string; _to: string }
         Returns: Json
@@ -3894,6 +3923,30 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "platform_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      review_pix_payment: {
+        Args: { _approve: boolean; _note?: string; _payment_id: string }
+        Returns: {
+          admin_note: string | null
+          amount: number
+          created_at: string
+          id: string
+          months: number
+          organization_id: string
+          payer_note: string | null
+          pix_key: string
+          requested_by: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          subscription_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pix_payments"
           isOneToOne: true
           isSetofReturn: false
         }
