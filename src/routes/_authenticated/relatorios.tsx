@@ -19,15 +19,31 @@ const iso = (date: Date) => date.toISOString().slice(0, 10);
 
 function RelatoriosPage() {
   const { data: membership } = useMembership();
+  const [locationId, setLocationId] = useState("");
   const [to, setTo] = useState(iso(new Date()));
   const [from, setFrom] = useState(iso(addDays(new Date(), -89)));
+  const locations = useQuery({
+    enabled: !!membership?.organization.id,
+    queryKey: ["report-locations", membership?.organization.id],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("organization_locations")
+        .select("id,name")
+        .eq("active", true)
+        .order("is_main", { ascending: false })
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
   const report = useQuery({
     enabled: !!membership?.organization.id,
-    queryKey: ["financial-intelligence", membership?.organization.id, from, to],
+    queryKey: ["financial-intelligence", membership?.organization.id, from, to, locationId],
     queryFn: async () => {
       const { data, error } = await (supabase as any).rpc("get_financial_intelligence", {
         _from: from,
         _to: to,
+        _location_id: locationId || null,
       });
       if (error) throw error;
       return data as {
@@ -57,6 +73,21 @@ function RelatoriosPage() {
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">Fim</label>
           <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Filial</label>
+          <select
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            value={locationId}
+            onChange={(e) => setLocationId(e.target.value)}
+          >
+            <option value="">Todas as filiais</option>
+            {locations.data?.map((location: { id: string; name: string }) => (
+              <option value={location.id} key={location.id}>
+                {location.name}
+              </option>
+            ))}
+          </select>
         </div>
         <Button
           variant="outline"

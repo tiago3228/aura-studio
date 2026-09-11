@@ -1,7 +1,15 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Plus, Loader2, MessageCircle } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Loader2,
+  MessageCircle,
+  Clipboard,
+  ExternalLink,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -116,6 +124,10 @@ function Agenda() {
   const [view, setView] = useState<"dia" | "semana">("dia");
   const [open, setOpen] = useState(false);
   const [messageTarget, setMessageTarget] = useState<MessageTarget | null>(null);
+  const bookingUrl =
+    typeof window !== "undefined" && membership?.organization.booking_slug
+      ? `${window.location.origin}/agendar/${membership.organization.booking_slug}`
+      : "";
 
   const range = useMemo(() => {
     const from = view === "dia" ? anchor : startOfWeek(anchor);
@@ -220,6 +232,39 @@ function Agenda() {
           </Dialog>
         }
       />
+
+      <div className="surface mb-5 flex flex-wrap items-center gap-3 border-primary/20 bg-primary-soft/40 p-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold text-primary">Agendamento online</p>
+          <p className="mt-1 truncate text-sm font-medium">
+            Envie este link para seus clientes agendarem sozinhos
+          </p>
+          <p className="mt-1 truncate text-xs text-muted-foreground">
+            {bookingUrl || "Configure o link público em Configurações."}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!bookingUrl}
+            onClick={() => {
+              void navigator.clipboard.writeText(bookingUrl);
+              toast.success("Link copiado.");
+            }}
+          >
+            <Clipboard className="size-4" /> Copiar link
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!bookingUrl}
+            onClick={() => window.open(bookingUrl, "_blank", "noopener,noreferrer")}
+          >
+            <ExternalLink className="size-4" /> Abrir
+          </Button>
+        </div>
+      </div>
 
       <div className="surface mb-5 flex flex-wrap items-center justify-between gap-3 p-3">
         <div className="flex items-center gap-1">
