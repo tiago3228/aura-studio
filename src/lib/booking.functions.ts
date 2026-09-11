@@ -383,56 +383,57 @@ export const createPublicBooking = createServerFn({ method: "POST" })
     let notes = data.notes || null;
     let appointmentPrice = price;
 
-    if (pkg) {
-      // pacote: garante cadastro do cliente e cria o saldo de sessões
-      const digits = data.phone.replace(/\D/g, "");
-      const existing = await supabaseAdmin
+    const digits = data.phone.replace(/\D/g, "");
+    const existing = await supabaseAdmin
+      .from("clients")
+      .select("id")
+      .eq("organization_id", ctx.orgId)
+      .or(`phone.eq.${digits},whatsapp.eq.${digits}`)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (existing.data) clientId = existing.data.id;
+    else {
+      const created = await supabaseAdmin
         .from("clients")
+        .insert({
+          organization_id: ctx.orgId,
+          name: data.name,
+          phone: digits,
+          whatsapp: digits,
+          email: data.email || null,
+          origin: "agendamento online",
+        })
         .select("id")
-        .eq("organization_id", ctx.orgId)
-        .or(`phone.eq.${digits},whatsapp.eq.${digits}`)
-        .is("deleted_at", null)
-        .maybeSingle();
+        .single();
+      if (created.error) return { ok: false as const, message: created.error.message };
+      clientId = created.data?.id ?? null;
+    }
 
-      if (existing.data) clientId = existing.data.id;
-      else {
-        const created = await supabaseAdmin
-          .from("clients")
-          .insert({
-            organization_id: ctx.orgId,
-            name: data.name,
-            phone: digits,
-            whatsapp: digits,
-            email: data.email || null,
-            origin: "agendamento online",
-          })
-          .select("id")
-          .single();
-        clientId = created.data?.id ?? null;
-      }
+    if (!clientId) return { ok: false as const, message: "Não foi possível cadastrar o cliente." };
 
+    if (pkg) {
       const totalSessions = pkg.items.reduce((sum, i) => sum + i.sessions, 0) || pkg.sessions;
-      if (clientId) {
-        const expires = new Date(Date.now() + (pkg.validity_days || 180) * 86400000)
-          .toISOString()
-          .slice(0, 10);
-        const cp = await supabaseAdmin
-          .from("client_packages")
-          .insert({
-            organization_id: ctx.orgId,
-            client_id: clientId,
-            package_id: pkg.id,
-            name: pkg.name,
-            service_id: pkg.items[0]?.service_id ?? null,
-            sessions_total: totalSessions,
-            sessions_used: 0,
-            price: pkg.price,
-            expires_at: expires,
-          })
-          .select("id")
-          .single();
-        clientPackageId = cp.data?.id ?? null;
-      }
+      const expires = new Date(Date.now() + (pkg.validity_days || 180) * 86400000)
+        .toISOString()
+        .slice(0, 10);
+      const cp = await supabaseAdmin
+        .from("client_packages")
+        .insert({
+          organization_id: ctx.orgId,
+          client_id: clientId,
+          package_id: pkg.id,
+          name: pkg.name,
+          service_id: pkg.items[0]?.service_id ?? null,
+          sessions_total: totalSessions,
+          sessions_used: 0,
+          price: pkg.price,
+          expires_at: expires,
+        })
+        .select("id")
+        .single();
+      if (cp.error) return { ok: false as const, message: cp.error.message };
+      clientPackageId = cp.data?.id ?? null;
       appointmentPrice = 0;
       notes = [`Pacote: ${pkg.name} — sessão 1 de ${totalSessions}`, data.notes]
         .filter(Boolean)
