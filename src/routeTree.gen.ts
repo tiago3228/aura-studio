@@ -26,6 +26,7 @@ import { Route as AuthenticatedMarketingRouteImport } from './routes/_authentica
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedPixAdminRouteImport } from './routes/_authenticated/pix-admin'
 import { Route as AuthenticatedPlatformAdminRouteImport } from './routes/_authenticated/platform-admin'
+import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedServicosRouteImport } from './routes/_authenticated/servicos'
 import { Route as AgendarSlugRouteImport } from './routes/agendar.$slug'
 import { Route as AuthenticatedClientesIndexRouteImport } from './routes/_authenticated/clientes/index'
@@ -118,6 +119,11 @@ const AuthenticatedPlatformAdminRoute =
     path: '/platform-admin',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedServicosRoute = AuthenticatedServicosRouteImport.update({
   id: '/servicos',
   path: '/servicos',
@@ -163,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pix-admin': typeof AuthenticatedPixAdminRoute
   '/platform-admin': typeof AuthenticatedPlatformAdminRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/servicos': typeof AuthenticatedServicosRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -186,6 +193,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pix-admin': typeof AuthenticatedPixAdminRoute
   '/platform-admin': typeof AuthenticatedPlatformAdminRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/servicos': typeof AuthenticatedServicosRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -211,6 +219,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/pix-admin': typeof AuthenticatedPixAdminRoute
   '/_authenticated/platform-admin': typeof AuthenticatedPlatformAdminRoute
+  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/_authenticated/servicos': typeof AuthenticatedServicosRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/_authenticated/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -236,6 +245,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/pix-admin'
     | '/platform-admin'
+    | '/relatorios'
     | '/servicos'
     | '/agendar/$slug'
     | '/clientes/$id'
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/pix-admin'
     | '/platform-admin'
+    | '/relatorios'
     | '/servicos'
     | '/agendar/$slug'
     | '/clientes/$id'
@@ -283,6 +294,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding'
     | '/_authenticated/pix-admin'
     | '/_authenticated/platform-admin'
+    | '/_authenticated/relatorios'
     | '/_authenticated/servicos'
     | '/agendar/$slug'
     | '/_authenticated/clientes/$id'
@@ -419,6 +431,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlatformAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/relatorios': {
+      id: '/_authenticated/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/servicos': {
       id: '/_authenticated/servicos'
       path: '/servicos'
@@ -472,6 +491,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPixAdminRoute: typeof AuthenticatedPixAdminRoute
   AuthenticatedPlatformAdminRoute: typeof AuthenticatedPlatformAdminRoute
+  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
   AuthenticatedServicosRoute: typeof AuthenticatedServicosRoute
   AuthenticatedClientesIdRoute: typeof AuthenticatedClientesIdRoute
   AuthenticatedClientesIndexRoute: typeof AuthenticatedClientesIndexRoute
@@ -492,6 +512,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPixAdminRoute: AuthenticatedPixAdminRoute,
   AuthenticatedPlatformAdminRoute: AuthenticatedPlatformAdminRoute,
+  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
   AuthenticatedServicosRoute: AuthenticatedServicosRoute,
   AuthenticatedClientesIdRoute: AuthenticatedClientesIdRoute,
   AuthenticatedClientesIndexRoute: AuthenticatedClientesIndexRoute,
