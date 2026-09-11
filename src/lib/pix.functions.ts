@@ -8,11 +8,6 @@ export const PIX_KEY = "tiago3228@gmail.com";
 export const PIX_KEY_TYPE = "E-mail";
 export const PLATFORM_ADMIN_EMAILS = ["tiago3228@yahoo.com.br", "tiago3228@gmail.com"];
 
-async function adminClient() {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  return supabaseAdmin;
-}
-
 function emailOf(context: { claims: unknown }) {
   return String((context.claims as { email?: string }).email ?? "").toLowerCase();
 }
@@ -44,8 +39,7 @@ export const getPixInfo = createServerFn({ method: "GET" })
     const org = await currentOrg(context.supabase as never);
     if (!org) return { pixKey: PIX_KEY, keyType: PIX_KEY_TYPE, amount: PRO_PRICE, payments: [], isPlatformAdmin: false };
 
-    const admin = await adminClient();
-    const payments = await admin
+    const payments = await context.supabase
       .from("pix_payments")
       .select("id, amount, status, months, payer_note, admin_note, created_at, reviewed_at")
       .eq("organization_id", org.id)
@@ -75,41 +69,21 @@ export const declarePixPayment = createServerFn({ method: "POST" })
     if (org.role !== "owner" && org.role !== "manager")
       return { ok: false as const, message: "Apenas proprietária ou gerente pode informar o pagamento." };
 
-    const admin = await adminClient();
-    const pending = await admin
-      .from("pix_payments")
-      .select("id")
-      .eq("organization_id", org.id)
-      .eq("status", "pending")
-      .maybeSingle();
-    if (pending.data)
-      return { ok: false as const, message: "Já existe um pagamento aguardando liberação." };
-
-    const sub = await admin.from("subscriptions").select("id").eq("organization_id", org.id).maybeSingle();
-    const orgRow = await admin.from("organizations").select("name").eq("id", org.id).maybeSingle();
-
-    const inserted = await admin
-      .from("pix_payments")
-      .insert({
-        organization_id: org.id,
-        subscription_id: sub.data?.id ?? null,
-        amount: PRO_PRICE * data.months,
-        months: data.months,
-        pix_key: PIX_KEY,
-        payer_note: data.note ?? null,
-        requested_by: context.userId,
-      })
-      .select("id")
-      .single();
-    if (inserted.error) return { ok: false as const, message: "Não foi possível registrar o pagamento." };
-
-    await admin.from("subscription_events").insert({
-      organization_id: org.id,
-      subscription_id: sub.data?.id ?? null,
-      kind: "pix_informado",
-      status: "pending",
-      amount: PRO_PRICE * data.months,
+    const orgRow = await context.supabase.from("organizations").select("name").eq("id", org.id).maybeSingle();
+    const declared = await context.supabase.rpc("declare_pix_payment", {
+      _months: data.months,
+      _note: data.note ?? "",
+      _amount: PRO_PRICE,
+      _pix_key: PIX_KEY,
     });
+    if (declared.error) {
+      const knownMessage = declared.error.message.includes("Já existe")
+        ? "Já existe um pagamento aguardando liberação."
+        : declared.error.message.includes("Apenas proprietária")
+          ? "Apenas proprietária ou gerente pode informar o pagamento."
+          : "Não foi possível registrar o pagamento.";
+      return { ok: false as const, message: knownMessage };
+    }
 
     await notifyAdmin("Novo pagamento Pix aguardando liberação", [
       `Clínica: ${orgRow.data?.name ?? org.id}`,
@@ -125,8 +99,7 @@ export const listPixPayments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     if (!isPlatformAdmin(context)) return { ok: false as const, items: [] };
-    const admin = await adminClient();
-    const { data } = await admin
+    const { data } = await context.supabase
       .from("pix_payments")
       .select("id, organization_id, amount, months, status, payer_note, admin_note, created_at, reviewed_at")
       .order("created_at", { ascending: false })
@@ -134,7 +107,7 @@ export const listPixPayments = createServerFn({ method: "GET" })
 
     const orgIds = [...new Set((data ?? []).map((p) => p.organization_id))];
     const orgs = orgIds.length
-      ? await admin.from("organizations").select("id, name").in("id", orgIds)
+      ? await context.supabase.from("organizations").select("id, name").in("id", orgIds)
       : { data: [] as { id: string; name: string }[] };
     const nameById = new Map((orgs.data ?? []).map((o) => [o.id, o.name]));
 
@@ -159,51 +132,19 @@ export const reviewPixPayment = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (!isPlatformAdmin(context)) return { ok: false as const, message: "Acesso restrito." };
 
-    const admin = await adminClient();
-    const payment = await admin.from("pix_payments").select("*").eq("id", data.id).maybeSingle();
-    if (!payment.data) return { ok: false as const, message: "Pagamento não encontrado." };
-    if (payment.data.status !== "pending")
-      return { ok: false as const, message: "Este pagamento já foi revisado." };
-
-    await admin
-      .from("pix_payments")
-      .update({
-        status: data.approve ? "approved" : "rejected",
-        admin_note: data.note ?? null,
-        reviewed_by: context.userId,
-        reviewed_at: new Date().toISOString(),
-      })
-      .eq("id", data.id);
-
-    if (data.approve) {
-      const sub = await admin
-        .from("subscriptions")
-        .select("*")
-        .eq("organization_id", payment.data.organization_id)
-        .maybeSingle();
-      const base = sub.data?.current_period_end ? new Date(sub.data.current_period_end) : new Date();
-      const from = base.getTime() > Date.now() ? base : new Date();
-      const end = new Date(from);
-      end.setMonth(end.getMonth() + (payment.data.months ?? 1));
-
-      await admin
-        .from("subscriptions")
-        .update({
-          status: "active",
-          plan: "pro",
-          current_period_end: end.toISOString(),
-          canceled_at: null,
-        })
-        .eq("organization_id", payment.data.organization_id);
-    }
-
-    await admin.from("subscription_events").insert({
-      organization_id: payment.data.organization_id,
-      subscription_id: payment.data.subscription_id,
-      kind: data.approve ? "pix_liberado" : "pix_recusado",
-      status: data.approve ? "active" : "rejected",
-      amount: payment.data.amount,
+    const reviewed = await context.supabase.rpc("review_pix_payment", {
+      _payment_id: data.id,
+      _approve: data.approve,
+      _note: data.note ?? "",
     });
+    if (reviewed.error) {
+      const knownMessage = reviewed.error.message.includes("já foi revisado")
+        ? "Este pagamento já foi revisado."
+        : reviewed.error.message.includes("não encontrado")
+          ? "Pagamento não encontrado."
+          : "Não foi possível revisar o pagamento.";
+      return { ok: false as const, message: knownMessage };
+    }
 
     return {
       ok: true as const,
