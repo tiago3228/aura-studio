@@ -60,6 +60,14 @@ type ServiceRow = {
   active: boolean;
   online_booking: boolean;
 };
+type PackageRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  validity_days: number;
+  online_booking: boolean;
+};
 
 function Servicos() {
   const { data: membership } = useMembership();
@@ -68,6 +76,7 @@ function Servicos() {
   const [openService, setOpenService] = useState(false);
   const [editingService, setEditingService] = useState<ServiceRow | null>(null);
   const [openPackage, setOpenPackage] = useState(false);
+  const [editingPackage, setEditingPackage] = useState<PackageRow | null>(null);
   const [openLibrary, setOpenLibrary] = useState(false);
 
   const data = useQuery({
@@ -312,6 +321,14 @@ function Servicos() {
                         type="button"
                         variant="outline"
                         size="sm"
+                        onClick={() => setEditingPackage(p)}
+                      >
+                        <Pencil className="size-3.5" /> Editar pacote
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
                         className="w-full justify-center text-destructive hover:text-destructive"
                         onClick={() => deletePackage(p)}
                       >
@@ -331,6 +348,21 @@ function Servicos() {
             service={editingService}
             onDone={() => {
               setEditingService(null);
+              refresh();
+            }}
+          />
+        ) : null}
+      </Dialog>
+      <Dialog open={!!editingPackage} onOpenChange={(value) => !value && setEditingPackage(null)}>
+        {editingPackage ? (
+          <PackageDialog
+            services={data.data?.services ?? []}
+            pkg={editingPackage}
+            existingItems={(data.data?.items ?? []).filter(
+              (item) => item.package_id === editingPackage.id,
+            )}
+            onDone={() => {
+              setEditingPackage(null);
               refresh();
             }}
           />
@@ -592,20 +624,26 @@ function LibraryDialog({ existing, onDone }: { existing: string[]; onDone: () =>
 
 function PackageDialog({
   services,
+  pkg,
+  existingItems,
   onDone,
 }: {
   services: { id: string; name: string }[];
+  pkg?: PackageRow;
+  existingItems?: { service_id: string; sessions: number }[];
   onDone: () => void;
 }) {
   const { data: membership } = useMembership();
   const [saving, setSaving] = useState(false);
-  const [items, setItems] = useState<Record<string, number>>({});
+  const [items, setItems] = useState<Record<string, number>>(
+    Object.fromEntries((existingItems ?? []).map((item) => [item.service_id, item.sessions])),
+  );
   const [form, setForm] = useState({
-    name: "",
-    description: "",
-    price: "",
-    validity_days: "180",
-    online_booking: true,
+    name: pkg?.name ?? "",
+    description: pkg?.description ?? "",
+    price: pkg ? String(pkg.price) : "",
+    validity_days: String(pkg?.validity_days ?? 180),
+    online_booking: pkg?.online_booking ?? true,
   });
 
   const totalSessions = Object.values(items).reduce((sum, n) => sum + n, 0);
@@ -621,21 +659,31 @@ function PackageDialog({
     setSaving(true);
     try {
       const orgId = membership.organization.id;
-      const { data: created, error } = await supabase
-        .from("packages")
-        .insert({
-          organization_id: orgId,
-          name: form.name,
-          description: form.description || null,
-          service_id: entries[0]![0],
-          sessions: totalSessions,
-          price: Number(form.price || 0),
-          validity_days: Number(form.validity_days),
-          online_booking: form.online_booking,
-        })
-        .select("id")
-        .single();
+      const values = {
+        organization_id: orgId,
+        name: form.name,
+        description: form.description || null,
+        service_id: entries[0]![0],
+        sessions: totalSessions,
+        price: Number(form.price || 0),
+        validity_days: Number(form.validity_days),
+        online_booking: form.online_booking,
+      };
+      const { data: created, error } = pkg
+        ? {
+            data: pkg,
+            error: (await supabase.from("packages").update(values).eq("id", pkg.id)).error,
+          }
+        : await supabase.from("packages").insert(values).select("id").single();
       if (error) throw error;
+
+      if (pkg) {
+        const { error: removeError } = await supabase
+          .from("package_items")
+          .delete()
+          .eq("package_id", pkg.id);
+        if (removeError) throw removeError;
+      }
 
       const { error: itemsError } = await supabase.from("package_items").insert(
         entries.map(([service_id, sessions]) => ({
@@ -647,7 +695,7 @@ function PackageDialog({
       );
       if (itemsError) throw itemsError;
 
-      toast.success("Pacote criado.");
+      toast.success(pkg ? "Pacote atualizado." : "Pacote criado.");
       onDone();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao salvar.");
@@ -659,7 +707,7 @@ function PackageDialog({
   return (
     <DialogContent className="max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle className="font-display">Novo pacote</DialogTitle>
+        <DialogTitle className="font-display">{pkg ? "Editar pacote" : "Novo pacote"}</DialogTitle>
       </DialogHeader>
       <form onSubmit={save} className="space-y-4">
         <div className="space-y-1.5">
@@ -771,7 +819,8 @@ function PackageDialog({
 
         <DialogFooter>
           <Button type="submit" disabled={saving}>
-            {saving ? <Loader2 className="size-4 animate-spin" /> : null} Criar pacote
+            {saving ? <Loader2 className="size-4 animate-spin" /> : null}{" "}
+            {pkg ? "Salvar alterações" : "Criar pacote"}
           </Button>
         </DialogFooter>
       </form>
