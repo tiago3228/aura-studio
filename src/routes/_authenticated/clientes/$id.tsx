@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, Loader2, MessageSquare, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -45,7 +46,7 @@ function ClientDetail() {
     enabled: !!membership,
     queryKey: ["client", id],
     queryFn: async () => {
-      const [client, appointments, packages, anamnesis] = await Promise.all([
+      const [client, appointments, packages, anamnesis, interactions] = await Promise.all([
         supabase.from("clients").select("*").eq("id", id).single(),
         supabase
           .from("appointments")
@@ -53,12 +54,22 @@ function ClientDetail() {
           .eq("client_id", id)
           .order("starts_at", { ascending: false })
           .limit(30),
-        supabase.from("client_packages").select("*").eq("client_id", id).order("created_at", { ascending: false }),
+        supabase
+          .from("client_packages")
+          .select("*")
+          .eq("client_id", id)
+          .order("created_at", { ascending: false }),
         supabase
           .from("anamnesis_responses")
           .select("id, created_at, answers, signed_at")
           .eq("client_id", id)
           .order("created_at", { ascending: false }),
+        (supabase as any)
+          .from("crm_interactions")
+          .select("id,type,occurred_at,subject,description,result,next_action")
+          .eq("client_id", id)
+          .order("occurred_at", { ascending: false })
+          .limit(50),
       ]);
       if (client.error) throw client.error;
       return {
@@ -66,17 +77,45 @@ function ClientDetail() {
         appointments: appointments.data ?? [],
         packages: packages.data ?? [],
         anamnesis: anamnesis.data ?? [],
+        interactions: (interactions.data ?? []) as {
+          id: string;
+          type: string;
+          occurred_at: string;
+          subject: string | null;
+          description: string;
+          result: string | null;
+          next_action: string | null;
+        }[],
       };
     },
   });
 
   if (query.isLoading) return <SkeletonCard />;
-  if (query.error) return <EmptyState title="Cliente não encontrado" description="Verifique o link." />;
+  if (query.error)
+    return <EmptyState title="Cliente não encontrado" description="Verifique o link." />;
 
-  const { client, appointments, packages, anamnesis } = query.data!;
+  const { client, appointments, packages, anamnesis, interactions } = query.data!;
+  const crmClient = client as typeof client & {
+    crm_status?: string | null;
+    is_vip?: boolean;
+    instagram?: string | null;
+    last_contact_at?: string | null;
+  };
   const totalSpent = appointments
     .filter((a) => a.status === "atendido")
     .reduce((acc, a) => acc + Number(a.price), 0);
+  const attended = appointments.filter((a) => a.status === "atendido");
+  const nextAppointment = appointments.find(
+    (a) => new Date(a.starts_at) >= new Date() && !["cancelado", "faltou"].includes(a.status),
+  );
+  const preferredProfessional = attended.reduce<Record<string, number>>((acc, appointment) => {
+    const name = appointment.professionals?.name;
+    if (name) acc[name] = (acc[name] ?? 0) + 1;
+    return acc;
+  }, {});
+  const preferredProfessionalName = Object.entries(preferredProfessional).sort(
+    (a, b) => b[1] - a[1],
+  )[0]?.[0];
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -98,18 +137,32 @@ function ClientDetail() {
             {client.birth_date ? ` · nasc. ${dateFmt(client.birth_date)}` : ""}
           </p>
         </div>
-        {client.origin ? <Pill tone="primary">{client.origin}</Pill> : null}
+        {crmClient.crm_status ? (
+          <Pill tone={crmClient.crm_status === "vip" ? "gold" : "primary"}>
+            {crmClient.crm_status}
+          </Pill>
+        ) : null}
+        {crmClient.is_vip ? <Pill tone="gold">VIP</Pill> : null}
       </div>
 
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <StatCard label="Atendimentos" value={String(appointments.length)} />
+        <StatCard label="Atendimentos" value={String(attended.length)} />
         <StatCard label="Total gasto" value={brl(totalSpent)} tone="success" />
-        <StatCard label="Pacotes ativos" value={String(packages.filter((p) => p.active).length)} tone="gold" />
+        <StatCard
+          label="Pacotes ativos"
+          value={String(packages.filter((p) => p.active).length)}
+          tone="gold"
+        />
+        <StatCard
+          label="Ticket médio"
+          value={brl(attended.length ? totalSpent / attended.length : 0)}
+        />
       </div>
 
       <Tabs defaultValue="historico">
         <TabsList>
-          <TabsTrigger value="historico">Histórico</TabsTrigger>
+          <TabsTrigger value="historico">Timeline 360º</TabsTrigger>
+          <TabsTrigger value="resumo">Resumo</TabsTrigger>
           <TabsTrigger value="prontuario">Prontuário</TabsTrigger>
           <TabsTrigger value="pacotes">Pacotes</TabsTrigger>
           <TabsTrigger value="anamnese">Anamnese</TabsTrigger>
@@ -117,25 +170,124 @@ function ClientDetail() {
         </TabsList>
 
         <TabsContent value="historico" className="mt-4">
-          {appointments.length === 0 ? (
-            <EmptyState title="Sem atendimentos" description="Os agendamentos deste cliente aparecerão aqui." />
+          {appointments.length === 0 && interactions.length === 0 ? (
+            <EmptyState
+              title="Sem histórico"
+              description="Agendamentos e contatos deste cliente aparecerão aqui."
+            />
           ) : (
             <ul className="surface divide-y divide-border p-0">
-              {appointments.map((a) => (
-                <li key={a.id} className="flex items-center gap-3 px-5 py-3">
-                  <div className="w-28 shrink-0 text-xs text-muted-foreground tabular-nums">
-                    {dateFmt(a.starts_at)} {timeFmt(a.starts_at)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{a.services?.name ?? "Procedimento"}</p>
-                    <p className="text-xs text-muted-foreground">{a.professionals?.name ?? "—"}</p>
-                  </div>
-                  <span className="text-sm font-semibold tabular-nums">{brl(Number(a.price))}</span>
-                  <Pill tone={a.status === "atendido" ? "success" : "neutral"}>{a.status}</Pill>
-                </li>
-              ))}
+              {[
+                ...appointments.map((a) => ({
+                  kind: "atendimento",
+                  date: a.starts_at,
+                  id: a.id,
+                  item: a,
+                })),
+                ...interactions.map((interaction) => ({
+                  kind: "contato",
+                  date: interaction.occurred_at,
+                  id: interaction.id,
+                  item: interaction,
+                })),
+              ]
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .map((event) =>
+                  event.kind === "atendimento"
+                    ? (() => {
+                        const a = event.item as (typeof appointments)[number];
+                        return (
+                          <li key={event.id} className="flex items-center gap-3 px-5 py-3">
+                            <div className="w-28 shrink-0 text-xs text-muted-foreground tabular-nums">
+                              {dateFmt(a.starts_at)} {timeFmt(a.starts_at)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium">
+                                {a.services?.name ?? "Procedimento"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {a.professionals?.name ?? "—"}
+                              </p>
+                            </div>
+                            <span className="text-sm font-semibold tabular-nums">
+                              {brl(Number(a.price))}
+                            </span>
+                            <Pill tone={a.status === "atendido" ? "success" : "neutral"}>
+                              {a.status}
+                            </Pill>
+                          </li>
+                        );
+                      })()
+                    : (() => {
+                        const contact = event.item as (typeof interactions)[number];
+                        return (
+                          <li key={event.id} className="flex items-start gap-3 px-5 py-3">
+                            <div className="grid size-8 shrink-0 place-items-center rounded-full bg-primary-soft text-primary">
+                              <MessageSquare className="size-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium">
+                                {contact.subject ?? "Contato registrado"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {dateFmt(contact.occurred_at)} · {contact.type}
+                              </p>
+                              <p className="mt-1 text-sm">{contact.description}</p>
+                              {contact.result ? (
+                                <p className="text-xs text-muted-foreground">
+                                  Resultado: {contact.result}
+                                </p>
+                              ) : null}
+                            </div>
+                          </li>
+                        );
+                      })(),
+                )}
             </ul>
           )}
+        </TabsContent>
+
+        <TabsContent value="resumo" className="mt-4">
+          <div className="surface grid gap-4 p-5 text-sm sm:grid-cols-2">
+            <Row
+              label="Próximo atendimento"
+              value={
+                nextAppointment
+                  ? `${dateFmt(nextAppointment.starts_at)} ${timeFmt(nextAppointment.starts_at)}`
+                  : null
+              }
+            />
+            <Row
+              label="Último atendimento"
+              value={
+                attended[0]
+                  ? `${dateFmt(attended[0].starts_at)} ${timeFmt(attended[0].starts_at)}`
+                  : null
+              }
+            />
+            <Row label="Profissional preferido" value={preferredProfessionalName} />
+            <Row
+              label="Último contato"
+              value={crmClient.last_contact_at ? dateFmt(crmClient.last_contact_at) : null}
+            />
+            <Row
+              label="Procedimentos realizados"
+              value={String(
+                new Set(attended.map((item) => item.services?.name).filter(Boolean)).size,
+              )}
+            />
+            <Row
+              label="Sessões restantes"
+              value={String(
+                packages
+                  .filter((item) => item.active)
+                  .reduce(
+                    (sum, item) => sum + Math.max(0, item.sessions_total - item.sessions_used),
+                    0,
+                  ),
+              )}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="prontuario" className="mt-4">
@@ -144,13 +296,18 @@ function ClientDetail() {
 
         <TabsContent value="pacotes" className="mt-4 space-y-3">
           {packages.length === 0 ? (
-            <EmptyState title="Nenhum pacote" description="Venda pacotes em Procedimentos para controlar sessões." />
+            <EmptyState
+              title="Nenhum pacote"
+              description="Venda pacotes em Procedimentos para controlar sessões."
+            />
           ) : (
             packages.map((p) => (
               <div key={p.id} className="surface p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold">{p.name}</p>
-                  <Pill tone={p.active ? "success" : "neutral"}>{p.active ? "ativo" : "encerrado"}</Pill>
+                  <Pill tone={p.active ? "success" : "neutral"}>
+                    {p.active ? "ativo" : "encerrado"}
+                  </Pill>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {p.sessions_used} de {p.sessions_total} sessões usadas · {brl(Number(p.price))}
@@ -159,7 +316,9 @@ function ClientDetail() {
                 <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full rounded-full bg-primary"
-                    style={{ width: `${Math.min(100, (p.sessions_used / Math.max(1, p.sessions_total)) * 100)}%` }}
+                    style={{
+                      width: `${Math.min(100, (p.sessions_used / Math.max(1, p.sessions_total)) * 100)}%`,
+                    }}
                   />
                 </div>
               </div>
@@ -199,7 +358,9 @@ function ClientDetail() {
                 <dl className="mt-3 space-y-1.5 text-xs">
                   {Object.entries((a.answers ?? {}) as Record<string, string>).map(([k, v]) => (
                     <div key={k} className="flex gap-2">
-                      <dt className="w-32 shrink-0 text-muted-foreground capitalize">{k.replace(/_/g, " ")}</dt>
+                      <dt className="w-32 shrink-0 text-muted-foreground capitalize">
+                        {k.replace(/_/g, " ")}
+                      </dt>
                       <dd className="flex-1 text-pretty">{String(v) || "—"}</dd>
                     </div>
                   ))}
@@ -214,6 +375,7 @@ function ClientDetail() {
             <Row label="CPF" value={client.cpf} />
             <Row label="Telefone" value={client.phone} />
             <Row label="E-mail" value={client.email} />
+            <Row label="Instagram" value={crmClient.instagram} />
             <Row label="Endereço" value={client.address} />
             <Row label="Origem" value={client.origin} />
             <Row label="Observações" value={client.notes} />
