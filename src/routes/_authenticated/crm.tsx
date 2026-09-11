@@ -1,8 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { ArrowRight, CheckCircle2, Loader2, Plus, UsersRound } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Loader2,
+  MessageSquare,
+  Pencil,
+  Plus,
+  Search,
+  UserRound,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -32,8 +41,10 @@ type Lead = {
   whatsapp: string | null;
   email: string | null;
   source: string | null;
+  notes?: string | null;
   stage: string;
   created_at: string;
+  client_id?: string | null;
 };
 type FollowUp = {
   id: string;
@@ -44,7 +55,6 @@ type FollowUp = {
   lead_id: string | null;
   client_id: string | null;
 };
-
 const STAGES = [
   ["novo_lead", "Novo lead"],
   ["primeiro_contato", "Primeiro contato"],
@@ -62,17 +72,19 @@ function CrmPage() {
   const { data: membership } = useMembership();
   const orgId = membership?.organization.id;
   const queryClient = useQueryClient();
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [tab, setTab] = useState("dashboard");
-  const [saving, setSaving] = useState(false);
-
+  const [leadDialog, setLeadDialog] = useState(false);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [contactLead, setContactLead] = useState<Lead | null>(null);
+  const [followUpLead, setFollowUpLead] = useState<Lead | null>(null);
+  const [term, setTerm] = useState("");
   const leads = useQuery({
     enabled: !!orgId,
     queryKey: ["crm-leads", orgId],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("crm_leads")
-        .select("id,name,whatsapp,email,source,stage,created_at")
+        .select("id,name,whatsapp,email,source,notes,stage,client_id,created_at")
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Lead[];
@@ -91,15 +103,19 @@ function CrmPage() {
       return (data ?? []) as FollowUp[];
     },
   });
-
+  const filteredLeads = (leads.data ?? []).filter((lead) =>
+    `${lead.name} ${lead.whatsapp ?? ""} ${lead.email ?? ""} ${lead.source ?? ""}`
+      .toLowerCase()
+      .includes(term.toLowerCase()),
+  );
   const grouped = useMemo(
     () =>
       STAGES.map(([key, label]) => ({
         key,
         label,
-        leads: (leads.data ?? []).filter((lead) => lead.stage === key),
+        leads: filteredLeads.filter((lead) => lead.stage === key),
       })),
-    [leads.data],
+    [filteredLeads],
   );
   const metrics = {
     total: leads.data?.length ?? 0,
@@ -107,35 +123,21 @@ function CrmPage() {
     lost: leads.data?.filter((x) => x.stage === "perdido").length ?? 0,
     followUps: followUps.data?.length ?? 0,
   };
-
-  async function createLead(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!orgId) return;
-    setSaving(true);
-    const form = new FormData(event.currentTarget);
-    const payload = {
-      organization_id: orgId,
-      name: String(form.get("name")),
-      whatsapp: String(form.get("whatsapp") || "") || null,
-      email: String(form.get("email") || "") || null,
-      source: String(form.get("source") || "") || null,
-      notes: String(form.get("notes") || "") || null,
-      first_contact_at: new Date().toISOString(),
-    };
-    const { error } = await (supabase as any).from("crm_leads").insert(payload);
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success("Lead criado no funil.");
-    setDialogOpen(false);
-    await queryClient.invalidateQueries({ queryKey: ["crm-leads", orgId] });
-  }
-
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ["crm-leads", orgId] });
+    void queryClient.invalidateQueries({ queryKey: ["crm-follow-ups", orgId] });
+  };
   async function moveLead(lead: Lead, stage: string) {
     const { error } = await (supabase as any).from("crm_leads").update({ stage }).eq("id", lead.id);
     if (error) return toast.error(error.message);
-    await queryClient.invalidateQueries({ queryKey: ["crm-leads", orgId] });
+    invalidate();
   }
-
+  async function convertLead(lead: Lead) {
+    const { data, error } = await (supabase as any).rpc("crm_convert_lead", { _lead_id: lead.id });
+    if (error) return toast.error(error.message);
+    toast.success(`${data?.name ?? lead.name} convertido em cliente.`);
+    invalidate();
+  }
   async function finishFollowUp(id: string) {
     const { error } = await (supabase as any)
       .from("crm_follow_ups")
@@ -143,28 +145,33 @@ function CrmPage() {
       .eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Follow-up concluído.");
-    await queryClient.invalidateQueries({ queryKey: ["crm-follow-ups", orgId] });
+    invalidate();
   }
-
   return (
     <div className="mx-auto max-w-7xl">
       <PageHeader
         title="CRM"
         subtitle="Acompanhe a jornada completa dos seus leads e clientes."
         actions={
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button
+            onClick={() => {
+              setEditingLead(null);
+              setLeadDialog(true);
+            }}
+          >
             <Plus className="size-4" /> Novo lead
           </Button>
         }
       />
-      <div className="mb-5 rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-sm text-foreground">
-        <strong>CRM em construção:</strong> esta primeira versão já traz dashboard, cadastro de
-        leads, funil e follow-ups. Novos módulos serão liberados gradualmente.
+      <div className="mb-5 rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-sm">
+        <strong>CRM em evolução:</strong> leads, funil, contatos e follow-ups já estão disponíveis
+        nesta etapa.
       </div>
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="mb-5 grid w-full grid-cols-3 sm:w-auto sm:grid-cols-3">
+        <TabsList className="mb-5 grid w-full grid-cols-4 sm:w-auto">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="funil">Funil de vendas</TabsTrigger>
+          <TabsTrigger value="leads">Leads</TabsTrigger>
+          <TabsTrigger value="funil">Funil</TabsTrigger>
           <TabsTrigger value="followups">Follow-ups</TabsTrigger>
         </TabsList>
         <TabsContent value="dashboard" className="space-y-5">
@@ -195,40 +202,72 @@ function CrmPage() {
               ))}
             </div>
           </div>
-          <div className="surface p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="font-display text-lg font-semibold">Leads recentes</h2>
-                <p className="text-sm text-muted-foreground">Últimos cadastros recebidos no CRM.</p>
-              </div>
-              <Button variant="outline" size="sm" onClick={() => setTab("funil")}>
-                Ver funil
-              </Button>
-            </div>
-            {leads.isLoading ? (
-              <SkeletonCard />
-            ) : (
-              leads.data?.slice(0, 5).map((lead) => (
-                <div className="flex items-center gap-3 border-t border-border py-3" key={lead.id}>
+        </TabsContent>
+        <TabsContent value="leads" className="space-y-4">
+          <div className="relative">
+            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              placeholder="Buscar por nome, WhatsApp, e-mail ou origem"
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+            />
+          </div>
+          {leads.isLoading ? (
+            <SkeletonCard />
+          ) : (
+            <div className="surface divide-y divide-border">
+              {filteredLeads.map((lead) => (
+                <div className="flex flex-wrap items-center gap-3 p-4" key={lead.id}>
                   <div className="grid size-9 place-items-center rounded-full bg-primary-soft text-primary">
-                    <UsersRound className="size-4" />
+                    <UserRound className="size-4" />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{lead.name}</p>
+                  <div className="min-w-44 flex-1">
+                    <p className="font-medium">{lead.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {lead.whatsapp ?? lead.email ?? "Sem contato"}
+                      {lead.whatsapp ?? lead.email ?? "Sem contato"}{" "}
+                      {lead.source ? ` · ${lead.source}` : ""}
                     </p>
                   </div>
                   <Pill>{STAGES.find(([key]) => key === lead.stage)?.[1] ?? lead.stage}</Pill>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Editar lead"
+                      onClick={() => {
+                        setEditingLead(lead);
+                        setLeadDialog(true);
+                      }}
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Registrar contato"
+                      onClick={() => setContactLead(lead)}
+                    >
+                      <MessageSquare className="size-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setFollowUpLead(lead)}>
+                      Follow-up
+                    </Button>
+                    {lead.stage !== "converteu" && lead.stage !== "fidelizado" ? (
+                      <Button size="sm" onClick={() => convertLead(lead)}>
+                        Converter
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
-              ))
-            )}
-            {!leads.isLoading && !leads.data?.length ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                Nenhum lead cadastrado ainda.
-              </p>
-            ) : null}
-          </div>
+              ))}
+              {!filteredLeads.length ? (
+                <p className="p-10 text-center text-sm text-muted-foreground">
+                  Nenhum lead encontrado.
+                </p>
+              ) : null}
+            </div>
+          )}
         </TabsContent>
         <TabsContent value="funil">
           <div className="flex gap-3 overflow-x-auto pb-4">
@@ -248,21 +287,28 @@ function CrmPage() {
                       <p className="mt-1 text-xs text-muted-foreground">
                         {lead.whatsapp ?? lead.email ?? "Sem contato"}
                       </p>
-                      <select
-                        className="mt-3 h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
-                        value={lead.stage}
-                        onChange={(event) => moveLead(lead, event.target.value)}
-                        aria-label={`Mover ${lead.name}`}
-                      >
-                        <option disabled value={lead.stage}>
-                          {column.label}
-                        </option>
-                        {STAGES.map(([key, label]) => (
-                          <option value={key} key={key}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="mt-3 flex gap-1">
+                        <select
+                          className="h-8 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-xs"
+                          value={lead.stage}
+                          onChange={(event) => moveLead(lead, event.target.value)}
+                          aria-label={`Mover ${lead.name}`}
+                        >
+                          {STAGES.map(([key, label]) => (
+                            <option value={key} key={key}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setEditingLead(lead)}
+                          title="Editar lead"
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -281,7 +327,7 @@ function CrmPage() {
                     <CheckCircle2 className="size-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{followUp.title}</p>
+                    <p className="font-medium">{followUp.title}</p>
                     <p className="text-xs text-muted-foreground">
                       {followUp.description ?? "Sem descrição"} ·{" "}
                       {new Date(followUp.due_at).toLocaleString("pt-BR")}
@@ -293,7 +339,7 @@ function CrmPage() {
                 </div>
               ))
             )}
-            {!followUps.isLoading && !followUps.data?.length ? (
+            {!followUps.data?.length ? (
               <p className="py-10 text-center text-sm text-muted-foreground">
                 Nenhum follow-up pendente.
               </p>
@@ -301,42 +347,266 @@ function CrmPage() {
           </div>
         </TabsContent>
       </Tabs>
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="font-display">Novo lead</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={createLead} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="lead-name">Nome completo</Label>
-              <Input id="lead-name" name="name" required />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="lead-phone">WhatsApp</Label>
-                <Input id="lead-phone" name="whatsapp" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="lead-email">E-mail</Label>
-                <Input id="lead-email" name="email" type="email" />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="lead-source">Origem</Label>
-              <Input id="lead-source" name="source" placeholder="Instagram, indicação..." />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="lead-notes">Observações</Label>
-              <Textarea id="lead-notes" name="notes" rows={3} />
-            </div>
-            <DialogFooter>
-              <Button type="submit" disabled={saving}>
-                {saving ? <Loader2 className="size-4 animate-spin" /> : null} Criar lead
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
+      <Dialog open={leadDialog} onOpenChange={setLeadDialog}>
+        <LeadDialog
+          lead={editingLead}
+          orgId={orgId}
+          onDone={() => {
+            setLeadDialog(false);
+            invalidate();
+          }}
+        />
+      </Dialog>
+      <Dialog open={!!contactLead} onOpenChange={(open) => !open && setContactLead(null)}>
+        {contactLead ? (
+          <InteractionDialog
+            lead={contactLead}
+            orgId={orgId}
+            onDone={() => {
+              setContactLead(null);
+              invalidate();
+            }}
+          />
+        ) : null}
+      </Dialog>
+      <Dialog open={!!followUpLead} onOpenChange={(open) => !open && setFollowUpLead(null)}>
+        {followUpLead ? (
+          <FollowUpDialog
+            lead={followUpLead}
+            orgId={orgId}
+            onDone={() => {
+              setFollowUpLead(null);
+              invalidate();
+            }}
+          />
+        ) : null}
       </Dialog>
     </div>
+  );
+}
+
+function LeadDialog({
+  lead,
+  orgId,
+  onDone,
+}: {
+  lead: Lead | null;
+  orgId?: string;
+  onDone: () => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    name: lead?.name ?? "",
+    whatsapp: lead?.whatsapp ?? "",
+    email: lead?.email ?? "",
+    source: lead?.source ?? "",
+    notes: lead?.notes ?? "",
+  });
+  async function save(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!orgId) return;
+    setSaving(true);
+    const payload = {
+      name: form.name,
+      whatsapp: form.whatsapp || null,
+      email: form.email || null,
+      source: form.source || null,
+      notes: form.notes || null,
+    };
+    const result = lead
+      ? await (supabase as any).from("crm_leads").update(payload).eq("id", lead.id)
+      : await (supabase as any).from("crm_leads").insert({
+          ...payload,
+          organization_id: orgId,
+          first_contact_at: new Date().toISOString(),
+        });
+    setSaving(false);
+    if (result.error) return toast.error(result.error.message);
+    toast.success(lead ? "Lead atualizado." : "Lead criado no funil.");
+    onDone();
+  }
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>{lead ? "Editar lead" : "Novo lead"}</DialogTitle>
+      </DialogHeader>
+      <form onSubmit={save} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label>Nome completo</Label>
+          <Input
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            required
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label>WhatsApp</Label>
+            <Input
+              value={form.whatsapp}
+              onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>E-mail</Label>
+            <Input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Origem</Label>
+          <Input
+            value={form.source}
+            onChange={(e) => setForm({ ...form, source: e.target.value })}
+            placeholder="Instagram, indicação..."
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Observações</Label>
+          <Textarea
+            rows={3}
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          />
+        </div>
+        <DialogFooter>
+          <Button type="submit" disabled={saving}>
+            {saving ? <Loader2 className="size-4 animate-spin" /> : null} Salvar
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  );
+}
+
+function InteractionDialog({
+  lead,
+  orgId,
+  onDone,
+}: {
+  lead: Lead;
+  orgId?: string;
+  onDone: () => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  async function save(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!orgId) return;
+    setSaving(true);
+    const form = new FormData(event.currentTarget);
+    const { error } = await (supabase as any).from("crm_interactions").insert({
+      organization_id: orgId,
+      lead_id: lead.id,
+      type: String(form.get("type")),
+      subject: String(form.get("subject") || "") || null,
+      description: String(form.get("description")),
+      result: String(form.get("result") || "") || null,
+      next_action: String(form.get("next_action") || "") || null,
+    });
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("Contato registrado no histórico.");
+    onDone();
+  }
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Registrar contato · {lead.name}</DialogTitle>
+      </DialogHeader>
+      <form onSubmit={save} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label>Tipo</Label>
+          <select
+            name="type"
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="whatsapp">WhatsApp</option>
+            <option value="ligacao">Ligação</option>
+            <option value="email">E-mail</option>
+            <option value="mensagem">Mensagem</option>
+            <option value="observacao">Observação</option>
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Assunto</Label>
+          <Input name="subject" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Descrição</Label>
+          <Textarea name="description" required rows={3} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Resultado</Label>
+          <Input name="result" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Próxima ação</Label>
+          <Input name="next_action" />
+        </div>
+        <DialogFooter>
+          <Button type="submit" disabled={saving}>
+            {saving ? <Loader2 className="size-4 animate-spin" /> : null} Registrar
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  );
+}
+
+function FollowUpDialog({
+  lead,
+  orgId,
+  onDone,
+}: {
+  lead: Lead;
+  orgId?: string;
+  onDone: () => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  async function save(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!orgId) return;
+    setSaving(true);
+    const form = new FormData(event.currentTarget);
+    const { error } = await (supabase as any).from("crm_follow_ups").insert({
+      organization_id: orgId,
+      lead_id: lead.id,
+      title: String(form.get("title")),
+      description: String(form.get("description") || "") || null,
+      due_at: new Date(String(form.get("due_at"))).toISOString(),
+    });
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("Follow-up criado.");
+    onDone();
+  }
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Novo follow-up · {lead.name}</DialogTitle>
+      </DialogHeader>
+      <form onSubmit={save} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label>Assunto</Label>
+          <Input name="title" required placeholder="Retorno do orçamento" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Data e hora</Label>
+          <Input name="due_at" type="datetime-local" required />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Descrição</Label>
+          <Textarea name="description" rows={3} />
+        </div>
+        <DialogFooter>
+          <Button type="submit" disabled={saving}>
+            {saving ? <Loader2 className="size-4 animate-spin" /> : null} Criar follow-up
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
   );
 }
