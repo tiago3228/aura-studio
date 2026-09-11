@@ -243,7 +243,7 @@ function Agenda() {
             </DialogTrigger>
             <NewAppointmentDialog
               lists={lists.data}
-              locationId={locationId || undefined}
+              {...(locationId ? { locationId } : {})}
               onDone={() => {
                 setOpen(false);
                 queryClient.invalidateQueries({ queryKey: ["appointments"] });
