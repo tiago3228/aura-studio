@@ -27,6 +27,7 @@ import { Route as AuthenticatedGatewaysRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedGlobalizacaoRouteImport } from './routes/_authenticated/globalizacao'
 import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedPagamentosRouteImport } from './routes/_authenticated/pagamentos'
 import { Route as AuthenticatedPixAdminRouteImport } from './routes/_authenticated/pix-admin'
 import { Route as AuthenticatedPlatformAdminRouteImport } from './routes/_authenticated/platform-admin'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
@@ -128,6 +129,11 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPagamentosRoute = AuthenticatedPagamentosRouteImport.update({
+  id: '/pagamentos',
+  path: '/pagamentos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPixAdminRoute = AuthenticatedPixAdminRouteImport.update({
   id: '/pix-admin',
   path: '/pix-admin',
@@ -195,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/globalizacao': typeof AuthenticatedGlobalizacaoRoute
   '/marketing': typeof AuthenticatedMarketingRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/pix-admin': typeof AuthenticatedPixAdminRoute
   '/platform-admin': typeof AuthenticatedPlatformAdminRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -223,6 +230,7 @@ export interface FileRoutesByTo {
   '/globalizacao': typeof AuthenticatedGlobalizacaoRoute
   '/marketing': typeof AuthenticatedMarketingRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/pix-admin': typeof AuthenticatedPixAdminRoute
   '/platform-admin': typeof AuthenticatedPlatformAdminRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -253,6 +261,7 @@ export interface FileRoutesById {
   '/_authenticated/globalizacao': typeof AuthenticatedGlobalizacaoRoute
   '/_authenticated/marketing': typeof AuthenticatedMarketingRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_authenticated/pagamentos': typeof AuthenticatedPagamentosRoute
   '/_authenticated/pix-admin': typeof AuthenticatedPixAdminRoute
   '/_authenticated/platform-admin': typeof AuthenticatedPlatformAdminRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -283,6 +292,7 @@ export interface FileRouteTypes {
     | '/globalizacao'
     | '/marketing'
     | '/onboarding'
+    | '/pagamentos'
     | '/pix-admin'
     | '/platform-admin'
     | '/relatorios'
@@ -311,6 +321,7 @@ export interface FileRouteTypes {
     | '/globalizacao'
     | '/marketing'
     | '/onboarding'
+    | '/pagamentos'
     | '/pix-admin'
     | '/platform-admin'
     | '/relatorios'
@@ -340,6 +351,7 @@ export interface FileRouteTypes {
     | '/_authenticated/globalizacao'
     | '/_authenticated/marketing'
     | '/_authenticated/onboarding'
+    | '/_authenticated/pagamentos'
     | '/_authenticated/pix-admin'
     | '/_authenticated/platform-admin'
     | '/_authenticated/relatorios'
@@ -487,6 +499,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/pagamentos': {
+      id: '/_authenticated/pagamentos'
+      path: '/pagamentos'
+      fullPath: '/pagamentos'
+      preLoaderRoute: typeof AuthenticatedPagamentosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/pix-admin': {
       id: '/_authenticated/pix-admin'
       path: '/pix-admin'
@@ -569,6 +588,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedGlobalizacaoRoute: typeof AuthenticatedGlobalizacaoRoute
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+  AuthenticatedPagamentosRoute: typeof AuthenticatedPagamentosRoute
   AuthenticatedPixAdminRoute: typeof AuthenticatedPixAdminRoute
   AuthenticatedPlatformAdminRoute: typeof AuthenticatedPlatformAdminRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
@@ -594,6 +614,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedGlobalizacaoRoute: AuthenticatedGlobalizacaoRoute,
   AuthenticatedMarketingRoute: AuthenticatedMarketingRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+  AuthenticatedPagamentosRoute: AuthenticatedPagamentosRoute,
   AuthenticatedPixAdminRoute: AuthenticatedPixAdminRoute,
   AuthenticatedPlatformAdminRoute: AuthenticatedPlatformAdminRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
