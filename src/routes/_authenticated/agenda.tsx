@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Clipboard,
   ExternalLink,
+  BellRing,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -41,6 +42,12 @@ import {
 import type { Database } from "@/integrations/supabase/types";
 
 type Status = Database["public"]["Enums"]["appointment_status"];
+type OnlineAlert = {
+  id: string;
+  starts_at: string;
+  guest_name: string | null;
+  clients: { name: string } | null;
+};
 
 const STATUSES: Status[] = [
   "agendado",
@@ -126,10 +133,9 @@ function Agenda() {
   const [locationId, setLocationId] = useState("");
   const [open, setOpen] = useState(false);
   const [messageTarget, setMessageTarget] = useState<MessageTarget | null>(null);
-  const bookingUrl =
-    membership?.organization.booking_slug
-      ? publicAppUrl(`/agendar/${membership.organization.booking_slug}`)
-      : "";
+  const bookingUrl = membership?.organization.booking_slug
+    ? publicAppUrl(`/agendar/${membership.organization.booking_slug}`)
+    : "";
 
   const range = useMemo(() => {
     const from = view === "dia" ? anchor : startOfWeek(anchor);
@@ -153,6 +159,26 @@ function Agenda() {
       return data;
     },
   });
+
+  const onlineAlerts = useQuery({
+    enabled: !!orgId,
+    queryKey: ["agenda-online-alerts", orgId],
+    refetchInterval: 30000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("id, starts_at, guest_name, clients(name), services(name)")
+        .eq("source", "online")
+        .eq("status", "agendado")
+        .gte("starts_at", new Date().toISOString())
+        .order("starts_at")
+        .limit(20);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const pendingOnline = onlineAlerts.data ?? [];
 
   const locations = useQuery({
     enabled: !!orgId,
@@ -252,6 +278,55 @@ function Agenda() {
           </Dialog>
         }
       />
+
+      {pendingOnline.length > 0 ? (
+        <section className="mb-5 overflow-hidden rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 shadow-sm">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="relative grid size-10 shrink-0 place-items-center rounded-full bg-amber-400 text-white">
+              <span className="absolute inset-0 animate-ping rounded-full bg-amber-400/60" />
+              <BellRing className="relative size-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">
+                {pendingOnline.length} agendamento(s) online aguardando confirmação
+              </p>
+              <p className="text-xs text-amber-800">
+                A Agenda verifica novos pedidos automaticamente a cada 30 segundos.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-400 bg-white text-amber-900 hover:bg-amber-100"
+              onClick={() => {
+                setAnchor(isoDay(new Date(pendingOnline[0].starts_at)));
+                setView("dia");
+              }}
+            >
+              Ver primeiro
+            </Button>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {pendingOnline.slice(0, 5).map((appointment: OnlineAlert) => {
+              const date = new Date(appointment.starts_at);
+              return (
+                <button
+                  type="button"
+                  key={appointment.id}
+                  className="rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-amber-100"
+                  onClick={() => {
+                    setAnchor(isoDay(date));
+                    setView("dia");
+                  }}
+                >
+                  {date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} ·{" "}
+                  {appointment.clients?.name ?? appointment.guest_name ?? "Paciente"}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
       <div className="surface mb-5 flex flex-wrap items-center gap-3 border-primary/20 bg-primary-soft/40 p-4">
         <div className="min-w-0 flex-1">
