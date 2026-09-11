@@ -17,6 +17,7 @@ import { Route as AuthenticatedAssinaturaRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAssistenteRouteImport } from './routes/_authenticated/assistente'
 import { Route as AuthenticatedComissoesRouteImport } from './routes/_authenticated/comissoes'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
+import { Route as AuthenticatedCrmRouteImport } from './routes/_authenticated/crm'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedEquipeRouteImport } from './routes/_authenticated/equipe'
 import { Route as AuthenticatedEstoqueRouteImport } from './routes/_authenticated/estoque'
@@ -69,6 +70,11 @@ const AuthenticatedConfiguracoesRoute =
     path: '/configuracoes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCrmRoute = AuthenticatedCrmRouteImport.update({
+  id: '/crm',
+  path: '/crm',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/assistente': typeof AuthenticatedAssistenteRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/crm': typeof AuthenticatedCrmRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/equipe': typeof AuthenticatedEquipeRoute
   '/estoque': typeof AuthenticatedEstoqueRoute
@@ -155,6 +162,7 @@ export interface FileRoutesByTo {
   '/assistente': typeof AuthenticatedAssistenteRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/crm': typeof AuthenticatedCrmRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/equipe': typeof AuthenticatedEquipeRoute
   '/estoque': typeof AuthenticatedEstoqueRoute
@@ -177,6 +185,7 @@ export interface FileRoutesById {
   '/_authenticated/assistente': typeof AuthenticatedAssistenteRoute
   '/_authenticated/comissoes': typeof AuthenticatedComissoesRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/_authenticated/crm': typeof AuthenticatedCrmRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/equipe': typeof AuthenticatedEquipeRoute
   '/_authenticated/estoque': typeof AuthenticatedEstoqueRoute
@@ -199,6 +208,7 @@ export interface FileRouteTypes {
     | '/assistente'
     | '/comissoes'
     | '/configuracoes'
+    | '/crm'
     | '/dashboard'
     | '/equipe'
     | '/estoque'
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/assistente'
     | '/comissoes'
     | '/configuracoes'
+    | '/crm'
     | '/dashboard'
     | '/equipe'
     | '/estoque'
@@ -240,6 +251,7 @@ export interface FileRouteTypes {
     | '/_authenticated/assistente'
     | '/_authenticated/comissoes'
     | '/_authenticated/configuracoes'
+    | '/_authenticated/crm'
     | '/_authenticated/dashboard'
     | '/_authenticated/equipe'
     | '/_authenticated/estoque'
@@ -317,6 +329,13 @@ declare module '@tanstack/react-router' {
       path: '/configuracoes'
       fullPath: '/configuracoes'
       preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/crm': {
+      id: '/_authenticated/crm'
+      path: '/crm'
+      fullPath: '/crm'
+      preLoaderRoute: typeof AuthenticatedCrmRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
@@ -405,6 +424,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAssistenteRoute: typeof AuthenticatedAssistenteRoute
   AuthenticatedComissoesRoute: typeof AuthenticatedComissoesRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
+  AuthenticatedCrmRoute: typeof AuthenticatedCrmRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEquipeRoute: typeof AuthenticatedEquipeRoute
   AuthenticatedEstoqueRoute: typeof AuthenticatedEstoqueRoute
@@ -422,6 +442,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAssistenteRoute: AuthenticatedAssistenteRoute,
   AuthenticatedComissoesRoute: AuthenticatedComissoesRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
+  AuthenticatedCrmRoute: AuthenticatedCrmRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEquipeRoute: AuthenticatedEquipeRoute,
   AuthenticatedEstoqueRoute: AuthenticatedEstoqueRoute,
