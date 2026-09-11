@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Globe2,
   Building2,
+  HelpCircle,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -70,6 +71,13 @@ const NAV: NavItem[] = [
   { to: "/globalizacao", label: "Idioma e moeda", area: "configuracoes", icon: Globe2 },
   { to: "/seguranca", label: "Segurança e auditoria", area: "configuracoes", icon: ShieldCheck },
   { to: "/filiais", label: "Filiais", area: "configuracoes", icon: Building2 },
+  {
+    to: "/ajuda",
+    label: "Central de Ajuda",
+    area: "configuracoes",
+    icon: HelpCircle,
+    mobile: true,
+  },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
