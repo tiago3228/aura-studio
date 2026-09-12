@@ -197,7 +197,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       ) : null}
 
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/85 px-4 py-3 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/85 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur lg:hidden">
         <div className="flex items-center gap-2">
           {pathname !== "/dashboard" ? (
             <button onClick={() => router.history.back()} aria-label="Voltar">
@@ -230,7 +230,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="px-4 pt-6 pb-28 lg:ml-64 lg:px-8 lg:pb-10">{children}</main>
+      <main className="min-w-0 px-4 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] lg:ml-64 lg:px-8 lg:pb-10">
+        {children}
+      </main>
 
       <div
         aria-hidden="true"
@@ -239,7 +241,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         By Tiago Cardoso
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-background/95 backdrop-blur lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
         {items
           .filter((i) => i.mobile)
           .map((item) => {
@@ -250,7 +252,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "flex flex-1 flex-col items-center gap-1 py-2.5 text-[10px] font-medium",
+                  "flex min-h-14 flex-1 flex-col items-center justify-center gap-1 px-1 py-2.5 text-[10px] font-medium",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >
