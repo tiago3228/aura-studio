@@ -48,6 +48,7 @@ type OfferService = {
   duration_min: number;
   price: number;
   promo_price: number | null;
+  online_booking: boolean;
 };
 
 type OfferPackage = {
@@ -70,10 +71,9 @@ async function loadCatalog(orgId: string) {
   const [services, packages, items, profServices, profPackages] = await Promise.all([
     supabase
       .from("services")
-      .select("id, name, description, duration_min, price, promo_price")
+      .select("id, name, description, duration_min, price, promo_price, online_booking")
       .eq("organization_id", orgId)
       .eq("active", true)
-      .eq("online_booking", true)
       .order("name"),
     supabase
       .from("packages")
@@ -144,7 +144,7 @@ async function loadCatalog(orgId: string) {
         [...serviceById.values()];
 
     return {
-      services: base.filter((s) => !blocked.has(s.id)),
+      services: base.filter((s) => s.online_booking && !blocked.has(s.id)),
       packages: pkgs,
     };
   };
@@ -253,13 +253,14 @@ async function loadContext(
   }
 
   const uniqueTargetServiceIds = [...new Set(targetServiceIds)];
-  const service = await supabaseAdmin
+  let serviceQuery = supabaseAdmin
     .from("services")
     .select("id, name, duration_min, buffer_min, price, promo_price")
     .in("id", uniqueTargetServiceIds)
     .eq("organization_id", org.data.id)
-    .eq("active", true)
-    .eq("online_booking", true);
+    .eq("active", true);
+  if (!packages.length) serviceQuery = serviceQuery.eq("online_booking", true);
+  const service = await serviceQuery;
   if (!service.data?.length || service.data.length !== uniqueTargetServiceIds.length) {
     return { error: "Um dos procedimentos selecionados está indisponível." as const };
   }
