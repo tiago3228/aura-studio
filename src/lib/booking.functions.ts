@@ -68,7 +68,10 @@ type OfferPackage = {
  * nesse pacote deixam de aparecer como avulsos — apenas para esse profissional.
  */
 async function loadCatalog(orgId: string) {
-  const supabase = publicClient();
+  // A leitura é feita no servidor com filtros explícitos por organização.
+  // Isso permite que um procedimento ativo dentro de um pacote online seja
+  // validado mesmo quando não está liberado como serviço avulso.
+  const { supabaseAdmin: supabase } = await import("@/integrations/supabase/client.server");
   const [services, packages, items, profServices, profPackages] = await Promise.all([
     supabase
       .from("services")
