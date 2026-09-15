@@ -2371,6 +2371,134 @@ export type Database = {
           },
         ]
       }
+      payment_charges: {
+        Row: {
+          amount: number
+          appointment_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          discount: number
+          expires_at: string | null
+          external_id: string | null
+          final_amount: number
+          id: string
+          idempotency_key: string
+          kind: string
+          method: string | null
+          organization_id: string
+          package_id: string | null
+          paid_at: string | null
+          payment_url: string | null
+          professional_id: string | null
+          provider_id: string | null
+          service_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          appointment_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          discount?: number
+          expires_at?: string | null
+          external_id?: string | null
+          final_amount: number
+          id?: string
+          idempotency_key: string
+          kind: string
+          method?: string | null
+          organization_id: string
+          package_id?: string | null
+          paid_at?: string | null
+          payment_url?: string | null
+          professional_id?: string | null
+          provider_id?: string | null
+          service_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          appointment_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          discount?: number
+          expires_at?: string | null
+          external_id?: string | null
+          final_amount?: number
+          id?: string
+          idempotency_key?: string
+          kind?: string
+          method?: string | null
+          organization_id?: string
+          package_id?: string | null
+          paid_at?: string | null
+          payment_url?: string | null
+          professional_id?: string | null
+          provider_id?: string | null
+          service_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_charges_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_charges_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_charges_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_charges_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_charges_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_charges_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "payment_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_charges_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_gateways: {
         Row: {
           active: boolean
@@ -2411,6 +2539,107 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "payment_gateways_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_providers: {
+        Row: {
+          account_label: string | null
+          capabilities: Json
+          connected_at: string | null
+          created_at: string
+          display_name: string
+          id: string
+          last_webhook_at: string | null
+          organization_id: string
+          provider: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_label?: string | null
+          capabilities?: Json
+          connected_at?: string | null
+          created_at?: string
+          display_name: string
+          id?: string
+          last_webhook_at?: string | null
+          organization_id: string
+          provider: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_label?: string | null
+          capabilities?: Json
+          connected_at?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          last_webhook_at?: string | null
+          organization_id?: string
+          provider?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_providers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_refunds: {
+        Row: {
+          amount: number
+          charge_id: string
+          created_at: string
+          external_id: string | null
+          id: string
+          organization_id: string
+          reason: string | null
+          requested_by: string | null
+          status: string
+        }
+        Insert: {
+          amount: number
+          charge_id: string
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          organization_id: string
+          reason?: string | null
+          requested_by?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          charge_id?: string
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          organization_id?: string
+          reason?: string | null
+          requested_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_refunds_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "payment_charges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_refunds_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
