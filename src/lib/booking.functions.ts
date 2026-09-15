@@ -289,10 +289,14 @@ async function loadContext(
   const orderedServices = targetServiceIds
     .map((id) => service.data.find((item) => item.id === id))
     .filter((item): item is NonNullable<typeof item> => !!item);
+  const firstService = orderedServices[0];
+  if (!firstService) {
+    return { error: "Um dos procedimentos selecionados está indisponível." as const };
+  }
 
   const ctx: Ctx = {
     orgId: org.data.id,
-    serviceId: orderedServices[0].id,
+    serviceId: firstService.id,
     serviceNames: orderedServices.map((item) => item.name),
     duration: orderedServices.reduce((sum, item) => sum + item.duration_min + item.buffer_min, 0),
     cfg: {
