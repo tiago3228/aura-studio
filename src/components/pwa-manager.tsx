@@ -22,10 +22,14 @@ export function PwaManager() {
   const [offline, setOffline] = useState(false);
   const [updateReady, setUpdateReady] = useState(false);
   const [iosHelp, setIosHelp] = useState(false);
+  const [installDismissed, setInstallDismissed] = useState(false);
+  const [iosInstallDismissed, setIosInstallDismissed] = useState(false);
 
   useEffect(() => {
     setInstalled(isStandalone());
     setOffline(!navigator.onLine);
+    setInstallDismissed(window.localStorage.getItem("aura-install-dismissed") === "1");
+    setIosInstallDismissed(window.localStorage.getItem("aura-ios-install-dismissed") === "1");
 
     const onBeforeInstall = (event: Event) => {
       event.preventDefault();
@@ -82,7 +86,7 @@ export function PwaManager() {
 
   const browserAvailable = typeof window !== "undefined";
   const isIos = browserAvailable && /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const showIos = isIos && !installed && !window.localStorage.getItem("aura-ios-install-dismissed");
+  const showIos = isIos && !installed && !iosInstallDismissed;
 
   return (
     <>
@@ -103,10 +107,7 @@ export function PwaManager() {
         </div>
       ) : null}
 
-      {installEvent &&
-      !installed &&
-      browserAvailable &&
-      !window.localStorage.getItem("aura-install-dismissed") ? (
+      {installEvent && !installed && browserAvailable && !installDismissed ? (
         <div className="fixed inset-x-3 bottom-20 z-[65] mx-auto flex max-w-md items-center gap-3 rounded-xl border border-primary/20 bg-card p-3 text-sm shadow-lg lg:bottom-4">
           <Smartphone className="size-5 shrink-0 text-primary" />
           <span className="min-w-0 flex-1">
@@ -119,7 +120,10 @@ export function PwaManager() {
             type="button"
             aria-label="Fechar convite de instalação"
             className="text-muted-foreground hover:text-foreground"
-            onClick={() => localStorage.setItem("aura-install-dismissed", "1")}
+            onClick={() => {
+              setInstallDismissed(true);
+              window.localStorage.setItem("aura-install-dismissed", "1");
+            }}
           >
             <X className="size-4" />
           </button>
@@ -151,7 +155,8 @@ export function PwaManager() {
               aria-label="Fechar instruções"
               onClick={() => {
                 setIosHelp(false);
-                localStorage.setItem("aura-ios-install-dismissed", "1");
+                setIosInstallDismissed(true);
+                window.localStorage.setItem("aura-ios-install-dismissed", "1");
               }}
             >
               <X className="size-4 text-muted-foreground" />
