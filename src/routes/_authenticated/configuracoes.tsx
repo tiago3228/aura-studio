@@ -546,8 +546,8 @@ function MessageTemplates({ canEdit, orgId }: { canEdit: boolean; orgId?: string
       <div>
         <h2 className="font-display text-base font-semibold">Mensagens</h2>
         <p className="text-xs text-muted-foreground">
-          Modelos usados no botão “Mensagem” da agenda. Nada é enviado automaticamente — você revisa
-          antes.
+          Modelos usados nos botões de mensagem e de compartilhamento da Agenda. Nada é enviado
+          automaticamente — você revisa antes.
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
           Variáveis: {MESSAGE_VARIABLES.join("  ")}

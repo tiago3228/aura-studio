@@ -1,6 +1,6 @@
 /** Modelos de mensagem para envio manual pelo WhatsApp. */
 export type MessageEvent =
-  "confirmacao" | "cancelamento" | "reagendamento" | "lembrete" | "agradecimento" | "satisfacao";
+  "confirmacao" | "cancelamento" | "reagendamento" | "lembrete" | "agradecimento" | "satisfacao" | "link_agendamento";
 
 export const MESSAGE_EVENTS: { value: MessageEvent; label: string }[] = [
   { value: "confirmacao", label: "Confirmação de agendamento" },
@@ -9,6 +9,7 @@ export const MESSAGE_EVENTS: { value: MessageEvent; label: string }[] = [
   { value: "lembrete", label: "Lembrete de horário" },
   { value: "agradecimento", label: "Agradecimento pós-atendimento" },
   { value: "satisfacao", label: "Compartilhar satisfação e avaliação Google" },
+  { value: "link_agendamento", label: "Compartilhar link de agendamento" },
 ];
 
 export const DEFAULT_TEMPLATES: Record<MessageEvent, string> = {
@@ -24,6 +25,8 @@ export const DEFAULT_TEMPLATES: Record<MessageEvent, string> = {
     "Obrigada pela visita, {cliente}! Foi um prazer cuidar de você. Qualquer dúvida sobre os cuidados pós-{procedimento}, é só chamar. — {clinica}",
   satisfacao:
     "Olá {cliente}! Como foi sua experiência com {clinica}? Sua opinião é muito importante para nós. Se puder, avalie nosso atendimento no Google: {google_avaliacao} — Obrigada!",
+  link_agendamento:
+    "Olá! Para agendar seu atendimento na {clinica}, acesse nosso link de agendamento: {link_agendamento} Se precisar de ajuda, estamos à disposição.",
 };
 
 export const MESSAGE_VARIABLES = [
@@ -34,6 +37,7 @@ export const MESSAGE_VARIABLES = [
   "{profissional}",
   "{clinica}",
   "{google_avaliacao}",
+  "{link_agendamento}",
 ];
 
 export function fillTemplate(body: string, vars: Record<string, string>) {
@@ -44,4 +48,8 @@ export function whatsappLink(phone: string, text: string) {
   const digits = phone.replace(/\D/g, "");
   const full = digits.startsWith("55") ? digits : `55${digits}`;
   return `https://wa.me/${full}?text=${encodeURIComponent(text)}`;
+}
+
+export function whatsappShareLink(text: string) {
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }

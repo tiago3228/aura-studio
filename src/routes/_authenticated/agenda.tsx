@@ -23,7 +23,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MessageDialog, type MessageTarget } from "@/components/message-dialog";
-import type { MessageEvent as MsgEvent } from "@/lib/messages";
+import {
+  DEFAULT_TEMPLATES,
+  fillTemplate,
+  whatsappShareLink,
+  type MessageEvent as MsgEvent,
+} from "@/lib/messages";
 import {
   Dialog,
   DialogContent,
@@ -146,6 +151,29 @@ function Agenda() {
   const bookingUrl = membership?.organization.booking_slug
     ? publicAppUrl(`/agendar/${membership.organization.booking_slug}`)
     : "";
+  const bookingMessage = useQuery({
+    enabled: !!orgId,
+    queryKey: ["booking-share-message", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("message_templates")
+        .select("body, active")
+        .eq("organization_id", orgId!)
+        .eq("event", "link_agendamento")
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const bookingMessageText = fillTemplate(
+    bookingMessage.data?.active === false
+      ? DEFAULT_TEMPLATES.link_agendamento
+      : bookingMessage.data?.body || DEFAULT_TEMPLATES.link_agendamento,
+    {
+      clinica: membership?.organization.name ?? "nossa clínica",
+      link_agendamento: bookingUrl,
+    },
+  );
 
   const range = useMemo(() => {
     const from = view === "dia" ? anchor : startOfWeek(anchor);
@@ -385,6 +413,13 @@ function Agenda() {
             onClick={() => window.open(bookingUrl, "_blank", "noopener,noreferrer")}
           >
             <ExternalLink className="size-4" /> Abrir
+          </Button>
+          <Button
+            size="sm"
+            disabled={!bookingUrl || bookingMessage.isLoading}
+            onClick={() => window.open(whatsappShareLink(bookingMessageText), "_blank", "noopener,noreferrer")}
+          >
+            <MessageCircle className="size-4" /> WhatsApp
           </Button>
         </div>
       </div>
