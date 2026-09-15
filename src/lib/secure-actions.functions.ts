@@ -11,7 +11,7 @@ export const getFinancialIntelligence = createServerFn({ method: "POST" })
   }).parse(input))
   .handler(async ({ data, context }) => {
     const result = await context.supabase.rpc("get_financial_intelligence", {
-      _from: data.from, _to: data.to, _location_id: data.locationId,
+      _from: data.from, _to: data.to, _location_id: data.locationId ?? undefined,
     });
     if (result.error) throw new Error("Não foi possível gerar o relatório.");
     return result.data;
@@ -33,7 +33,7 @@ export const setOrganizationAccess = createServerFn({ method: "POST" })
   }).parse(input))
   .handler(async ({ data, context }) => {
     const result = await context.supabase.rpc("platform_set_organization_access", {
-      _organization_id: data.organizationId, _enabled: data.enabled, _reason: data.reason,
+      _organization_id: data.organizationId, _enabled: data.enabled, _reason: data.reason ?? undefined,
     });
     if (result.error) throw new Error("Não foi possível alterar o acesso.");
     return result.data;

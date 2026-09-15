@@ -14,6 +14,8 @@ import {
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { setOrganizationAccess, setPlatformSubscription } from "@/lib/secure-actions.functions";
 import { useSession } from "@/lib/session";
 import { PageHeader, Pill, SkeletonCard } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
@@ -58,6 +60,8 @@ const MASTER_EMAIL = "tiago3228@yahoo.com.br";
 const ONLINE_WINDOW_MS = 90_000;
 
 function PlatformAdmin() {
+  const setOrganizationAccessFn = useServerFn(setOrganizationAccess);
+  const setPlatformSubscriptionFn = useServerFn(setPlatformSubscription);
   const queryClient = useQueryClient();
   const { user } = useSession();
   const [reason, setReason] = useState("");
@@ -138,24 +142,26 @@ function PlatformAdmin() {
 
   async function toggleAccess(org: Organization) {
     setBusy(true);
-    const { error } = await (supabase as any).rpc("platform_set_organization_access", {
-      _organization_id: org.id,
-      _enabled: org.access_blocked,
-      _reason: reason || null,
-    });
+    try {
+      await setOrganizationAccessFn({ data: { organizationId: org.id, enabled: org.access_blocked, reason: reason || null } });
+    } catch {
+      setBusy(false);
+      toast.error("Não foi possível alterar o acesso.");
+      return;
+    }
     setBusy(false);
-    if (error) return toast.error(error.message);
     toast.success(org.access_blocked ? "Acesso liberado." : "Acesso bloqueado.");
     setSelected(null);
     setReason("");
     await queryClient.invalidateQueries({ queryKey: ["platform-organizations"] });
   }
   async function changeSubscription(orgId: string, status: string) {
-    const { error } = await (supabase as any).rpc("platform_set_subscription", {
-      _organization_id: orgId,
-      _status: status,
-    });
-    if (error) return toast.error(error.message);
+    try {
+      await setPlatformSubscriptionFn({ data: { organizationId: orgId, status } });
+    } catch {
+      toast.error("Não foi possível atualizar a assinatura.");
+      return;
+    }
     toast.success("Assinatura atualizada.");
     await queryClient.invalidateQueries({ queryKey: ["platform-subscriptions"] });
   }
