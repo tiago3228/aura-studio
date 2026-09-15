@@ -48,13 +48,6 @@ const NAV: NavItem[] = [
     icon: LayoutDashboard,
     mobile: true,
   },
-  {
-    to: "/ajuda",
-    label: "Central de Ajuda",
-    area: "configuracoes",
-    icon: HelpCircle,
-    mobile: true,
-  },
   { to: "/agenda", label: "Agenda", area: "agenda", icon: CalendarDays, mobile: true },
   { to: "/clientes", label: "Clientes", area: "clientes", icon: Users, mobile: true },
   { to: "/crm", label: "CRM · em construção", area: "crm", icon: BarChart3, mobile: true },
@@ -79,6 +72,13 @@ const NAV: NavItem[] = [
   { to: "/globalizacao", label: "Idioma e moeda", area: "configuracoes", icon: Globe2 },
   { to: "/seguranca", label: "Segurança e auditoria", area: "configuracoes", icon: ShieldCheck },
   { to: "/filiais", label: "Filiais", area: "configuracoes", icon: Building2 },
+  {
+    to: "/ajuda",
+    label: "Central de Ajuda",
+    area: "configuracoes",
+    icon: HelpCircle,
+    mobile: true,
+  },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
