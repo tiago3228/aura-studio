@@ -70,20 +70,27 @@ export const declarePixPayment = createServerFn({ method: "POST" })
       return { ok: false as const, message: "Apenas proprietária ou gerente pode informar o pagamento." };
 
     const orgRow = await context.supabase.from("organizations").select("name").eq("id", org.id).maybeSingle();
-    const declared = await context.supabase.rpc("declare_pix_payment", {
-      _months: data.months,
-      _note: data.note ?? "",
-      _amount: PRO_PRICE,
-      _pix_key: PIX_KEY,
+    const pending = await context.supabase
+      .from("pix_payments").select("id").eq("organization_id", org.id).eq("status", "pending").limit(1);
+    if (pending.data?.length) return { ok: false as const, message: "Já existe um pagamento aguardando liberação." };
+    const subscription = await context.supabase.from("subscriptions").select("id").eq("organization_id", org.id).maybeSingle();
+    const declared = await context.supabase.from("pix_payments").insert({
+      organization_id: org.id,
+      subscription_id: subscription.data?.id ?? null,
+      amount: PRO_PRICE * data.months,
+      months: data.months,
+      pix_key: PIX_KEY,
+      payer_note: data.note?.trim() || null,
+      requested_by: context.userId,
     });
-    if (declared.error) {
-      const knownMessage = declared.error.message.includes("Já existe")
-        ? "Já existe um pagamento aguardando liberação."
-        : declared.error.message.includes("Apenas proprietária")
-          ? "Apenas proprietária ou gerente pode informar o pagamento."
-          : "Não foi possível registrar o pagamento.";
-      return { ok: false as const, message: knownMessage };
-    }
+    if (declared.error) return { ok: false as const, message: "Não foi possível registrar o pagamento." };
+    await context.supabase.from("subscription_events").insert({
+      organization_id: org.id,
+      subscription_id: subscription.data?.id ?? null,
+      kind: "pix_informado",
+      status: "pending",
+      amount: PRO_PRICE * data.months,
+    });
 
     await notifyAdmin("Novo pagamento Pix aguardando liberação", [
       `Clínica: ${orgRow.data?.name ?? org.id}`,
