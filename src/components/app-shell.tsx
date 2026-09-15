@@ -38,6 +38,7 @@ type NavItem = {
   area: string;
   icon: typeof CalendarDays;
   mobile?: boolean;
+  children?: NavItem[];
 };
 
 const NAV: NavItem[] = [
@@ -56,21 +57,46 @@ const NAV: NavItem[] = [
   { to: "/financeiro", label: "Financeiro", area: "financeiro", icon: Wallet, mobile: true },
   { to: "/pagamentos", label: "Pagamentos", area: "financeiro", icon: CreditCard, mobile: true },
   { to: "/relatorios", label: "Relatórios avançados", area: "financeiro", icon: BarChart3 },
-  { to: "/gateways", label: "Integrações de pagamento", area: "financeiro", icon: CreditCard },
   { to: "/estoque", label: "Estoque", area: "estoque", icon: Package },
   { to: "/comissoes", label: "Comissões", area: "comissoes", icon: Percent },
-  { to: "/assistente", label: "Assistente IA", area: "assistente", icon: Bot, mobile: true },
   {
-    to: "/marketing",
-    label: "Aura IA · Marketing",
+    to: "/assistente",
+    label: "Assistente IA",
     area: "assistente",
-    icon: Sparkles,
+    icon: Bot,
     mobile: true,
+    children: [
+      {
+        to: "/marketing",
+        label: "Aura IA · Marketing",
+        area: "assistente",
+        icon: Sparkles,
+        mobile: true,
+      },
+    ],
   },
   { to: "/assinatura", label: "Assinatura", area: "assinatura", icon: CreditCard },
-  { to: "/configuracoes", label: "Ajustes", area: "configuracoes", icon: Settings },
-  { to: "/globalizacao", label: "Idioma e moeda", area: "configuracoes", icon: Globe2 },
-  { to: "/seguranca", label: "Segurança e auditoria", area: "configuracoes", icon: ShieldCheck },
+  {
+    to: "/configuracoes",
+    label: "Ajustes",
+    area: "configuracoes",
+    icon: Settings,
+    children: [
+      { to: "/globalizacao", label: "Idioma e moeda", area: "configuracoes", icon: Globe2 },
+      {
+        to: "/gateways",
+        label: "Integrações de pagamento",
+        area: "financeiro",
+        icon: CreditCard,
+      },
+      {
+        to: "/seguranca",
+        label: "Segurança e auditoria",
+        area: "configuracoes",
+        icon: ShieldCheck,
+      },
+    ],
+  },
   { to: "/filiais", label: "Filiais", area: "configuracoes", icon: Building2 },
   {
     to: "/ajuda",
@@ -141,22 +167,49 @@ export function AppShell({ children }: { children: ReactNode }) {
         ].map((item) => {
           const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
           const Icon = item.icon;
+          const children = item.children?.filter((child) => can(membership?.role, child.area)) ?? [];
           return (
-            <Link
-              key={item.to}
-              to={item.to}
-              onClick={() => setOpen(false)}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              <Icon className="size-4 shrink-0" />
-              {navLabel(item.label.replace(" · em construção", ""))}
-              {item.label.includes("em construção") ? " · em construção" : ""}
-            </Link>
+            <div key={item.to}>
+              <Link
+                to={item.to}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <Icon className="size-4 shrink-0" />
+                {navLabel(item.label.replace(" · em construção", ""))}
+                {item.label.includes("em construção") ? " · em construção" : ""}
+              </Link>
+              {children.length ? (
+                <div className="ml-5 border-l border-sidebar-border pl-3">
+                  {children.map((child) => {
+                    const ChildIcon = child.icon;
+                    const childActive =
+                      pathname === child.to || pathname.startsWith(`${child.to}/`);
+                    return (
+                      <Link
+                        key={child.to}
+                        to={child.to}
+                        onClick={() => setOpen(false)}
+                        className={cn(
+                          "flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors",
+                          childActive
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                        )}
+                      >
+                        <ChildIcon className="size-3.5 shrink-0" />
+                        {navLabel(child.label.replace(" · em construção", ""))}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
           );
         })}
       </nav>
