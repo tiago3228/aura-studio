@@ -43,12 +43,18 @@ function Clientes() {
   const clients = useQuery({
     enabled: !!orgId,
     queryKey: ["clients", orgId],
-    queryFn: async () => {
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: async ({ signal }) => {
+      if (!orgId) return [];
       const { data, error } = await supabase
         .from("clients")
         .select("id, name, phone, email, tags, birth_date, created_at")
+        .eq("organization_id", orgId)
         .is("deleted_at", null)
-        .order("name");
+        .order("name")
+        .abortSignal(signal);
       if (error) throw error;
       return data;
     },

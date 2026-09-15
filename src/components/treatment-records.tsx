@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/lib/session";
 import { dateFmt, timeFmt } from "@/lib/format";
+import { resizeImage } from "@/lib/image";
 import { EmptyState, Pill, SkeletonCard } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +28,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type Photo = { path: string; label?: string | null };
+type PhotoStage = "antes" | "depois" | "evolucao";
+type Photo = { path: string; label?: string | null; stage?: PhotoStage };
+type SelectedPhoto = { file: File; stage: PhotoStage };
+
+const PHOTO_STAGE_LABEL: Record<PhotoStage, string> = {
+  antes: "Antes",
+  depois: "Depois",
+  evolucao: "Evolução",
+};
 
 const localInput = (d: Date) => {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -153,13 +162,22 @@ function PhotoGrid({ photos }: { photos: Photo[] }) {
     <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
       {(data ?? []).map((item, i) =>
         item.signedUrl ? (
-          <a key={item.path ?? i} href={item.signedUrl} target="_blank" rel="noreferrer">
+          <a
+            key={item.path ?? i}
+            href={item.signedUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="group relative overflow-hidden rounded-lg"
+          >
             <img
               src={item.signedUrl}
-              alt={photos[i]?.label ?? "Foto do atendimento"}
+              alt={`${photos[i]?.stage ? PHOTO_STAGE_LABEL[photos[i].stage] : "Foto"} do atendimento`}
               loading="lazy"
               className="aspect-square w-full rounded-lg object-cover"
             />
+            <span className="absolute inset-x-1 bottom-1 rounded bg-background/90 px-1.5 py-1 text-center text-[10px] font-semibold text-foreground">
+              {photos[i]?.stage ? PHOTO_STAGE_LABEL[photos[i].stage] : "Evolução"}
+            </span>
           </a>
         ) : null,
       )}
@@ -170,7 +188,7 @@ function PhotoGrid({ photos }: { photos: Photo[] }) {
 function RecordDialog({ clientId, onDone }: { clientId: string; onDone: () => void }) {
   const { data: membership } = useMembership();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [files, setFiles] = useState<File[]>([]);
+  const [photosToUpload, setPhotosToUpload] = useState<SelectedPhoto[]>([]);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     performed_at: localInput(new Date()),
@@ -182,6 +200,17 @@ function RecordDialog({ clientId, onDone }: { clientId: string; onDone: () => vo
     evolution: "",
     next_steps: "",
   });
+  const previews = useMemo(
+    () => photosToUpload.map(({ file }) => URL.createObjectURL(file)),
+    [photosToUpload],
+  );
+
+  useEffect(
+    () => () => {
+      previews.forEach((url) => URL.revokeObjectURL(url));
+    },
+    [previews],
+  );
 
   const options = useQuery({
     enabled: !!membership,
@@ -206,14 +235,15 @@ function RecordDialog({ clientId, onDone }: { clientId: string; onDone: () => vo
     try {
       const orgId = membership.organization.id;
       const photos: Photo[] = [];
-      for (const file of files) {
+       for (const { file, stage } of photosToUpload) {
         const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
         const path = `${orgId}/prontuario/${clientId}/${crypto.randomUUID()}.${ext}`;
-        const { error } = await supabase.storage.from("clinic-files").upload(path, file, {
-          contentType: file.type || "image/jpeg",
+         const optimized = await resizeImage(file, 1400, 0.84);
+         const { error } = await supabase.storage.from("clinic-files").upload(path, optimized, {
+           contentType: optimized.type || "image/jpeg",
         });
         if (error) throw error;
-        photos.push({ path, label: file.name });
+         photos.push({ path, label: file.name, stage });
       }
 
       const { error } = await supabase.from("treatment_records").insert({
@@ -340,35 +370,65 @@ function RecordDialog({ clientId, onDone }: { clientId: string; onDone: () => vo
         </div>
 
         <div className="space-y-2">
-          <Label>Fotos (antes e depois)</Label>
+          <Label>Fotos de evolução da sessão</Label>
           <input
             ref={fileRef}
             type="file"
             accept="image/*"
             multiple
             className="hidden"
-            onChange={(e) => setFiles([...files, ...Array.from(e.target.files ?? [])])}
+            onChange={(e) => {
+              const selected = Array.from(e.target.files ?? []).map((file) => ({
+                file,
+                stage: "evolucao" as const,
+              }));
+              setPhotosToUpload((current) => [...current, ...selected]);
+              e.target.value = "";
+            }}
           />
           <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
             <Camera className="size-4" /> Adicionar fotos
           </Button>
-          {files.length > 0 ? (
+          {photosToUpload.length > 0 ? (
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {files.map((f, i) => (
-                <div key={`${f.name}-${i}`} className="relative">
+              {photosToUpload.map(({ file, stage }, i) => (
+                <div key={`${file.name}-${i}`} className="space-y-1.5">
+                  <div className="relative">
                   <img
-                    src={URL.createObjectURL(f)}
-                    alt={f.name}
+                     src={previews[i]}
+                     alt={file.name}
                     className="aspect-square w-full rounded-lg object-cover"
                   />
-                  <button
+                   <Button
                     type="button"
+                     variant="secondary"
+                     size="icon"
                     aria-label="Remover foto"
-                    onClick={() => setFiles(files.filter((_, idx) => idx !== i))}
-                    className="absolute right-1 top-1 rounded-full bg-background/90 p-1"
+                     onClick={() => setPhotosToUpload((current) => current.filter((_, idx) => idx !== i))}
+                     className="absolute right-1 top-1 size-7 rounded-full"
                   >
                     <Trash2 className="size-3" />
-                  </button>
+                   </Button>
+                  </div>
+                  <Select
+                    value={stage}
+                    onValueChange={(value: PhotoStage) =>
+                      setPhotosToUpload((current) =>
+                        current.map((photo, idx) =>
+                          idx === i ? { ...photo, stage: value } : photo,
+                        ),
+                      )
+                    }
+                  >
+                    <SelectTrigger className="h-8 text-xs" aria-label={`Classificar ${file.name}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="antes">Antes</SelectItem>
+                      <SelectItem value="depois">Depois</SelectItem>
+                      <SelectItem value="evolucao">Evolução</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               ))}
             </div>
