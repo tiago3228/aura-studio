@@ -16,6 +16,8 @@ import {
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { convertCrmLead } from "@/lib/secure-actions.functions";
 import { useMembership } from "@/lib/session";
 import { PageHeader, Pill, SkeletonCard } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
@@ -78,6 +80,7 @@ const STAGES = [
 ] as const;
 
 function CrmPage() {
+  const convertCrmLeadFn = useServerFn(convertCrmLead);
   const { data: membership } = useMembership();
   const orgId = membership?.organization.id;
   const queryClient = useQueryClient();
@@ -200,9 +203,13 @@ function CrmPage() {
     invalidate();
   }
   async function convertLead(lead: Lead) {
-    const { data, error } = await (supabase as any).rpc("crm_convert_lead", { _lead_id: lead.id });
-    if (error) return toast.error(error.message);
-    toast.success(`${data?.name ?? lead.name} convertido em cliente.`);
+    try {
+      const data = await convertCrmLeadFn({ data: { leadId: lead.id } });
+      toast.success(`${data?.name ?? lead.name} convertido em cliente.`);
+    } catch {
+      toast.error("Não foi possível converter o lead.");
+      return;
+    }
     invalidate();
   }
   async function finishFollowUp(id: string) {

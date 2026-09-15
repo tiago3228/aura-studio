@@ -6,6 +6,8 @@ import { AppShell } from "@/components/app-shell";
 import { useMembership } from "@/lib/session";
 import { SkeletonCard } from "@/components/ui-kit";
 import { LanguageProvider } from "@/lib/language";
+import { useServerFn } from "@tanstack/react-start";
+import { touchPlatformSession } from "@/lib/secure-actions.functions";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -18,6 +20,7 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AuthenticatedLayout() {
+  const touchSession = useServerFn(touchPlatformSession);
   const { data: membership, isLoading } = useMembership();
   const navigate = useNavigate();
   const pathname = typeof window !== "undefined" ? window.location.pathname : "";
@@ -29,15 +32,12 @@ function AuthenticatedLayout() {
     const sessionId = existing ?? crypto.randomUUID();
     window.localStorage.setItem(key, sessionId);
     const send = (eventType: "entered" | "heartbeat" | "left") => {
-      void supabase.rpc(
-        "platform_touch_session" as never,
-        {
-          _session_id: sessionId,
-          _organization_id: membership.organization.id,
-          _event_type: eventType,
-          _user_agent: navigator.userAgent,
-        } as never,
-      );
+      void touchSession({ data: {
+        sessionId,
+        organizationId: membership.organization.id,
+        eventType,
+        userAgent: navigator.userAgent,
+      } });
     };
     send(existing ? "heartbeat" : "entered");
     const interval = window.setInterval(() => send("heartbeat"), 30_000);
@@ -48,7 +48,7 @@ function AuthenticatedLayout() {
       window.removeEventListener("pagehide", onLeave);
       send("left");
     };
-  }, [membership]);
+  }, [membership, touchSession]);
 
   useEffect(() => {
     if (!isLoading && membership === null && pathname !== "/onboarding") {

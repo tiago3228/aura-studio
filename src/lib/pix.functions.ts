@@ -70,20 +70,27 @@ export const declarePixPayment = createServerFn({ method: "POST" })
       return { ok: false as const, message: "Apenas proprietária ou gerente pode informar o pagamento." };
 
     const orgRow = await context.supabase.from("organizations").select("name").eq("id", org.id).maybeSingle();
-    const declared = await context.supabase.rpc("declare_pix_payment", {
-      _months: data.months,
-      _note: data.note ?? "",
-      _amount: PRO_PRICE,
-      _pix_key: PIX_KEY,
+    const pending = await context.supabase
+      .from("pix_payments").select("id").eq("organization_id", org.id).eq("status", "pending").limit(1);
+    if (pending.data?.length) return { ok: false as const, message: "Já existe um pagamento aguardando liberação." };
+    const subscription = await context.supabase.from("subscriptions").select("id").eq("organization_id", org.id).maybeSingle();
+    const declared = await context.supabase.from("pix_payments").insert({
+      organization_id: org.id,
+      subscription_id: subscription.data?.id ?? null,
+      amount: PRO_PRICE * data.months,
+      months: data.months,
+      pix_key: PIX_KEY,
+      payer_note: data.note?.trim() || null,
+      requested_by: context.userId,
     });
-    if (declared.error) {
-      const knownMessage = declared.error.message.includes("Já existe")
-        ? "Já existe um pagamento aguardando liberação."
-        : declared.error.message.includes("Apenas proprietária")
-          ? "Apenas proprietária ou gerente pode informar o pagamento."
-          : "Não foi possível registrar o pagamento.";
-      return { ok: false as const, message: knownMessage };
-    }
+    if (declared.error) return { ok: false as const, message: "Não foi possível registrar o pagamento." };
+    await context.supabase.from("subscription_events").insert({
+      organization_id: org.id,
+      subscription_id: subscription.data?.id ?? null,
+      kind: "pix_informado",
+      status: "pending",
+      amount: PRO_PRICE * data.months,
+    });
 
     await notifyAdmin("Novo pagamento Pix aguardando liberação", [
       `Clínica: ${orgRow.data?.name ?? org.id}`,
@@ -132,19 +139,44 @@ export const reviewPixPayment = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (!isPlatformAdmin(context)) return { ok: false as const, message: "Acesso restrito." };
 
-    const reviewed = await context.supabase.rpc("review_pix_payment", {
-      _payment_id: data.id,
-      _approve: data.approve,
-      _note: data.note ?? "",
-    });
-    if (reviewed.error) {
-      const knownMessage = reviewed.error.message.includes("já foi revisado")
-        ? "Este pagamento já foi revisado."
-        : reviewed.error.message.includes("não encontrado")
-          ? "Pagamento não encontrado."
-          : "Não foi possível revisar o pagamento.";
-      return { ok: false as const, message: knownMessage };
+    const payment = await context.supabase
+      .from("pix_payments")
+      .select("id, organization_id, subscription_id, amount, months, status")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!payment.data) return { ok: false as const, message: "Pagamento não encontrado." };
+    if (payment.data.status !== "pending") return { ok: false as const, message: "Este pagamento já foi revisado." };
+
+    const status = data.approve ? "approved" : "rejected";
+    const updated = await context.supabase.from("pix_payments").update({
+      status,
+      admin_note: data.note?.trim() || null,
+      reviewed_by: context.userId,
+      reviewed_at: new Date().toISOString(),
+    }).eq("id", data.id).eq("status", "pending");
+    if (updated.error) return { ok: false as const, message: "Não foi possível revisar o pagamento." };
+
+    let subscriptionId = payment.data.subscription_id;
+    if (data.approve) {
+      const existing = await context.supabase.from("subscriptions").select("id,current_period_end").eq("organization_id", payment.data.organization_id).maybeSingle();
+      const base = Math.max(Date.now(), existing.data?.current_period_end ? new Date(existing.data.current_period_end).getTime() : 0);
+      const periodEnd = new Date(base);
+      periodEnd.setMonth(periodEnd.getMonth() + (payment.data.months ?? 1));
+      if (existing.data) {
+        subscriptionId = existing.data.id;
+        await context.supabase.from("subscriptions").update({ status: "active", plan: "pro", amount: PRO_PRICE, current_period_end: periodEnd.toISOString(), canceled_at: null }).eq("id", existing.data.id);
+      } else {
+        const created = await context.supabase.from("subscriptions").insert({ organization_id: payment.data.organization_id, plan: "pro", status: "active", amount: PRO_PRICE, current_period_end: periodEnd.toISOString(), created_by: context.userId }).select("id").single();
+        subscriptionId = created.data?.id ?? null;
+      }
     }
+    await context.supabase.from("subscription_events").insert({
+      organization_id: payment.data.organization_id,
+      subscription_id: subscriptionId,
+      kind: data.approve ? "pix_liberado" : "pix_recusado",
+      status: data.approve ? "active" : "rejected",
+      amount: payment.data.amount,
+    });
 
     return {
       ok: true as const,

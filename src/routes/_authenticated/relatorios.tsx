@@ -10,6 +10,8 @@ import { addDays, brl } from "@/lib/format";
 import { PageHeader, Pill, SkeletonCard, StatCard } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useServerFn } from "@tanstack/react-start";
+import { getFinancialIntelligence } from "@/lib/secure-actions.functions";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — Aura Clínicas" }] }),
@@ -18,6 +20,7 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
 const iso = (date: Date) => date.toISOString().slice(0, 10);
 
 function RelatoriosPage() {
+  const fetchFinancialIntelligence = useServerFn(getFinancialIntelligence);
   const { data: membership } = useMembership();
   const [locationId, setLocationId] = useState("");
   const [to, setTo] = useState(iso(new Date()));
@@ -40,13 +43,9 @@ function RelatoriosPage() {
     enabled: !!membership?.organization.id,
     queryKey: ["financial-intelligence", membership?.organization.id, from, to, locationId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc("get_financial_intelligence", {
-        _from: from,
-        _to: to,
-        _location_id: locationId || null,
-      });
-      if (error) throw error;
-      return data as {
+      return await fetchFinancialIntelligence({ data: {
+        from, to, locationId: locationId || null,
+      } }) as {
         summary: any;
         top_services: { service: string; revenue: number; quantity: number }[];
         by_month: { month: string; revenue: number; costs: number }[];
