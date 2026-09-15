@@ -48,6 +48,13 @@ const NAV: NavItem[] = [
     icon: LayoutDashboard,
     mobile: true,
   },
+  {
+    to: "/ajuda",
+    label: "Central de Ajuda",
+    area: "configuracoes",
+    icon: HelpCircle,
+    mobile: true,
+  },
   { to: "/agenda", label: "Agenda", area: "agenda", icon: CalendarDays, mobile: true },
   { to: "/clientes", label: "Clientes", area: "clientes", icon: Users, mobile: true },
   { to: "/crm", label: "CRM · em construção", area: "crm", icon: BarChart3, mobile: true },
@@ -72,13 +79,6 @@ const NAV: NavItem[] = [
   { to: "/globalizacao", label: "Idioma e moeda", area: "configuracoes", icon: Globe2 },
   { to: "/seguranca", label: "Segurança e auditoria", area: "configuracoes", icon: ShieldCheck },
   { to: "/filiais", label: "Filiais", area: "configuracoes", icon: Building2 },
-  {
-    to: "/ajuda",
-    label: "Central de Ajuda",
-    area: "configuracoes",
-    icon: HelpCircle,
-    mobile: true,
-  },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -105,7 +105,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex h-full flex-col gap-1 p-4">
       <div className="mb-5 flex items-center justify-between px-2">
         <Link
-          to="/dashboard"
+          to="/"
+          target="_self"
+          rel="noreferrer"
+          aria-label="Ir para a página inicial pública"
           className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight"
         >
           <span className="grid size-8 place-items-center rounded-full bg-primary-soft text-primary">
@@ -215,9 +218,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Menu className="size-5" />
           </button>
         </div>
-        <span className="flex items-center gap-1.5 font-display text-base font-semibold">
+        <Link
+          to="/"
+          target="_self"
+          rel="noreferrer"
+          aria-label="Ir para a página inicial pública"
+          className="flex items-center gap-1.5 font-display text-base font-semibold"
+        >
           <Flower2 className="size-4 text-primary" /> Aura<span className="text-primary">.</span>
-        </span>
+        </Link>
         <div className="flex items-center gap-1">
           <select
             aria-label="Idioma"
