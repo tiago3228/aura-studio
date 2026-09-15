@@ -7,6 +7,7 @@ import {
   Check,
   ChevronRight,
   CircleDollarSign,
+  Flower2,
   Globe2,
   HeartPulse,
   Layers3,
@@ -90,8 +91,8 @@ function Landing() {
     <main className="min-h-screen overflow-hidden bg-background">
       <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-5 py-6 sm:px-8">
         <Link to="/" className="flex items-center gap-2.5" aria-label="Aura início">
-          <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-            <Sparkles className="size-4" />
+          <span className="grid size-9 place-items-center rounded-full bg-primary-soft text-primary shadow-sm">
+            <Flower2 className="size-4" />
           </span>
           <span className="font-display text-xl font-semibold tracking-tight">Aura</span>
         </Link>

@@ -22,6 +22,7 @@ import {
   Globe2,
   Building2,
   HelpCircle,
+  Flower2,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -103,8 +104,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   const sidebar = (
     <div className="flex h-full flex-col gap-1 p-4">
       <div className="mb-5 flex items-center justify-between px-2">
-        <Link to="/dashboard" className="font-display text-lg font-semibold tracking-tight">
-          Aura<span className="text-gold">.</span>
+        <Link
+          to="/dashboard"
+          className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight"
+        >
+          <span className="grid size-8 place-items-center rounded-full bg-primary-soft text-primary">
+            <Flower2 className="size-4" />
+          </span>
+          Aura<span className="text-primary">.</span>
         </Link>
         <button className="lg:hidden" onClick={() => setOpen(false)} aria-label="Fechar menu">
           <X className="size-5" />
@@ -208,8 +215,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Menu className="size-5" />
           </button>
         </div>
-        <span className="font-display text-base font-semibold">
-          Aura<span className="text-gold">.</span>
+        <span className="flex items-center gap-1.5 font-display text-base font-semibold">
+          <Flower2 className="size-4 text-primary" /> Aura<span className="text-primary">.</span>
         </span>
         <div className="flex items-center gap-1">
           <select
