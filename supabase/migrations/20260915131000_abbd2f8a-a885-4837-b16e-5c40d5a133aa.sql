@@ -1,0 +1,27 @@
+ALTER FUNCTION public.convert_organization_amount(numeric, text, text, uuid, date) SECURITY INVOKER;
+ALTER FUNCTION public.crm_convert_lead(uuid) SECURITY INVOKER;
+ALTER FUNCTION public.get_financial_intelligence(date, date, uuid) SECURITY INVOKER;
+ALTER FUNCTION public.has_org_permission(uuid, text) SECURITY INVOKER;
+ALTER FUNCTION public.has_org_role(uuid, public.app_role[]) SECURITY INVOKER;
+ALTER FUNCTION public.is_org_admin(uuid) SECURITY INVOKER;
+ALTER FUNCTION public.is_org_member(uuid) SECURITY INVOKER;
+ALTER FUNCTION public.is_platform_admin() SECURITY INVOKER;
+ALTER FUNCTION public.payment_create_transaction(uuid, text, text, numeric, text, text, jsonb) SECURITY INVOKER;
+ALTER FUNCTION public.platform_set_organization_access(uuid, boolean, text) SECURITY INVOKER;
+ALTER FUNCTION public.platform_set_subscription(uuid, text, text, timestamptz) SECURITY INVOKER;
+ALTER FUNCTION public.platform_touch_session(uuid, uuid, text, text, text, jsonb) SECURITY INVOKER;
+ALTER FUNCTION public.user_has_location(uuid) SECURITY INVOKER;
+
+GRANT EXECUTE ON FUNCTION public.convert_organization_amount(numeric, text, text, uuid, date) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.crm_convert_lead(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_financial_intelligence(date, date, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.has_org_permission(uuid, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.has_org_role(uuid, public.app_role[]) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_org_admin(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_org_member(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_platform_admin() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.payment_create_transaction(uuid, text, text, numeric, text, text, jsonb) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.platform_set_organization_access(uuid, boolean, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.platform_set_subscription(uuid, text, text, timestamptz) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.platform_touch_session(uuid, uuid, text, text, text, jsonb) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.user_has_location(uuid) TO authenticated;
