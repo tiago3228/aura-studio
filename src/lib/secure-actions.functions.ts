@@ -68,3 +68,17 @@ export const touchPlatformSession = createServerFn({ method: "POST" })
     if (result.error) throw new Error("Não foi possível atualizar a sessão.");
     return result.data;
   });
+
+export const reviewPixPaymentSecure = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    paymentId: z.string().uuid(), approve: z.boolean(), note: z.string().max(500).nullable(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const args = data.note
+      ? { _payment_id: data.paymentId, _approve: data.approve, _note: data.note }
+      : { _payment_id: data.paymentId, _approve: data.approve };
+    const result = await context.supabase.rpc("review_pix_payment", args);
+    if (result.error) throw new Error("Não foi possível revisar o pagamento.");
+    return result.data;
+  });

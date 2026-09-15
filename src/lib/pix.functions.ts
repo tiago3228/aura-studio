@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { PRO_PRICE } from "@/lib/billing.functions";
+import { reviewPixPaymentSecure } from "@/lib/secure-actions.functions";
 
 /** Chave Pix que recebe as assinaturas e e-mail do administrador da plataforma. */
 export const PIX_KEY = "tiago3228@gmail.com";
@@ -139,18 +140,10 @@ export const reviewPixPayment = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (!isPlatformAdmin(context)) return { ok: false as const, message: "Acesso restrito." };
 
-    const reviewed = await context.supabase.rpc("review_pix_payment", {
-      _payment_id: data.id,
-      _approve: data.approve,
-      _note: data.note ?? "",
-    });
-    if (reviewed.error) {
-      const knownMessage = reviewed.error.message.includes("já foi revisado")
-        ? "Este pagamento já foi revisado."
-        : reviewed.error.message.includes("não encontrado")
-          ? "Pagamento não encontrado."
-          : "Não foi possível revisar o pagamento.";
-      return { ok: false as const, message: knownMessage };
+    try {
+      await reviewPixPaymentSecure({ data: { paymentId: data.id, approve: data.approve, note: data.note ?? null } });
+    } catch {
+      return { ok: false as const, message: "Não foi possível revisar o pagamento." };
     }
 
     return {
