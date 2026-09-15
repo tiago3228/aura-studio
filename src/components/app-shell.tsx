@@ -23,6 +23,8 @@ import {
   Building2,
   HelpCircle,
   Flower2,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -67,6 +69,13 @@ const NAV: NavItem[] = [
     mobile: true,
     children: [
       {
+        to: "/assistente",
+        label: "Assistente IA",
+        area: "assistente",
+        icon: Bot,
+        mobile: true,
+      },
+      {
         to: "/marketing",
         label: "Aura IA · Marketing",
         area: "assistente",
@@ -82,6 +91,7 @@ const NAV: NavItem[] = [
     area: "configuracoes",
     icon: Settings,
     children: [
+      { to: "/configuracoes", label: "Ajustes", area: "configuracoes", icon: Settings },
       { to: "/globalizacao", label: "Idioma e moeda", area: "configuracoes", icon: Globe2 },
       {
         to: "/gateways",
@@ -116,6 +126,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { language, setLanguage, navLabel } = useLanguage();
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => ({
+    "/assistente": pathname.startsWith("/assistente") || pathname.startsWith("/marketing"),
+    "/configuracoes": ["/configuracoes", "/globalizacao", "/gateways", "/seguranca"].some(
+      (path) => pathname.startsWith(path),
+    ),
+  }));
 
   const items = NAV.filter((item) => can(membership?.role, item.area));
   const isPlatformAdmin = user?.email?.toLowerCase() === "tiago3228@yahoo.com.br";
@@ -168,23 +184,51 @@ export function AppShell({ children }: { children: ReactNode }) {
           const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
           const Icon = item.icon;
           const children = item.children?.filter((child) => can(membership?.role, child.area)) ?? [];
+          const expanded = expandedGroups[item.to] ?? false;
           return (
             <div key={item.to}>
-              <Link
-                to={item.to}
-                onClick={() => setOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-              >
-                <Icon className="size-4 shrink-0" />
-                {navLabel(item.label.replace(" · em construção", ""))}
-                {item.label.includes("em construção") ? " · em construção" : ""}
-              </Link>
               {children.length ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExpandedGroups((current) => ({ ...current, [item.to]: !expanded }))
+                  }
+                  aria-expanded={expanded}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors",
+                    active
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  <Icon className="size-4 shrink-0" />
+                  <span className="min-w-0 flex-1">
+                    {navLabel(item.label.replace(" · em construção", ""))}
+                    {item.label.includes("em construção") ? " · em construção" : ""}
+                  </span>
+                  {expanded ? (
+                    <ChevronDown className="size-4 shrink-0" />
+                  ) : (
+                    <ChevronRight className="size-4 shrink-0" />
+                  )}
+                </button>
+              ) : (
+                <Link
+                  to={item.to}
+                  onClick={() => setOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  <Icon className="size-4 shrink-0" />
+                  {navLabel(item.label.replace(" · em construção", ""))}
+                  {item.label.includes("em construção") ? " · em construção" : ""}
+                </Link>
+              )}
+              {children.length && expanded ? (
                 <div className="ml-5 border-l border-sidebar-border pl-3">
                   {children.map((child) => {
                     const ChildIcon = child.icon;
