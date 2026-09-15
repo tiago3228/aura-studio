@@ -7,6 +7,7 @@ import {
   Check,
   ChevronRight,
   CircleDollarSign,
+  Crown,
   Flower2,
   Globe2,
   HeartPulse,
@@ -226,6 +227,49 @@ function Landing() {
               <br />
               com dados do seu negócio
             </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="planos" className="mx-auto max-w-6xl px-5 pt-16 sm:px-8 sm:pt-20">
+        <div className="relative overflow-hidden rounded-[1.5rem] bg-primary px-6 py-7 text-primary-foreground shadow-lg sm:px-10 sm:py-8">
+          <div className="pointer-events-none absolute -right-16 -top-20 size-56 rounded-full bg-white/10 blur-3xl" />
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="grid size-12 shrink-0 place-items-center rounded-full bg-white/15">
+                <Crown className="size-6 text-gold" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold tracking-[0.18em] text-primary-foreground/75 uppercase">
+                  Assinatura PRO
+                </p>
+                <h2 className="mt-1 font-display text-2xl font-semibold sm:text-3xl">
+                  Gestão completa para sua clínica
+                </h2>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-primary-foreground/75">
+                  Mais praticidade, controle e crescimento para a sua rotina — com 30 dias grátis e
+                  cancelamento livre.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center lg:pl-8">
+              <div className="whitespace-nowrap border-t border-white/25 pt-4 sm:border-t-0 sm:border-l sm:pl-8 sm:pt-0">
+                <span className="font-display text-4xl font-semibold">R$ 49,90</span>
+                <span className="ml-1 text-sm text-primary-foreground/75">/mês</span>
+              </div>
+              <Link
+                to="/auth"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-background px-5 py-3 text-sm font-semibold text-primary transition-transform hover:-translate-y-0.5"
+              >
+                Começar grátis <ArrowRight className="size-4" />
+              </Link>
+            </div>
+          </div>
+          <div className="relative mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-white/15 pt-4 text-xs text-primary-foreground/80">
+            <span>Agenda e autoagendamento online</span>
+            <span>Procedimentos ilimitados</span>
+            <span>Clientes, financeiro e estoque</span>
+            <span>Assistente de IA</span>
           </div>
         </div>
       </section>
