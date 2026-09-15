@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RefreshCw, Smartphone, WifiOff, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,10 @@ type InstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
+
+const INSTALL_ACCEPTED_KEY = "aura-install-accepted";
+const INSTALL_DISMISSED_KEY = "aura-install-dismissed";
+const IOS_INSTALL_DISMISSED_KEY = "aura-ios-install-dismissed";
 
 function isStandalone() {
   return (
@@ -24,12 +28,15 @@ export function PwaManager() {
   const [iosHelp, setIosHelp] = useState(false);
   const [installDismissed, setInstallDismissed] = useState(false);
   const [iosInstallDismissed, setIosInstallDismissed] = useState(false);
+  const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
+  const updatingRef = useRef(false);
 
   useEffect(() => {
-    setInstalled(isStandalone());
+    const installWasAccepted = window.localStorage.getItem(INSTALL_ACCEPTED_KEY) === "1";
+    setInstalled(isStandalone() || installWasAccepted);
     setOffline(!navigator.onLine);
-    setInstallDismissed(window.localStorage.getItem("aura-install-dismissed") === "1");
-    setIosInstallDismissed(window.localStorage.getItem("aura-ios-install-dismissed") === "1");
+    setInstallDismissed(window.localStorage.getItem(INSTALL_DISMISSED_KEY) === "1");
+    setIosInstallDismissed(window.localStorage.getItem(IOS_INSTALL_DISMISSED_KEY) === "1");
 
     const onBeforeInstall = (event: Event) => {
       event.preventDefault();
@@ -38,6 +45,7 @@ export function PwaManager() {
     const onInstalled = () => {
       setInstalled(true);
       setInstallEvent(null);
+      window.localStorage.setItem(INSTALL_ACCEPTED_KEY, "1");
     };
     const onOnline = () => setOffline(false);
     const onOffline = () => setOffline(true);
@@ -47,10 +55,16 @@ export function PwaManager() {
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
 
-    let registration: ServiceWorkerRegistration | undefined;
+    const onControllerChange = () => {
+      if (!updatingRef.current) return;
+      updatingRef.current = false;
+      window.location.reload();
+    };
+    navigator.serviceWorker?.addEventListener("controllerchange", onControllerChange);
+
     if ("serviceWorker" in navigator) {
       void navigator.serviceWorker.register("/sw.js").then((registered) => {
-        registration = registered;
+        registrationRef.current = registered;
         if (registered.waiting && navigator.serviceWorker.controller) setUpdateReady(true);
         registered.addEventListener("updatefound", () => {
           const worker = registered.installing;
@@ -68,20 +82,31 @@ export function PwaManager() {
       window.removeEventListener("appinstalled", onInstalled);
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
-      registration?.removeEventListener("updatefound", () => undefined);
+      navigator.serviceWorker?.removeEventListener("controllerchange", onControllerChange);
     };
   }, []);
 
   async function install() {
     if (!installEvent) return;
     await installEvent.prompt();
-    await installEvent.userChoice;
+    const choice = await installEvent.userChoice;
     setInstallEvent(null);
+    if (choice.outcome === "accepted") {
+      setInstalled(true);
+      window.localStorage.setItem(INSTALL_ACCEPTED_KEY, "1");
+    }
   }
 
   function update() {
-    navigator.serviceWorker.controller?.postMessage({ type: "SKIP_WAITING" });
-    window.setTimeout(() => window.location.reload(), 250);
+    const waiting = registrationRef.current?.waiting;
+    if (!waiting) {
+      setUpdateReady(false);
+      window.location.reload();
+      return;
+    }
+    updatingRef.current = true;
+    setUpdateReady(false);
+    waiting.postMessage({ type: "SKIP_WAITING" });
   }
 
   const browserAvailable = typeof window !== "undefined";
@@ -122,7 +147,7 @@ export function PwaManager() {
             className="text-muted-foreground hover:text-foreground"
             onClick={() => {
               setInstallDismissed(true);
-              window.localStorage.setItem("aura-install-dismissed", "1");
+              window.localStorage.setItem(INSTALL_DISMISSED_KEY, "1");
             }}
           >
             <X className="size-4" />
@@ -156,7 +181,7 @@ export function PwaManager() {
               onClick={() => {
                 setIosHelp(false);
                 setIosInstallDismissed(true);
-                window.localStorage.setItem("aura-ios-install-dismissed", "1");
+                window.localStorage.setItem(IOS_INSTALL_DISMISSED_KEY, "1");
               }}
             >
               <X className="size-4 text-muted-foreground" />
