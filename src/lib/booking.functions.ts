@@ -1,7 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import type { Database } from "@/integrations/supabase/types";
 import {
   brInstant,
   buildSlots,
@@ -10,20 +8,9 @@ import {
   type SlotConfig,
 } from "@/lib/availability";
 
-function publicClient() {
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
-  return createClient<Database>(process.env["SUPABASE_URL"]!, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: {
-      fetch: (input, init) => {
-        const h = new Headers(init?.headers);
-        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`)
-          h.delete("Authorization");
-        h.set("apikey", key);
-        return fetch(input, { ...init, headers: h });
-      },
-    },
-  });
+async function bookingServerClient() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin;
 }
 
 /** Converte caminho no bucket privado em URL assinada de longa duração. */
@@ -69,7 +56,7 @@ type OfferPackage = {
  * nesse pacote deixam de aparecer como avulsos — apenas para esse profissional.
  */
 async function loadCatalog(orgId: string) {
-  const supabase = publicClient();
+  const supabase = await bookingServerClient();
   const [services, packages, items, profServices, profPackages] = await Promise.all([
     supabase
       .from("services")
@@ -173,7 +160,7 @@ async function loadCatalog(orgId: string) {
 export const getBookingPage = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ slug: z.string().min(1) }).parse(input))
   .handler(async ({ data }) => {
-    const supabase = publicClient();
+    const supabase = await bookingServerClient();
     const org = await supabase
       .from("organizations")
       .select(
@@ -228,7 +215,7 @@ async function loadContext(
   packageId: string | undefined,
   packageIds: string[] | undefined,
 ) {
-  const supabase = publicClient();
+  const supabase = await bookingServerClient();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const org = await supabase
     .from("organizations")
