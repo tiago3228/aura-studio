@@ -55,6 +55,7 @@ type OfferPackage = {
   id: string;
   name: string;
   description: string | null;
+  service_id: string | null;
   sessions: number;
   price: number;
   validity_days: number;
@@ -77,7 +78,7 @@ async function loadCatalog(orgId: string) {
       .order("name"),
     supabase
       .from("packages")
-      .select("id, name, description, sessions, price, validity_days")
+      .select("id, name, description, service_id, sessions, price, validity_days")
       .eq("organization_id", orgId)
       .eq("active", true)
       .eq("online_booking", true)
@@ -113,10 +114,29 @@ async function loadCatalog(orgId: string) {
     itemsByPackage.set(it.package_id, list);
   }
   const packageById = new Map(
-    (packages.data ?? []).map((p) => [
-      p.id,
-      { ...p, price: Number(p.price), items: itemsByPackage.get(p.id) ?? [] } as OfferPackage,
-    ]),
+    (packages.data ?? []).map((p) => {
+      const items = itemsByPackage.get(p.id) ?? [];
+      // Pacotes criados antes de package_items usam packages.service_id.
+      // Normalizamos esse formato para o mesmo contrato público atual.
+      const normalizedItems =
+        items.length > 0 || !p.service_id
+          ? items
+          : [
+              {
+                service_id: p.service_id,
+                service_name: serviceById.get(p.service_id)?.name ?? "Procedimento",
+                sessions: p.sessions,
+              },
+            ];
+      return [
+        p.id,
+        {
+          ...p,
+          price: Number(p.price),
+          items: normalizedItems,
+        } as OfferPackage,
+      ] as const;
+    }),
   );
 
   const svcByPro = new Map<string, string[]>();
