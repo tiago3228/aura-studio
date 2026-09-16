@@ -56,8 +56,10 @@ type OfferPackage = {
  * nesse pacote deixam de aparecer como avulsos — apenas para esse profissional.
  */
 async function loadCatalog(orgId: string) {
+  // A leitura é feita no servidor com filtros explícitos por organização.
+  // Isso permite validar itens de pacotes online sem liberá-los como serviço avulso.
   const supabase = await bookingServerClient();
-  const [services, packages, items, profServices, profPackages] = await Promise.all([
+  const [services, packages, items, profServices] = await Promise.all([
     supabase
       .from("services")
       .select("id, name, description, duration_min, price, promo_price, active, online_booking")
@@ -77,11 +79,6 @@ async function loadCatalog(orgId: string) {
     supabase
       .from("professional_services")
       .select("professional_id, service_id")
-      .eq("organization_id", orgId)
-      .eq("active", true),
-    supabase
-      .from("professional_packages")
-      .select("professional_id, package_id")
       .eq("organization_id", orgId)
       .eq("active", true),
   ]);
@@ -129,17 +126,11 @@ async function loadCatalog(orgId: string) {
   const svcByPro = new Map<string, string[]>();
   for (const r of profServices.data ?? [])
     svcByPro.set(r.professional_id, [...(svcByPro.get(r.professional_id) ?? []), r.service_id]);
-  const pkgByPro = new Map<string, string[]>();
-  for (const r of profPackages.data ?? [])
-    pkgByPro.set(r.professional_id, [...(pkgByPro.get(r.professional_id) ?? []), r.package_id]);
-
   return function offerFor(professionalId: string) {
-    const selectedPackages = pkgByPro.get(professionalId);
-    const pkgs = (
-      selectedPackages
-        ? selectedPackages.map((id) => packageById.get(id))
-        : [...packageById.values()]
-    ).filter((p): p is OfferPackage => !!p);
+    // Pacotes ativos e liberados online são ofertas da clínica. Assim, um
+    // pacote novo não fica invisível apenas porque ainda não foi associado
+    // manualmente na tela de ofertas do profissional.
+    const pkgs = [...packageById.values()];
 
     const blocked = new Set<string>();
     for (const p of pkgs) for (const it of p.items) blocked.add(it.service_id);
