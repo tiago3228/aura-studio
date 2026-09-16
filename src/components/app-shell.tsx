@@ -53,7 +53,7 @@ const NAV: NavItem[] = [
   },
   { to: "/agenda", label: "Agenda", area: "agenda", icon: CalendarDays, mobile: true },
   { to: "/clientes", label: "Clientes", area: "clientes", icon: Users, mobile: true },
-  { to: "/crm", label: "CRM · em construção", area: "crm", icon: BarChart3, mobile: true },
+  { to: "/crm", label: "CRM", area: "crm", icon: BarChart3, mobile: true },
   { to: "/servicos", label: "Procedimentos", area: "procedimentos", icon: Sparkles },
   { to: "/equipe", label: "Equipe", area: "equipe", icon: UserCog },
   { to: "/financeiro", label: "Financeiro", area: "financeiro", icon: Wallet, mobile: true },

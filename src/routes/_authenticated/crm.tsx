@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { convertCrmLead } from "@/lib/secure-actions.functions";
 import { useMembership } from "@/lib/session";
-import { PageHeader, Pill, SkeletonCard } from "@/components/ui-kit";
+import { EmptyState, ErrorState, PageHeader, Pill, SkeletonCard } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,7 +33,16 @@ import {
 } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/crm")({
-  head: () => ({ meta: [{ title: "CRM — Aura Clínicas" }] }),
+  head: () => ({
+    meta: [
+      { title: "CRM — Aura Clínicas" },
+      { name: "description", content: "Gestão de leads, funil comercial, contatos, follow-ups e retenção de clientes." },
+      { property: "og:title", content: "CRM — Aura Clínicas" },
+      { property: "og:description", content: "Gestão comercial e retenção para clínicas de estética." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: CrmPage,
 });
 
@@ -62,9 +70,24 @@ type RetentionClient = {
   id: string;
   name: string;
   phone: string | null;
-  last_attended: string | null;
+  last_attended: string;
   last_service: string | null;
   total_spent: number;
+};
+type Interaction = {
+  id: string;
+  lead_id: string | null;
+  type: string;
+  subject: string | null;
+  description: string;
+  result: string | null;
+  occurred_at: string;
+};
+type AppointmentSummary = {
+  client_id: string | null;
+  starts_at: string;
+  price: number;
+  services: { name: string } | null;
 };
 const STAGES = [
   ["novo_lead", "Novo lead"],
@@ -93,26 +116,48 @@ function CrmPage() {
   const leads = useQuery({
     enabled: !!orgId,
     queryKey: ["crm-leads", orgId],
+    staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      if (!orgId) return [];
+      const { data, error } = await supabase
         .from("crm_leads")
         .select("id,name,whatsapp,email,source,notes,stage,client_id,created_at")
+        .eq("organization_id", orgId)
         .order("updated_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as Lead[];
+      return data;
     },
   });
   const followUps = useQuery({
     enabled: !!orgId,
     queryKey: ["crm-follow-ups", orgId],
+    staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      if (!orgId) return [];
+      const { data, error } = await supabase
         .from("crm_follow_ups")
         .select("id,title,description,due_at,status,lead_id,client_id")
+        .eq("organization_id", orgId)
         .eq("status", "pendente")
         .order("due_at");
       if (error) throw error;
-      return (data ?? []) as FollowUp[];
+      return data;
+    },
+  });
+  const interactions = useQuery({
+    enabled: !!orgId,
+    queryKey: ["crm-interactions", orgId],
+    staleTime: 30_000,
+    queryFn: async () => {
+      if (!orgId) return [];
+      const { data, error } = await supabase
+        .from("crm_interactions")
+        .select("id,lead_id,type,subject,description,result,occurred_at")
+        .eq("organization_id", orgId)
+        .order("occurred_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data;
     },
   });
   const retention = useQuery({
@@ -120,34 +165,42 @@ function CrmPage() {
     queryKey: ["crm-retention", orgId],
     queryFn: async () => {
       const [clientsResult, settingsResult, appointmentsResult] = await Promise.all([
-        (supabase as any)
+        supabase
           .from("clients")
           .select("id,name,phone")
+          .eq("organization_id", orgId ?? "")
           .is("deleted_at", null)
           .order("name"),
-        (supabase as any)
+        supabase
           .from("crm_retention_settings")
           .select("inactivity_days,return_days")
+          .eq("organization_id", orgId ?? "")
           .maybeSingle(),
         supabase
           .from("appointments")
           .select("client_id,starts_at,status,price,services(name)")
+          .eq("organization_id", orgId ?? "")
           .eq("status", "atendido")
           .order("starts_at", { ascending: false }),
       ]);
       if (clientsResult.error) throw clientsResult.error;
+      if (settingsResult.error) throw settingsResult.error;
+      if (appointmentsResult.error) throw appointmentsResult.error;
       const inactivityDays = settingsResult.data?.inactivity_days ?? 60;
       const returnDays = settingsResult.data?.return_days ?? 30;
       const cutoff = Date.now() - inactivityDays * 86400000;
       const returnCutoff = Date.now() - returnDays * 86400000;
-      const byClient = new Map<string, any[]>();
+      const byClient = new Map<string, AppointmentSummary[]>();
       for (const appointment of appointmentsResult.data ?? []) {
         if (!appointment.client_id) continue;
         const list = byClient.get(appointment.client_id) ?? [];
         list.push(appointment);
         byClient.set(appointment.client_id, list);
       }
-      const toRetentionClient = (client: any, history: any[]): RetentionClient => ({
+      const toRetentionClient = (
+        client: { id: string; name: string; phone: string | null },
+        history: AppointmentSummary[],
+      ): RetentionClient => ({
         id: client.id,
         name: client.name,
         phone: client.phone,
@@ -155,14 +208,14 @@ function CrmPage() {
         last_service: history[0].services?.name ?? null,
         total_spent: history.reduce((sum, item) => sum + Number(item.price), 0),
       });
-      const inactive = (clientsResult.data ?? []).flatMap((client: any) => {
+      const inactive = (clientsResult.data ?? []).flatMap((client) => {
         const history = byClient.get(client.id) ?? [];
         const last = history[0];
         return last && new Date(last.starts_at).getTime() <= cutoff
           ? [toRetentionClient(client, history)]
           : [];
       });
-      const pendingReturns = (clientsResult.data ?? []).flatMap((client: any) => {
+      const pendingReturns = (clientsResult.data ?? []).flatMap((client) => {
         const history = byClient.get(client.id) ?? [];
         const last = history[0];
         const date = last ? new Date(last.starts_at).getTime() : 0;
@@ -196,10 +249,21 @@ function CrmPage() {
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["crm-leads", orgId] });
     void queryClient.invalidateQueries({ queryKey: ["crm-follow-ups", orgId] });
+    void queryClient.invalidateQueries({ queryKey: ["crm-interactions", orgId] });
+    void queryClient.invalidateQueries({ queryKey: ["crm-retention", orgId] });
   };
   async function moveLead(lead: Lead, stage: string) {
-    const { error } = await (supabase as any).from("crm_leads").update({ stage }).eq("id", lead.id);
-    if (error) return toast.error(error.message);
+    if (!orgId) return;
+    const { error } = await supabase
+      .from("crm_leads")
+      .update({ stage })
+      .eq("organization_id", orgId)
+      .eq("id", lead.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Etapa atualizada.");
     invalidate();
   }
   async function convertLead(lead: Lead) {
@@ -213,16 +277,24 @@ function CrmPage() {
     invalidate();
   }
   async function finishFollowUp(id: string) {
-    const { error } = await (supabase as any)
+    if (!orgId) return;
+    const { error } = await supabase
       .from("crm_follow_ups")
       .update({ status: "concluido", completed_at: new Date().toISOString() })
+      .eq("organization_id", orgId)
       .eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Follow-up concluído.");
     invalidate();
   }
   function openReactivation(client: RetentionClient) {
-    if (!client.phone) return toast.error("Este cliente não possui telefone cadastrado.");
+    if (!client.phone) {
+      toast.error("Este cliente não possui telefone cadastrado.");
+      return;
+    }
     const message = `Olá, ${client.name}! Sentimos sua falta. Já faz um tempo desde seu último atendimento. Gostaria de verificar nossos horários disponíveis?`;
     window.open(
       `https://wa.me/${client.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`,
@@ -232,14 +304,17 @@ function CrmPage() {
   }
   async function createRetentionFollowUp(client: RetentionClient) {
     if (!orgId) return;
-    const { error } = await (supabase as any).from("crm_follow_ups").insert({
+    const { error } = await supabase.from("crm_follow_ups").insert({
       organization_id: orgId,
       client_id: client.id,
       title: `Reativar ${client.name}`,
       description: `Retorno recomendado após ${client.last_service ?? "último atendimento"}.`,
       due_at: new Date().toISOString(),
     });
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Follow-up de reativação criado.");
     invalidate();
   }
@@ -259,10 +334,6 @@ function CrmPage() {
           </Button>
         }
       />
-      <div className="mb-5 rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-sm">
-        <strong>CRM em evolução:</strong> leads, funil, contatos e follow-ups já estão disponíveis
-        nesta etapa.
-      </div>
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-5 grid w-full grid-cols-5 sm:w-auto">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
@@ -293,10 +364,35 @@ function CrmPage() {
             <div className="flex flex-wrap items-center gap-2">
               {STAGES.slice(0, 8).map(([key, label], index) => (
                 <div className="flex items-center gap-2" key={key}>
-                  <Pill tone={key === "converteu" ? "green" : "muted"}>{label}</Pill>
+                  <Pill tone={key === "converteu" ? "success" : "neutral"}>{label}</Pill>
                   {index < 7 ? <ArrowRight className="size-3 text-muted-foreground" /> : null}
                 </div>
               ))}
+            </div>
+          </div>
+          <div className="surface p-5">
+            <h2 className="mb-4 font-display text-lg font-semibold">Atividades recentes</h2>
+            {interactions.isLoading ? <SkeletonCard /> : null}
+            {interactions.isError ? <ErrorState message="Não foi possível carregar os contatos recentes." /> : null}
+            {!interactions.isLoading && !interactions.isError && interactions.data?.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">Nenhum contato registrado.</p>
+            ) : null}
+            <div className="divide-y divide-border">
+              {(interactions.data ?? []).slice(0, 6).map((interaction) => {
+                const lead = leads.data?.find((item) => item.id === interaction.lead_id);
+                return (
+                  <div key={interaction.id} className="flex items-start gap-3 py-3">
+                    <MessageSquare className="mt-0.5 size-4 shrink-0 text-primary" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">{interaction.subject ?? "Contato registrado"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {lead?.name ?? "Cliente convertido"} · {interaction.type} · {new Date(interaction.occurred_at).toLocaleString("pt-BR")}
+                      </p>
+                      <p className="mt-1 text-sm text-pretty">{interaction.description}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </TabsContent>
@@ -312,6 +408,8 @@ function CrmPage() {
           </div>
           {leads.isLoading ? (
             <SkeletonCard />
+          ) : leads.isError ? (
+            <ErrorState message="Não foi possível carregar os leads." />
           ) : (
             <div className="surface divide-y divide-border">
               {filteredLeads.map((lead) => (
@@ -400,7 +498,10 @@ function CrmPage() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => setEditingLead(lead)}
+                          onClick={() => {
+                            setEditingLead(lead);
+                            setLeadDialog(true);
+                          }}
                           title="Editar lead"
                         >
                           <Pencil className="size-4" />
@@ -417,6 +518,8 @@ function CrmPage() {
           <div className="surface divide-y divide-border p-2">
             {followUps.isLoading ? (
               <SkeletonCard />
+            ) : followUps.isError ? (
+              <ErrorState message="Não foi possível carregar os follow-ups." />
             ) : (
               followUps.data?.map((followUp) => (
                 <div className="flex items-center gap-3 p-4" key={followUp.id}>
@@ -436,7 +539,7 @@ function CrmPage() {
                 </div>
               ))
             )}
-            {!followUps.data?.length ? (
+            {!followUps.isLoading && !followUps.isError && !followUps.data?.length ? (
               <p className="py-10 text-center text-sm text-muted-foreground">
                 Nenhum follow-up pendente.
               </p>
@@ -474,6 +577,8 @@ function CrmPage() {
             </div>
             {retention.isLoading ? (
               <SkeletonCard />
+            ) : retention.isError ? (
+              <ErrorState message="Não foi possível analisar a retenção." />
             ) : (
               retention.data?.inactive.map((client) => (
                 <RetentionRow
@@ -509,17 +614,17 @@ function CrmPage() {
         </TabsContent>
       </Tabs>
       <Dialog open={leadDialog} onOpenChange={setLeadDialog}>
-        <LeadDialog
+        {orgId ? <LeadDialog
           lead={editingLead}
           orgId={orgId}
           onDone={() => {
             setLeadDialog(false);
             invalidate();
           }}
-        />
+        /> : null}
       </Dialog>
       <Dialog open={!!contactLead} onOpenChange={(open) => !open && setContactLead(null)}>
-        {contactLead ? (
+        {contactLead && orgId ? (
           <InteractionDialog
             lead={contactLead}
             orgId={orgId}
@@ -531,7 +636,7 @@ function CrmPage() {
         ) : null}
       </Dialog>
       <Dialog open={!!followUpLead} onOpenChange={(open) => !open && setFollowUpLead(null)}>
-        {followUpLead ? (
+        {followUpLead && orgId ? (
           <FollowUpDialog
             lead={followUpLead}
             orgId={orgId}
@@ -581,7 +686,7 @@ function LeadDialog({
   onDone,
 }: {
   lead: Lead | null;
-  orgId?: string;
+  orgId: string;
   onDone: () => void;
 }) {
   const [saving, setSaving] = useState(false);
@@ -594,7 +699,6 @@ function LeadDialog({
   });
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!orgId) return;
     setSaving(true);
     const payload = {
       name: form.name,
@@ -604,14 +708,17 @@ function LeadDialog({
       notes: form.notes || null,
     };
     const result = lead
-      ? await (supabase as any).from("crm_leads").update(payload).eq("id", lead.id)
-      : await (supabase as any).from("crm_leads").insert({
+      ? await supabase.from("crm_leads").update(payload).eq("organization_id", orgId).eq("id", lead.id)
+      : await supabase.from("crm_leads").insert({
           ...payload,
           organization_id: orgId,
           first_contact_at: new Date().toISOString(),
         });
     setSaving(false);
-    if (result.error) return toast.error(result.error.message);
+    if (result.error) {
+      toast.error(result.error.message);
+      return;
+    }
     toast.success(lead ? "Lead atualizado." : "Lead criado no funil.");
     onDone();
   }
@@ -678,16 +785,15 @@ function InteractionDialog({
   onDone,
 }: {
   lead: Lead;
-  orgId?: string;
+  orgId: string;
   onDone: () => void;
 }) {
   const [saving, setSaving] = useState(false);
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!orgId) return;
     setSaving(true);
     const form = new FormData(event.currentTarget);
-    const { error } = await (supabase as any).from("crm_interactions").insert({
+    const { error } = await supabase.from("crm_interactions").insert({
       organization_id: orgId,
       lead_id: lead.id,
       type: String(form.get("type")),
@@ -697,7 +803,10 @@ function InteractionDialog({
       next_action: String(form.get("next_action") || "") || null,
     });
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Contato registrado no histórico.");
     onDone();
   }
@@ -752,16 +861,15 @@ function FollowUpDialog({
   onDone,
 }: {
   lead: Lead;
-  orgId?: string;
+  orgId: string;
   onDone: () => void;
 }) {
   const [saving, setSaving] = useState(false);
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!orgId) return;
     setSaving(true);
     const form = new FormData(event.currentTarget);
-    const { error } = await (supabase as any).from("crm_follow_ups").insert({
+    const { error } = await supabase.from("crm_follow_ups").insert({
       organization_id: orgId,
       lead_id: lead.id,
       title: String(form.get("title")),
@@ -769,7 +877,10 @@ function FollowUpDialog({
       due_at: new Date(String(form.get("due_at"))).toISOString(),
     });
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Follow-up criado.");
     onDone();
   }
