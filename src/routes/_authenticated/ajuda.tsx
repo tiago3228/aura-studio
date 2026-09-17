@@ -1,13 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  BookOpen,
-  ChevronDown,
-  ClipboardCheck,
-  Lightbulb,
-  Search,
-  Sparkles,
-} from "lucide-react";
+import { BookOpen, ChevronDown, ClipboardCheck, Lightbulb, Search, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/ui-kit";
 import { Input } from "@/components/ui/input";
 
@@ -37,7 +30,9 @@ const GUIDES: Guide[] = [
       "Em Agenda, confira os horários e faça um agendamento de teste.",
       "Copie o link público de agendamento e compartilhe com os clientes.",
     ],
-    tips: ["Configure primeiro os cadastros básicos. Isso evita que agenda, financeiro e relatórios fiquem incompletos."],
+    tips: [
+      "Configure primeiro os cadastros básicos. Isso evita que agenda, financeiro e relatórios fiquem incompletos.",
+    ],
   },
   {
     title: "Visão geral",
@@ -65,7 +60,9 @@ const GUIDES: Guide[] = [
       "Use o link público no topo da Agenda para receber solicitações de agendamento online.",
       "Pedidos online aguardando confirmação aparecem no alerta da Agenda. Analise e confirme ou recuse cada solicitação.",
     ],
-    tips: ["Mantenha os horários da equipe atualizados. O link público só oferece horários compatíveis com profissional, procedimento e disponibilidade."],
+    tips: [
+      "Mantenha os horários da equipe atualizados. O link público só oferece horários compatíveis com profissional, procedimento e disponibilidade.",
+    ],
   },
   {
     title: "Clientes e ficha 360°",
@@ -95,7 +92,9 @@ const GUIDES: Guide[] = [
       "Use os controles Ativo e Agendamento online para controlar o catálogo sem apagar o histórico.",
       "Exclua um procedimento apenas quando ele não for mais utilizado. O histórico de agendamentos e vendas é preservado.",
     ],
-    tips: ["Cadastre Avaliação como primeiro contato quando a clínica precisa avaliar o cliente antes de indicar um tratamento."],
+    tips: [
+      "Cadastre Avaliação como primeiro contato quando a clínica precisa avaliar o cliente antes de indicar um tratamento.",
+    ],
   },
   {
     title: "Pacotes de sessões",
@@ -137,7 +136,9 @@ const GUIDES: Guide[] = [
       "Use Retenção para identificar clientes que não retornam há mais tempo.",
       "Entre em contato com uma mensagem adequada e registre o resultado da ação no CRM.",
     ],
-    tips: ["Registre também contatos sem conversão. Eles ajudam a entender onde o funil está parando."],
+    tips: [
+      "Registre também contatos sem conversão. Eles ajudam a entender onde o funil está parando.",
+    ],
   },
   {
     title: "Financeiro: vendas, caixa e despesas",
@@ -151,7 +152,9 @@ const GUIDES: Guide[] = [
       "Use os filtros de filial e período para analisar uma unidade específica.",
       "Confira lançamentos e corrija informações enquanto o período ainda estiver em conferência.",
     ],
-    tips: ["Registre vendas e despesas no mesmo dia para que o dashboard e os relatórios reflitam a operação."],
+    tips: [
+      "Registre vendas e despesas no mesmo dia para que o dashboard e os relatórios reflitam a operação.",
+    ],
   },
   {
     title: "Pagamentos e integrações",
@@ -178,7 +181,9 @@ const GUIDES: Guide[] = [
       "Use os dados de clientes e retenção para definir ações comerciais.",
       "Combine o relatório com o CRM e o Aura IA Marketing para transformar os números em ações.",
     ],
-    tips: ["Confira se vendas, despesas e status dos atendimentos estão atualizados antes de tomar decisões."],
+    tips: [
+      "Confira se vendas, despesas e status dos atendimentos estão atualizados antes de tomar decisões.",
+    ],
   },
   {
     title: "Estoque e movimentações",
@@ -204,7 +209,9 @@ const GUIDES: Guide[] = [
       "Revise o total por profissional, procedimento e status do atendimento.",
       "Concilie os valores antes de realizar o pagamento à equipe.",
     ],
-    tips: ["Altere regras de comissão antes dos novos atendimentos; isso evita ajustes manuais posteriores."],
+    tips: [
+      "Altere regras de comissão antes dos novos atendimentos; isso evita ajustes manuais posteriores.",
+    ],
   },
   {
     title: "Anamnese e evolução do atendimento",
@@ -218,7 +225,9 @@ const GUIDES: Guide[] = [
       "Adicione fotos de antes e depois somente com autorização e seguindo as regras da clínica.",
       "Consulte a evolução nas próximas sessões para acompanhar o tratamento.",
     ],
-    tips: ["Trate dados de saúde e imagens como informações sensíveis e limite o acesso à equipe autorizada."],
+    tips: [
+      "Trate dados de saúde e imagens como informações sensíveis e limite o acesso à equipe autorizada.",
+    ],
   },
   {
     title: "Assistente IA",
@@ -244,7 +253,9 @@ const GUIDES: Guide[] = [
       "Confira se preço, horários, link e condições estão corretos.",
       "Salve os conteúdos aprovados e acompanhe o resultado pelo CRM.",
     ],
-    tips: ["A IA cria uma sugestão; a clínica deve revisar a mensagem antes de enviá-la aos clientes."],
+    tips: [
+      "A IA cria uma sugestão; a clínica deve revisar a mensagem antes de enviá-la aos clientes.",
+    ],
   },
   {
     title: "Assinatura e plano",
@@ -269,7 +280,9 @@ const GUIDES: Guide[] = [
       "Ative ou desative o agendamento online conforme a operação da clínica.",
       "Abra o link público em uma janela anônima para testar como o cliente verá a página.",
     ],
-    tips: ["Sempre teste o link público depois de alterar procedimentos, profissionais ou horários."],
+    tips: [
+      "Sempre teste o link público depois de alterar procedimentos, profissionais ou horários.",
+    ],
   },
   {
     title: "Idioma e moeda",
@@ -281,7 +294,9 @@ const GUIDES: Guide[] = [
       "Selecione a moeda usada para exibir preços e valores financeiros.",
       "Salve a alteração e confira as telas principais para validar a apresentação.",
     ],
-    tips: ["A configuração é individual da clínica e ajuda equipes multilíngues a trabalhar na mesma conta."],
+    tips: [
+      "A configuração é individual da clínica e ajuda equipes multilíngues a trabalhar na mesma conta.",
+    ],
   },
   {
     title: "Filiais",
@@ -294,7 +309,9 @@ const GUIDES: Guide[] = [
       "Aplique o filtro de filial em Agenda, Financeiro e Relatórios para analisar cada unidade.",
       "Mantenha uma filial principal ativa para os links e cadastros que não dependem de local.",
     ],
-    tips: ["Cadastre filiais antes de distribuir a operação para manter os relatórios organizados."],
+    tips: [
+      "Cadastre filiais antes de distribuir a operação para manter os relatórios organizados.",
+    ],
   },
   {
     title: "Segurança e auditoria",
@@ -307,7 +324,9 @@ const GUIDES: Guide[] = [
       "Use os registros para investigar divergências e orientar a equipe.",
       "Conceda acesso somente a pessoas que precisam daquela função para trabalhar.",
     ],
-    tips: ["Nunca compartilhe senha. Cada pessoa deve usar sua própria conta para que a auditoria seja confiável."],
+    tips: [
+      "Nunca compartilhe senha. Cada pessoa deve usar sua própria conta para que a auditoria seja confiável.",
+    ],
   },
   {
     title: "Mensagens e comunicação com clientes",
@@ -320,7 +339,94 @@ const GUIDES: Guide[] = [
       "Personalize o texto quando necessário e registre o contato no histórico.",
       "Para solicitar uma avaliação, configure primeiro o link do Google em Ajustes.",
     ],
-    tips: ["Revise mensagens automáticas para manter o tom da clínica e evitar informações desatualizadas."],
+    tips: [
+      "Revise mensagens automáticas para manter o tom da clínica e evitar informações desatualizadas.",
+    ],
+  },
+  {
+    title: "Cupons e descontos",
+    area: "Relacionamento",
+    summary:
+      "Crie campanhas de desconto e permita que o cliente aplique o cupom no agendamento online.",
+    steps: [
+      "Abra Ajustes e expanda a seção Configurar descontos.",
+      "Clique em Novo cupom e informe um código simples, como RETORNO10, e o percentual de desconto.",
+      "Defina, se desejar, data de início, validade, limite de utilizações e a opção de uma utilização por cliente.",
+      "Escolha se o cupom vale para todos os procedimentos ou apenas para serviços selecionados.",
+      "Clique em Criar cupom e confira se ele aparece como ativo na lista.",
+      "Compartilhe o código com o cliente. No link público, ele deve selecionar o procedimento ou pacote, informar os dados e clicar em Aplicar no campo Cupom de desconto.",
+      "Acompanhe utilizações e o total concedido na própria seção de descontos. O Aura valida o cupom no servidor antes de registrar o agendamento.",
+    ],
+    tips: [
+      "Use códigos diferentes para campanhas diferentes. Para interromper uma campanha sem perder o histórico, edite o cupom e desative a opção Ativo.",
+    ],
+  },
+  {
+    title: "Clientes em recuperação",
+    area: "Relacionamento",
+    summary:
+      "Identifique clientes que não retornaram e envie uma oferta personalizada para reativá-los.",
+    steps: [
+      "Abra Ajustes e expanda Clientes em recuperação.",
+      "Ative os alertas e informe depois de quantos dias sem atendimento o cliente deve ser considerado inativo.",
+      "Clique em Salvar configuração. O mesmo prazo será usado na área Retenção do CRM.",
+      "Abra CRM e entre na aba Retenção para visualizar clientes inativos e retornos recomendados.",
+      "Use WhatsApp para enviar uma mensagem simples de reativação ou clique em Oferecer desconto para escolher um cupom ativo.",
+      "Revise o código, o percentual e a validade da oferta antes de enviá-la pelo WhatsApp.",
+      "Depois do contato, use Criar follow-up para registrar a próxima ação e não perder o acompanhamento.",
+    ],
+    tips: [
+      "Crie um cupom específico para recuperação, com validade curta e uma utilização por cliente, para medir melhor o resultado da campanha.",
+    ],
+  },
+  {
+    title: "Notificações de recuperação",
+    area: "Relacionamento",
+    summary: "Acompanhe alertas de clientes inativos diretamente pela campainha do Aura.",
+    steps: [
+      "Quando o Aura identificar um cliente sem atendimento pelo prazo configurado, ele poderá gerar um alerta de recuperação.",
+      "Na área autenticada, observe a campainha de notificações no cabeçalho, no computador ou no celular.",
+      "O número exibido indica notificações não lidas. Clique na campainha para abrir a lista.",
+      "Clique no alerta do cliente para marcá-lo como lido e abrir diretamente a ficha 360° correspondente.",
+      "Na ficha do cliente, consulte o histórico, registre uma interação ou volte ao CRM para enviar uma oferta.",
+    ],
+    tips: [
+      "Use a campainha como triagem rápida e a aba Retenção do CRM para visualizar a lista completa de clientes e executar ações em sequência.",
+    ],
+  },
+  {
+    title: "Vários procedimentos e pacotes no agendamento público",
+    area: "Operação",
+    summary:
+      "Permita que o cliente combine procedimentos ou selecione mais de um pacote no mesmo pedido.",
+    steps: [
+      "Confirme em Procedimentos que os serviços e pacotes estão ativos e disponíveis para agendamento online.",
+      "Abra o link público da clínica e escolha o profissional.",
+      "Na aba Procedimentos, marque todos os serviços desejados. O resumo mostra a duração e o preço combinados.",
+      "Na aba Pacotes, marque um ou mais pacotes disponíveis. O resumo mostra o total dos pacotes selecionados.",
+      "Escolha a data e o horário. O Aura considera a duração total para oferecer somente horários que comportem a combinação.",
+      "Preencha nome, WhatsApp, e-mail e observações e confirme o agendamento.",
+      "Se houver um cupom, informe o código no campo Cupom de desconto antes de confirmar.",
+    ],
+    tips: [
+      "Se um serviço não aparecer, confira se está ativo, se foi oferecido pelo profissional escolhido e se o pacote contém procedimentos ativos.",
+    ],
+  },
+  {
+    title: "Instalar o Aura como aplicativo",
+    area: "Comece aqui",
+    summary:
+      "Instale o Aura no celular ou computador para abrir a agenda rapidamente, inclusive com suporte à experiência offline.",
+    steps: [
+      "Abra o Aura pelo navegador e faça login normalmente.",
+      "Quando aparecer o convite Instale o Aura, clique em Instalar. No iPhone, use Compartilhar e depois Adicionar à Tela de Início.",
+      "Se fechar o convite, use o menu de instalação do próprio navegador para instalar quando quiser.",
+      "Abra o ícone do Aura pela tela inicial e confirme que a agenda e o menu estão funcionando.",
+      "Quando houver uma atualização, o Aura exibirá uma opção para atualizar a versão instalada.",
+    ],
+    tips: [
+      "A instalação não cria uma conta nova: ela apenas adiciona um atalho com experiência de aplicativo para a mesma clínica.",
+    ],
   },
 ];
 
@@ -371,9 +477,9 @@ function AjudaPage() {
           <div>
             <h2 className="font-display font-semibold">Bem-vinda ao manual do Aura</h2>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              Use a busca para encontrar uma função ou abra os capítulos abaixo. Cada capítulo explica
-              para que serve a área, o passo a passo e os cuidados mais importantes. Se estiver
-              começando agora, siga a ordem do capítulo “Primeiros passos”.
+              Use a busca para encontrar uma função ou abra os capítulos abaixo. Cada capítulo
+              explica para que serve a área, o passo a passo e os cuidados mais importantes. Se
+              estiver começando agora, siga a ordem do capítulo “Primeiros passos”.
             </p>
           </div>
         </div>
@@ -381,17 +487,23 @@ function AjudaPage() {
           <div className="rounded-lg bg-background/70 p-3">
             <ClipboardCheck className="mb-2 size-4 text-primary" />
             <p className="text-xs font-semibold">Configure</p>
-            <p className="mt-1 text-xs text-muted-foreground">Cadastros, equipe, catálogo e horários.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cadastros, equipe, catálogo e horários.
+            </p>
           </div>
           <div className="rounded-lg bg-background/70 p-3">
             <BookOpen className="mb-2 size-4 text-primary" />
             <p className="text-xs font-semibold">Aprenda</p>
-            <p className="mt-1 text-xs text-muted-foreground">Passos detalhados para cada módulo.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Passos detalhados para cada módulo.
+            </p>
           </div>
           <div className="rounded-lg bg-background/70 p-3">
             <Lightbulb className="mb-2 size-4 text-primary" />
             <p className="text-xs font-semibold">Aplique</p>
-            <p className="mt-1 text-xs text-muted-foreground">Dicas para evitar erros e ganhar tempo.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Dicas para evitar erros e ganhar tempo.
+            </p>
           </div>
         </div>
       </div>
@@ -416,7 +528,9 @@ function AjudaPage() {
                   <span className="block font-display text-lg font-semibold">{guide.title}</span>
                   <span className="mt-1 block text-sm text-muted-foreground">{guide.summary}</span>
                 </span>
-                <ChevronDown className={`size-5 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  className={`size-5 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`}
+                />
               </button>
               {expanded ? (
                 <div className="border-t border-border px-5 pt-4 pb-5">
