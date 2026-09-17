@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/lib/session";
+import { useLanguage } from "@/lib/language";
 import { dateFmt, initials } from "@/lib/format";
 import { PageHeader, SkeletonCard, EmptyState, Pill } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,10 @@ export const Route = createFileRoute("/_authenticated/clientes/")({
   head: () => ({
     meta: [
       { title: "Clientes — Aura Clínicas" },
-      { name: "description", content: "Base de clientes com histórico, tags e prontuário digital." },
+      {
+        name: "description",
+        content: "Base de clientes com histórico, tags e prontuário digital.",
+      },
       { property: "og:title", content: "Clientes — Aura Clínicas" },
       { property: "og:description", content: "Base de clientes da sua clínica de estética." },
     ],
@@ -35,6 +39,7 @@ export const Route = createFileRoute("/_authenticated/clientes/")({
 
 function Clientes() {
   const { data: membership } = useMembership();
+  const { t } = useLanguage();
   const orgId = membership?.organization.id;
   const queryClient = useQueryClient();
   const [term, setTerm] = useState("");
@@ -67,13 +72,13 @@ function Clientes() {
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
-        title="Clientes"
-        subtitle={`${clients.data?.length ?? 0} cadastros ativos`}
+        title={t("Clientes")}
+        subtitle={`${clients.data?.length ?? 0} ${t("cadastros ativos")}`}
         actions={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button>
-                <Plus className="size-4" /> Novo cliente
+                <Plus className="size-4" /> {t("Novo cliente")}
               </Button>
             </DialogTrigger>
             <NewClientDialog
@@ -91,7 +96,7 @@ function Clientes() {
         <Input
           value={term}
           onChange={(e) => setTerm(e.target.value)}
-          placeholder="Buscar por nome, telefone ou e-mail"
+          placeholder={t("Buscar por nome, telefone ou e-mail")}
           className="pl-9"
         />
       </div>
@@ -100,8 +105,10 @@ function Clientes() {
         <SkeletonCard />
       ) : filtered.length === 0 ? (
         <EmptyState
-          title="Nenhum cliente encontrado"
-          description="Cadastre sua base de clientes para acompanhar histórico, pacotes e prontuários."
+          title={t("Nenhum cliente encontrado")}
+          description={t(
+            "Cadastre sua base de clientes para acompanhar histórico, pacotes e prontuários.",
+          )}
         />
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
@@ -118,10 +125,14 @@ function Clientes() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{c.name}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {c.phone ?? c.email ?? "Sem contato"}
+                    {c.phone ?? c.email ?? t("Sem contato")}
                   </p>
                 </div>
-                {c.birth_date ? <Pill tone="gold">{dateFmt(c.birth_date, { day: "2-digit", month: "2-digit" })}</Pill> : null}
+                {c.birth_date ? (
+                  <Pill tone="gold">
+                    {dateFmt(c.birth_date, { day: "2-digit", month: "2-digit" })}
+                  </Pill>
+                ) : null}
               </Link>
             </li>
           ))}
@@ -133,6 +144,7 @@ function Clientes() {
 
 function NewClientDialog({ onDone }: { onDone: () => void }) {
   const { data: membership } = useMembership();
+  const { t } = useLanguage();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -159,10 +171,10 @@ function NewClientDialog({ onDone }: { onDone: () => void }) {
         notes: form.notes || null,
       });
       if (error) throw error;
-      toast.success("Cliente cadastrado.");
+      toast.success(t("Cliente cadastrado."));
       onDone();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao salvar.");
+      toast.error(err instanceof Error ? err.message : t("Erro ao salvar."));
     } finally {
       setSaving(false);
     }
@@ -171,11 +183,11 @@ function NewClientDialog({ onDone }: { onDone: () => void }) {
   return (
     <DialogContent>
       <DialogHeader>
-        <DialogTitle className="font-display">Novo cliente</DialogTitle>
+        <DialogTitle className="font-display">{t("Novo cliente")}</DialogTitle>
       </DialogHeader>
       <form onSubmit={save} className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="c-name">Nome completo</Label>
+          <Label htmlFor="c-name">{t("Nome completo")}</Label>
           <Input
             id="c-name"
             value={form.name}
@@ -193,7 +205,7 @@ function NewClientDialog({ onDone }: { onDone: () => void }) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="c-birth">Nascimento</Label>
+            <Label htmlFor="c-birth">{t("Nascimento")}</Label>
             <Input
               id="c-birth"
               type="date"
@@ -213,17 +225,17 @@ function NewClientDialog({ onDone }: { onDone: () => void }) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="c-origin">Como conheceu</Label>
+            <Label htmlFor="c-origin">{t("Como conheceu")}</Label>
             <Input
               id="c-origin"
               value={form.origin}
               onChange={(e) => setForm({ ...form, origin: e.target.value })}
-              placeholder="Instagram, indicação..."
+              placeholder={t("Instagram, indicação...")}
             />
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="c-notes">Observações</Label>
+          <Label htmlFor="c-notes">{t("Observações")}</Label>
           <Textarea
             id="c-notes"
             rows={2}
@@ -233,7 +245,7 @@ function NewClientDialog({ onDone }: { onDone: () => void }) {
         </div>
         <DialogFooter>
           <Button type="submit" disabled={saving}>
-            {saving ? <Loader2 className="size-4 animate-spin" /> : null} Cadastrar
+            {saving ? <Loader2 className="size-4 animate-spin" /> : null} {t("Cadastrar")}
           </Button>
         </DialogFooter>
       </form>

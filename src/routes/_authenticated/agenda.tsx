@@ -15,6 +15,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/lib/session";
+import { useLanguage } from "@/lib/language";
 import { addDays, brl, isoDay, longDate, startOfWeek, timeFmt, dateFmt } from "@/lib/format";
 import { publicAppUrl } from "@/lib/public-url";
 import { PageHeader, Pill, SkeletonCard, EmptyState } from "@/components/ui-kit";
@@ -100,14 +101,14 @@ const STATUS_META: Record<Status, { label: string; dot: string; bar: string; tex
   },
 };
 
-function StatusLegend() {
+function StatusLegend({ t }: { t: (value: string) => string }) {
   return (
     <div className="surface mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 p-3">
-      <span className="text-xs font-semibold text-muted-foreground">Legenda:</span>
+      <span className="text-xs font-semibold text-muted-foreground">{t("Legenda:")}</span>
       {STATUSES.map((s) => (
         <span key={s} className="inline-flex items-center gap-1.5 text-xs">
           <span className={`size-2.5 rounded-full ${STATUS_META[s].dot}`} aria-hidden />
-          {STATUS_META[s].label}
+          {t(STATUS_META[s].label)}
         </span>
       ))}
     </div>
@@ -131,6 +132,7 @@ export const Route = createFileRoute("/_authenticated/agenda")({
 
 function Agenda() {
   const { data: membership } = useMembership();
+  const { language, t } = useLanguage();
   const orgId = membership?.organization.id;
   const queryClient = useQueryClient();
   const [anchor, setAnchor] = useState(() => isoDay(new Date()));
@@ -288,7 +290,7 @@ function Agenda() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      toast.success("Status atualizado.");
+      toast.success(t("Status atualizado."));
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -299,13 +301,13 @@ function Agenda() {
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
-        title="Agenda"
-        subtitle="Conflitos de profissional e sala são bloqueados automaticamente."
+        title={t("Agenda")}
+        subtitle={t("Conflitos de profissional e sala são bloqueados automaticamente.")}
         actions={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button>
-                <Plus className="size-4" /> Agendar
+                <Plus className="size-4" /> {t("Agendar")}
               </Button>
             </DialogTrigger>
             <NewAppointmentDialog
@@ -329,10 +331,10 @@ function Agenda() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="font-semibold">
-                {visibleOnline.length} agendamento(s) online aguardando confirmação
+                {visibleOnline.length} {t("agendamento(s) online aguardando confirmação")}
               </p>
               <p className="text-xs text-amber-800">
-                A Agenda verifica novos pedidos automaticamente a cada 30 segundos.
+                {t("A Agenda verifica novos pedidos automaticamente a cada 30 segundos.")}
               </p>
             </div>
             <Button
@@ -344,7 +346,7 @@ function Agenda() {
                 setView("dia");
               }}
             >
-              Ver primeiro
+              {t("Ver primeiro")}
             </Button>
             <Button
               size="sm"
@@ -356,10 +358,10 @@ function Agenda() {
                 ];
                 setDismissedOnlineIds(ids);
                 window.localStorage.setItem("aura-dismissed-online-alerts", JSON.stringify(ids));
-                toast.success("Alertas limpos. Novos agendamentos continuarão aparecendo.");
+                toast.success(t("Alertas limpos. Novos agendamentos continuarão aparecendo."));
               }}
             >
-              Limpar alerta
+              {t("Limpar alerta")}
             </Button>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -376,7 +378,7 @@ function Agenda() {
                   }}
                 >
                   {date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} ·{" "}
-                  {appointment.clients?.name ?? appointment.guest_name ?? "Paciente"}
+                  {appointment.clients?.name ?? appointment.guest_name ?? t("Paciente")}
                 </button>
               );
             })}
@@ -386,12 +388,12 @@ function Agenda() {
 
       <div className="surface mb-5 flex flex-wrap items-center gap-3 border-primary/20 bg-primary-soft/40 p-4">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-primary">Agendamento online</p>
+          <p className="text-xs font-semibold text-primary">{t("Agendamento online")}</p>
           <p className="mt-1 truncate text-sm font-medium">
-            Envie este link para seus clientes agendarem sozinhos
+            {t("Envie este link para seus clientes agendarem sozinhos")}
           </p>
           <p className="mt-1 truncate text-xs text-muted-foreground">
-            {bookingUrl || "Configure o link público em Configurações."}
+            {bookingUrl || t("Configure o link público em Configurações.")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -401,10 +403,10 @@ function Agenda() {
             disabled={!bookingUrl}
             onClick={() => {
               void navigator.clipboard.writeText(bookingUrl);
-              toast.success("Link copiado.");
+              toast.success(t("Link copiado."));
             }}
           >
-            <Clipboard className="size-4" /> Copiar link
+            <Clipboard className="size-4" /> {t("Copiar link")}
           </Button>
           <Button
             size="sm"
@@ -412,12 +414,14 @@ function Agenda() {
             disabled={!bookingUrl}
             onClick={() => window.open(bookingUrl, "_blank", "noopener,noreferrer")}
           >
-            <ExternalLink className="size-4" /> Abrir
+            <ExternalLink className="size-4" /> {t("Abrir")}
           </Button>
           <Button
             size="sm"
             disabled={!bookingUrl || bookingMessage.isLoading}
-            onClick={() => window.open(whatsappShareLink(bookingMessageText), "_blank", "noopener,noreferrer")}
+            onClick={() =>
+              window.open(whatsappShareLink(bookingMessageText), "_blank", "noopener,noreferrer")
+            }
           >
             <MessageCircle className="size-4" /> WhatsApp
           </Button>
@@ -430,7 +434,7 @@ function Agenda() {
           value={locationId}
           onChange={(e) => setLocationId(e.target.value)}
         >
-          <option value="">Todas as filiais</option>
+          <option value="">{t("Todas as filiais")}</option>
           {locations.data?.map((location) => (
             <option value={location.id} key={location.id}>
               {location.name}
@@ -442,7 +446,7 @@ function Agenda() {
             variant="ghost"
             size="icon"
             onClick={() => setAnchor(addDays(anchor, view === "dia" ? -1 : -7))}
-            aria-label="Anterior"
+            aria-label={t("Anterior")}
           >
             <ChevronLeft className="size-4" />
           </Button>
@@ -455,12 +459,12 @@ function Agenda() {
             variant="ghost"
             size="icon"
             onClick={() => setAnchor(addDays(anchor, view === "dia" ? 1 : 7))}
-            aria-label="Próximo"
+            aria-label={t("Próximo")}
           >
             <ChevronRight className="size-4" />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setAnchor(isoDay(new Date()))}>
-            Hoje
+            {t("Hoje")}
           </Button>
         </div>
         <div className="flex rounded-lg bg-muted p-1">
@@ -472,20 +476,22 @@ function Agenda() {
                 view === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
               }`}
             >
-              {v}
+              {t(v)}
             </button>
           ))}
         </div>
       </div>
 
-      <StatusLegend />
+      <StatusLegend t={t} />
 
       {appointments.isLoading ? (
         <SkeletonCard />
       ) : (appointments.data?.length ?? 0) === 0 ? (
         <EmptyState
-          title="Nenhum agendamento neste período"
-          description="Clique em Agendar para criar o primeiro atendimento — o sistema valida horários automaticamente."
+          title={t("Nenhum agendamento neste período")}
+          description={t(
+            "Clique em Agendar para criar o primeiro atendimento — o sistema valida horários automaticamente.",
+          )}
         />
       ) : (
         <div
@@ -502,6 +508,7 @@ function Agenda() {
                   appointment={a}
                   onStatus={setStatus.mutate}
                   onMessage={setMessageTarget}
+                  t={t}
                 />
               ));
             }
@@ -511,7 +518,7 @@ function Agenda() {
                   {dateFmt(day, { weekday: "short", day: "2-digit", month: "2-digit" })}
                 </p>
                 {items.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Livre</p>
+                  <p className="text-xs text-muted-foreground">{t("Livre")}</p>
                 ) : (
                   <ul className="space-y-2">
                     {items.map((a) => (
@@ -568,6 +575,7 @@ type AppointmentRowProps = {
   };
   onStatus: (input: { id: string; status: Status }) => void;
   onMessage: (target: MessageTarget) => void;
+  t: (value: string) => string;
 };
 
 const SUGGESTED: Partial<Record<Status, MsgEvent>> = {
@@ -577,15 +585,15 @@ const SUGGESTED: Partial<Record<Status, MsgEvent>> = {
   atendido: "satisfacao",
 };
 
-function AppointmentRow({ appointment: a, onStatus, onMessage }: AppointmentRowProps) {
+function AppointmentRow({ appointment: a, onStatus, onMessage, t }: AppointmentRowProps) {
   const meta = STATUS_META[a.status];
   const target: MessageTarget = {
     appointmentId: a.id,
     clientId: a.client_id,
-    clientName: a.clients?.name ?? a.guest_name ?? "Cliente",
+    clientName: a.clients?.name ?? a.guest_name ?? t("Cliente"),
     phone: a.clients?.phone ?? a.guest_phone,
-    serviceName: a.services?.name ?? "atendimento",
-    professionalName: a.professionals?.name ?? "nossa equipe",
+    serviceName: a.services?.name ?? t("atendimento"),
+    professionalName: a.professionals?.name ?? t("nossa equipe"),
     startsAt: a.starts_at,
     ...(SUGGESTED[a.status] ? { suggested: SUGGESTED[a.status]! } : {}),
   };
@@ -602,38 +610,40 @@ function AppointmentRow({ appointment: a, onStatus, onMessage }: AppointmentRowP
       </div>
       <div className="min-w-40 flex-1">
         <p className="text-sm font-semibold">
-          {a.clients?.name ?? a.guest_name ?? "Cliente avulso"}
+          {a.clients?.name ?? a.guest_name ?? t("Cliente avulso")}
         </p>
         <p className="text-xs text-muted-foreground">
-          {a.services?.name ?? "Serviço"} · {a.professionals?.name ?? "Sem profissional"}
+          {a.services?.name ?? t("Serviço")} · {a.professionals?.name ?? t("Sem profissional")}
         </p>
         {a.notes ? <p className="mt-1 text-xs text-muted-foreground italic">{a.notes}</p> : null}
       </div>
       <span className="text-sm font-semibold tabular-nums">{brl(Number(a.price))}</span>
       <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
         <span className={`size-2.5 rounded-full ${meta.dot}`} aria-hidden />
-        {meta.label}
+        {t(meta.label)}
       </span>
       <Button
         variant="outline"
         size="sm"
         onClick={() => onMessage(target)}
         disabled={!target.phone}
-        title={target.phone ? "Enviar mensagem ao cliente" : "Cliente sem WhatsApp cadastrado"}
+        title={
+          target.phone ? t("Enviar mensagem ao cliente") : t("Cliente sem WhatsApp cadastrado")
+        }
       >
-        <MessageCircle className="size-4" /> Mensagem
+        <MessageCircle className="size-4" /> {t("Mensagem")}
       </Button>
       <Select
         value={a.status}
         onValueChange={(status) => onStatus({ id: a.id, status: status as Status })}
       >
-        <SelectTrigger className="w-36" aria-label="Alterar status">
+        <SelectTrigger className="w-36" aria-label={t("Alterar status")}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {STATUSES.map((s) => (
             <SelectItem key={s} value={s}>
-              {STATUS_META[s].label}
+              {t(STATUS_META[s].label)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -658,6 +668,7 @@ function NewAppointmentDialog({
   onDone: () => void;
 }) {
   const { data: membership } = useMembership();
+  const { t } = useLanguage();
   const [form, setForm] = useState({
     client_id: "",
     service_id: "",
@@ -686,7 +697,7 @@ function NewAppointmentDialog({
         const name = form.new_client_name.trim();
         const phone = form.new_client_phone.trim();
         const email = form.new_client_email.trim().toLowerCase();
-        if (!name) throw new Error("Informe o nome do cliente.");
+        if (!name) throw new Error(t("Informe o nome do cliente."));
         const normalizedPhone = phone.replace(/\D/g, "");
         const duplicate = lists?.clients.find(
           (client) =>
@@ -696,7 +707,7 @@ function NewAppointmentDialog({
         if (duplicate) {
           clientId = duplicate.id;
           toast.info(
-            `Cliente já cadastrado: ${duplicate.name}. O agendamento será vinculado a ele.`,
+            `${t("Cliente já cadastrado")}: ${duplicate.name}. ${t("O agendamento será vinculado a ele.")}`,
           );
         } else {
           const { data: created, error: clientError } = await supabase
@@ -729,10 +740,10 @@ function NewAppointmentDialog({
         source: "interno",
       });
       if (error) throw error;
-      toast.success("Agendamento criado.");
+      toast.success(t("Agendamento criado."));
       onDone();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao agendar.");
+      toast.error(err instanceof Error ? err.message : t("Erro ao agendar."));
     } finally {
       setSaving(false);
     }
@@ -741,17 +752,17 @@ function NewAppointmentDialog({
   return (
     <DialogContent className="max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle className="font-display">Novo agendamento</DialogTitle>
+        <DialogTitle className="font-display">{t("Novo agendamento")}</DialogTitle>
       </DialogHeader>
       <form onSubmit={save} className="space-y-4">
         <div className="space-y-1.5">
-          <Label>Cliente</Label>
+          <Label>{t("Cliente")}</Label>
           <Select value={form.client_id} onValueChange={(v) => setForm({ ...form, client_id: v })}>
             <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
+              <SelectValue placeholder={t("Selecione")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__new__">+ Novo cliente neste agendamento</SelectItem>
+              <SelectItem value="__new__">+ {t("Novo cliente neste agendamento")}</SelectItem>
               {lists?.clients.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name}
@@ -762,9 +773,9 @@ function NewAppointmentDialog({
         </div>
         {isNewClient ? (
           <div className="space-y-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3">
-            <p className="text-xs font-semibold text-primary">Cadastro rápido do cliente</p>
+            <p className="text-xs font-semibold text-primary">{t("Cadastro rápido do cliente")}</p>
             <div className="space-y-1.5">
-              <Label htmlFor="new-client-name">Nome completo</Label>
+              <Label htmlFor="new-client-name">{t("Nome completo")}</Label>
               <Input
                 id="new-client-name"
                 value={form.new_client_name}
@@ -794,13 +805,13 @@ function NewAppointmentDialog({
           </div>
         ) : null}
         <div className="space-y-1.5">
-          <Label>Procedimento</Label>
+          <Label>{t("Procedimento")}</Label>
           <Select
             value={form.service_id}
             onValueChange={(v) => setForm({ ...form, service_id: v })}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
+              <SelectValue placeholder={t("Selecione")} />
             </SelectTrigger>
             <SelectContent>
               {lists?.services.map((s) => (
@@ -812,13 +823,13 @@ function NewAppointmentDialog({
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>Profissional</Label>
+          <Label>{t("Profissional")}</Label>
           <Select
             value={form.professional_id}
             onValueChange={(v) => setForm({ ...form, professional_id: v })}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
+              <SelectValue placeholder={t("Selecione")} />
             </SelectTrigger>
             <SelectContent>
               {lists?.professionals.map((p) => (
@@ -831,7 +842,7 @@ function NewAppointmentDialog({
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="date">Data</Label>
+            <Label htmlFor="date">{t("Data")}</Label>
             <Input
               id="date"
               type="date"
@@ -841,7 +852,7 @@ function NewAppointmentDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="time">Horário</Label>
+            <Label htmlFor="time">{t("Horário")}</Label>
             <Input
               id="time"
               type="time"
@@ -852,7 +863,7 @@ function NewAppointmentDialog({
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="notes">Observações</Label>
+          <Label htmlFor="notes">{t("Observações")}</Label>
           <Textarea
             id="notes"
             rows={2}
@@ -862,7 +873,7 @@ function NewAppointmentDialog({
         </div>
         <DialogFooter>
           <Button type="submit" disabled={saving}>
-            {saving ? <Loader2 className="size-4 animate-spin" /> : null} Salvar
+            {saving ? <Loader2 className="size-4 animate-spin" /> : null} {t("Salvar")}
           </Button>
         </DialogFooter>
       </form>
