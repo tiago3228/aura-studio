@@ -260,36 +260,40 @@ export function AppShell({ children }: { children: ReactNode }) {
         })}
       </nav>
 
-      <div className="surface mt-4 flex items-center gap-3 p-3">
-        <div className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-          {initials(membership?.organization.name)}
+      <div className="surface mt-4 space-y-3 p-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+            {initials(membership?.organization.name)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-semibold">{membership?.organization.name}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {membership ? roleLabel[membership.role] : "—"}
+            </p>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-semibold">{membership?.organization.name}</p>
-          <p className="text-[11px] text-muted-foreground">
-            {membership ? roleLabel[membership.role] : "—"}
-          </p>
+        <div className="flex items-center justify-end gap-2 border-t border-border pt-2">
+          <select
+            aria-label="Idioma"
+            className="h-8 min-w-0 flex-1 rounded-md border border-border bg-transparent px-1.5 text-[11px]"
+            value={language}
+            onChange={(event) => setLanguage(event.target.value as typeof language)}
+          >
+            {LANGUAGE_OPTIONS.map((option) => (
+              <option value={option.value} key={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <NotificationBell />
+          <button
+            onClick={signOut}
+            aria-label="Sair"
+            className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive"
+          >
+            <LogOut className="size-4" />
+          </button>
         </div>
-        <button
-          onClick={signOut}
-          aria-label="Sair"
-          className="text-muted-foreground hover:text-destructive"
-        >
-          <LogOut className="size-4" />
-        </button>
-        <select
-          aria-label="Idioma"
-          className="h-8 rounded-md border border-border bg-transparent px-1.5 text-[11px]"
-          value={language}
-          onChange={(event) => setLanguage(event.target.value as typeof language)}
-        >
-          {LANGUAGE_OPTIONS.map((option) => (
-            <option value={option.value} key={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <NotificationBell />
       </div>
     </div>
   );
