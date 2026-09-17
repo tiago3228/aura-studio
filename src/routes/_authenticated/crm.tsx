@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -6,6 +7,7 @@ import {
   Archive,
   Bell,
   CheckCircle2,
+  Gift,
   Loader2,
   MessageSquare,
   Pencil,
@@ -38,9 +40,15 @@ export const Route = createFileRoute("/_authenticated/crm")({
   head: () => ({
     meta: [
       { title: "CRM — Aura Clínicas" },
-      { name: "description", content: "Gestão de leads, funil comercial, contatos, follow-ups e retenção de clientes." },
+      {
+        name: "description",
+        content: "Gestão de leads, funil comercial, contatos, follow-ups e retenção de clientes.",
+      },
       { property: "og:title", content: "CRM — Aura Clínicas" },
-      { property: "og:description", content: "Gestão comercial e retenção para clínicas de estética." },
+      {
+        property: "og:description",
+        content: "Gestão comercial e retenção para clínicas de estética.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -76,6 +84,7 @@ type RetentionClient = {
   last_service: string | null;
   total_spent: number;
 };
+type RecoveryCoupon = { id: string; code: string; percentage: number; expires_at: string | null };
 type Interaction = {
   id: string;
   lead_id: string | null;
@@ -117,6 +126,21 @@ function CrmPage() {
   const [term, setTerm] = useState("");
   const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
   const [movingLeadId, setMovingLeadId] = useState<string | null>(null);
+  const [offerClient, setOfferClient] = useState<RetentionClient | null>(null);
+  const coupons = useQuery({
+    enabled: !!orgId,
+    queryKey: ["crm-recovery-coupons", orgId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("discount_coupons")
+        .select("id,code,percentage,expires_at")
+        .eq("organization_id", orgId ?? "")
+        .eq("active", true)
+        .order("code");
+      if (error) throw error;
+      return (data ?? []) as RecoveryCoupon[];
+    },
+  });
   const leads = useQuery({
     enabled: !!orgId,
     queryKey: ["crm-leads", orgId],
@@ -205,6 +229,7 @@ function CrmPage() {
     enabled: !!orgId,
     queryKey: ["crm-retention", orgId],
     queryFn: async () => {
+      await (supabase as any).rpc("refresh_recovery_notifications", { _org_id: orgId });
       const [clientsResult, settingsResult, appointmentsResult] = await Promise.all([
         supabase
           .from("clients")
@@ -356,7 +381,8 @@ function CrmPage() {
       toast.error("Confira o telefone do cliente antes de abrir o WhatsApp.");
       return;
     }
-    const fallback = "Olá, {{nome}}! Sentimos sua falta. Já faz um tempo desde seu último atendimento. Gostaria de verificar nossos horários disponíveis?";
+    const fallback =
+      "Olá, {{nome}}! Sentimos sua falta. Já faz um tempo desde seu último atendimento. Gostaria de verificar nossos horários disponíveis?";
     const message = (reactivationTemplate.data?.body ?? fallback)
       .replaceAll("{{nome}}", client.name)
       .replaceAll("{{ultimo_procedimento}}", client.last_service ?? "último atendimento");
@@ -437,9 +463,13 @@ function CrmPage() {
           <div className="surface p-5">
             <h2 className="mb-4 font-display text-lg font-semibold">Atividades recentes</h2>
             {interactions.isLoading ? <SkeletonCard /> : null}
-            {interactions.isError ? <ErrorState message="Não foi possível carregar os contatos recentes." /> : null}
+            {interactions.isError ? (
+              <ErrorState message="Não foi possível carregar os contatos recentes." />
+            ) : null}
             {!interactions.isLoading && !interactions.isError && interactions.data?.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">Nenhum contato registrado.</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                Nenhum contato registrado.
+              </p>
             ) : null}
             <div className="divide-y divide-border">
               {(interactions.data ?? []).slice(0, 6).map((interaction) => {
@@ -448,9 +478,12 @@ function CrmPage() {
                   <div key={interaction.id} className="flex items-start gap-3 py-3">
                     <MessageSquare className="mt-0.5 size-4 shrink-0 text-primary" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{interaction.subject ?? "Contato registrado"}</p>
+                      <p className="text-sm font-medium">
+                        {interaction.subject ?? "Contato registrado"}
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        {lead?.name ?? "Cliente convertido"} · {interaction.type} · {new Date(interaction.occurred_at).toLocaleString("pt-BR")}
+                        {lead?.name ?? "Cliente convertido"} · {interaction.type} ·{" "}
+                        {new Date(interaction.occurred_at).toLocaleString("pt-BR")}
                       </p>
                       <p className="mt-1 text-sm text-pretty">{interaction.description}</p>
                     </div>
@@ -466,8 +499,12 @@ function CrmPage() {
                     <div key={entry.id} className="flex flex-wrap items-center gap-2 text-xs">
                       <span className="font-medium">{entry.crm_leads?.name ?? "Lead"}</span>
                       <span className="text-muted-foreground">foi movido para</span>
-                      <Pill>{STAGES.find(([key]) => key === entry.new_stage)?.[1] ?? entry.new_stage}</Pill>
-                      <span className="ml-auto text-muted-foreground">{new Date(entry.created_at).toLocaleString("pt-BR")}</span>
+                      <Pill>
+                        {STAGES.find(([key]) => key === entry.new_stage)?.[1] ?? entry.new_stage}
+                      </Pill>
+                      <span className="ml-auto text-muted-foreground">
+                        {new Date(entry.created_at).toLocaleString("pt-BR")}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -528,13 +565,25 @@ function CrmPage() {
                       Follow-up
                     </Button>
                     {lead.stage !== "converteu" && lead.stage !== "fidelizado" ? (
-                      <Button size="sm" disabled={convertingLeadId === lead.id} onClick={() => convertLead(lead)}>
-                        {convertingLeadId === lead.id ? <Loader2 className="size-4 animate-spin" /> : null}
+                      <Button
+                        size="sm"
+                        disabled={convertingLeadId === lead.id}
+                        onClick={() => convertLead(lead)}
+                      >
+                        {convertingLeadId === lead.id ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : null}
                         Converter
                       </Button>
                     ) : null}
                     {!["perdido", "converteu", "fidelizado"].includes(lead.stage) ? (
-                      <Button variant="ghost" size="icon" title="Arquivar lead" disabled={movingLeadId === lead.id} onClick={() => moveLead(lead, "perdido")}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Arquivar lead"
+                        disabled={movingLeadId === lead.id}
+                        onClick={() => moveLead(lead, "perdido")}
+                      >
                         <Archive className="size-4" />
                       </Button>
                     ) : null}
@@ -609,7 +658,9 @@ function CrmPage() {
             ) : (
               followUps.data?.map((followUp) => (
                 <div className="flex items-center gap-3 p-4" key={followUp.id}>
-                  <div className={`grid size-9 place-items-center rounded-full ${new Date(followUp.due_at).getTime() < Date.now() ? "bg-destructive-soft text-destructive" : "bg-gold/15 text-gold"}`}>
+                  <div
+                    className={`grid size-9 place-items-center rounded-full ${new Date(followUp.due_at).getTime() < Date.now() ? "bg-destructive-soft text-destructive" : "bg-gold/15 text-gold"}`}
+                  >
                     <CheckCircle2 className="size-4" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -618,7 +669,9 @@ function CrmPage() {
                       {followUp.description ?? "Sem descrição"} ·{" "}
                       {new Date(followUp.due_at).toLocaleString("pt-BR")}
                     </p>
-                    {new Date(followUp.due_at).getTime() < Date.now() ? <Pill tone="danger">Atrasado</Pill> : null}
+                    {new Date(followUp.due_at).getTime() < Date.now() ? (
+                      <Pill tone="danger">Atrasado</Pill>
+                    ) : null}
                   </div>
                   <Button size="sm" variant="outline" onClick={() => finishFollowUp(followUp.id)}>
                     Concluir
@@ -672,6 +725,7 @@ function CrmPage() {
                   client={client}
                   key={client.id}
                   onWhatsApp={openReactivation}
+                  onOfferDiscount={setOfferClient}
                   onFollowUp={createRetentionFollowUp}
                 />
               ))
@@ -689,6 +743,7 @@ function CrmPage() {
                 client={client}
                 key={client.id}
                 onWhatsApp={openReactivation}
+                onOfferDiscount={setOfferClient}
                 onFollowUp={createRetentionFollowUp}
               />
             ))}
@@ -700,15 +755,26 @@ function CrmPage() {
           </div>
         </TabsContent>
       </Tabs>
+      <Dialog open={!!offerClient} onOpenChange={(open) => !open && setOfferClient(null)}>
+        {offerClient ? (
+          <DiscountOfferDialog
+            client={offerClient}
+            coupons={coupons.data ?? []}
+            onDone={() => setOfferClient(null)}
+          />
+        ) : null}
+      </Dialog>
       <Dialog open={leadDialog} onOpenChange={setLeadDialog}>
-        {orgId ? <LeadDialog
-          lead={editingLead}
-          orgId={orgId}
-          onDone={() => {
-            setLeadDialog(false);
-            invalidate();
-          }}
-        /> : null}
+        {orgId ? (
+          <LeadDialog
+            lead={editingLead}
+            orgId={orgId}
+            onDone={() => {
+              setLeadDialog(false);
+              invalidate();
+            }}
+          />
+        ) : null}
       </Dialog>
       <Dialog open={!!contactLead} onOpenChange={(open) => !open && setContactLead(null)}>
         {contactLead && orgId ? (
@@ -738,13 +804,78 @@ function CrmPage() {
   );
 }
 
+function DiscountOfferDialog({
+  client,
+  coupons,
+  onDone,
+}: {
+  client: RetentionClient;
+  coupons: RecoveryCoupon[];
+  onDone: () => void;
+}) {
+  const [couponId, setCouponId] = useState(coupons[0]?.id ?? "");
+  const coupon = coupons.find((item) => item.id === couponId);
+  function send() {
+    if (!client.phone || !coupon) return;
+    const expires = coupon.expires_at
+      ? new Date(`${coupon.expires_at}T12:00:00`).toLocaleDateString("pt-BR")
+      : "em breve";
+    const message = `Olá, ${client.name}! Como vai?\n\nSentimos sua falta! Estamos oferecendo um desconto especial para você retornar.\n\nUse o cupom ${coupon.code} no seu próximo agendamento e ganhe ${coupon.percentage}% de desconto.\n\nVálido até ${expires}.\n\nEsperamos você!`;
+    window.open(
+      `https://wa.me/${client.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+    onDone();
+  }
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Oferecer desconto</DialogTitle>
+      </DialogHeader>
+      {coupons.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Cadastre um cupom ativo em Configurações antes de enviar uma oferta.
+        </p>
+      ) : (
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Escolha o cupom que será enviado para {client.name}.
+          </p>
+          <select
+            className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+            value={couponId}
+            onChange={(event) => setCouponId(event.target.value)}
+          >
+            {coupons.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.code} · {item.percentage}%
+              </option>
+            ))}
+          </select>
+          <DialogFooter>
+            <Button variant="outline" onClick={onDone}>
+              Cancelar
+            </Button>
+            <Button onClick={send}>
+              <Gift className="size-4" /> Enviar pelo WhatsApp
+            </Button>
+          </DialogFooter>
+        </div>
+      )}
+    </DialogContent>
+  );
+}
+
 function RetentionRow({
   client,
   onWhatsApp,
+  onOfferDiscount,
   onFollowUp,
 }: {
   client: RetentionClient;
   onWhatsApp: (client: RetentionClient) => void;
+  onOfferDiscount: (client: RetentionClient) => void;
   onFollowUp: (client: RetentionClient) => void;
 }) {
   return (
@@ -759,6 +890,9 @@ function RetentionRow({
       <Pill tone="gold">R$ {client.total_spent.toFixed(2).replace(".", ",")} acumulado</Pill>
       <Button size="sm" variant="outline" onClick={() => onWhatsApp(client)}>
         <MessageSquare className="size-4" /> WhatsApp
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => onOfferDiscount(client)}>
+        <Gift className="size-4" /> Oferecer desconto
       </Button>
       <Button size="sm" onClick={() => onFollowUp(client)}>
         Criar follow-up
@@ -796,8 +930,24 @@ function LeadDialog({
     };
     if (!lead) {
       const checks = [];
-      if (form.whatsapp) checks.push(supabase.from("crm_leads").select("id").eq("organization_id", orgId).eq("whatsapp", form.whatsapp).limit(1));
-      if (form.email) checks.push(supabase.from("crm_leads").select("id").eq("organization_id", orgId).ilike("email", form.email).limit(1));
+      if (form.whatsapp)
+        checks.push(
+          supabase
+            .from("crm_leads")
+            .select("id")
+            .eq("organization_id", orgId)
+            .eq("whatsapp", form.whatsapp)
+            .limit(1),
+        );
+      if (form.email)
+        checks.push(
+          supabase
+            .from("crm_leads")
+            .select("id")
+            .eq("organization_id", orgId)
+            .ilike("email", form.email)
+            .limit(1),
+        );
       const duplicates = await Promise.all(checks);
       if (duplicates.some((result) => (result.data?.length ?? 0) > 0)) {
         setSaving(false);
@@ -806,7 +956,11 @@ function LeadDialog({
       }
     }
     const result = lead
-      ? await supabase.from("crm_leads").update(payload).eq("organization_id", orgId).eq("id", lead.id)
+      ? await supabase
+          .from("crm_leads")
+          .update(payload)
+          .eq("organization_id", orgId)
+          .eq("id", lead.id)
       : await supabase.from("crm_leads").insert({
           ...payload,
           organization_id: orgId,
@@ -913,7 +1067,9 @@ function InteractionDialog({
     <DialogContent>
       <DialogHeader>
         <DialogTitle>Registrar contato · {lead.name}</DialogTitle>
-        <DialogDescription>Registre o canal, o resultado e a próxima ação comercial.</DialogDescription>
+        <DialogDescription>
+          Registre o canal, o resultado e a próxima ação comercial.
+        </DialogDescription>
       </DialogHeader>
       <form onSubmit={save} className="space-y-4">
         <div className="space-y-1.5">

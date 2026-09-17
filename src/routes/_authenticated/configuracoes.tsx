@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { DEFAULT_TEMPLATES, MESSAGE_EVENTS, MESSAGE_VARIABLES } from "@/lib/messages";
+import { DiscountSettings } from "@/components/discount-settings";
+import { RecoverySettings } from "@/components/recovery-settings";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   head: () => ({
@@ -122,10 +124,7 @@ function Configuracoes() {
 
   if (isLoading || !org) return <SkeletonCard />;
   const canEdit = isAdminRole(membership?.role);
-  const bookingUrl =
-    form.booking_slug
-      ? publicAppUrl(`/agendar/${form.booking_slug}`)
-      : "";
+  const bookingUrl = form.booking_slug ? publicAppUrl(`/agendar/${form.booking_slug}`) : "";
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -166,6 +165,8 @@ function Configuracoes() {
       <PageHeader title="Configurações" subtitle={`Seu acesso: ${roleLabel[membership!.role]}`} />
 
       <form onSubmit={save} className="space-y-6">
+        <DiscountSettings />
+        <RecoverySettings />
         <Surface className="space-y-4 p-5">
           <h2 className="font-display text-base font-semibold">Dados da clínica</h2>
           <div className="space-y-1.5">

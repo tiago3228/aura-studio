@@ -33,6 +33,7 @@ import { initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { LANGUAGE_OPTIONS, useLanguage } from "@/lib/language";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/notification-bell";
 
 type NavItem = {
   to: string;
@@ -128,8 +129,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { language, setLanguage, navLabel } = useLanguage();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => ({
     "/assistente": pathname.startsWith("/assistente") || pathname.startsWith("/marketing"),
-    "/configuracoes": ["/configuracoes", "/globalizacao", "/gateways", "/seguranca"].some(
-      (path) => pathname.startsWith(path),
+    "/configuracoes": ["/configuracoes", "/globalizacao", "/gateways", "/seguranca"].some((path) =>
+      pathname.startsWith(path),
     ),
   }));
 
@@ -183,7 +184,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         ].map((item) => {
           const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
           const Icon = item.icon;
-          const children = item.children?.filter((child) => can(membership?.role, child.area)) ?? [];
+          const children =
+            item.children?.filter((child) => can(membership?.role, child.area)) ?? [];
           const expanded = expandedGroups[item.to] ?? false;
           return (
             <div key={item.to}>
@@ -287,6 +289,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </option>
           ))}
         </select>
+        <NotificationBell />
       </div>
     </div>
   );
@@ -325,6 +328,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Flower2 className="size-4 text-primary" /> Aura<span className="text-primary">.</span>
         </Link>
         <div className="flex items-center gap-1">
+          <NotificationBell />
           <select
             aria-label="Idioma"
             className="h-8 max-w-24 rounded-md border border-border bg-transparent px-1 text-[10px]"

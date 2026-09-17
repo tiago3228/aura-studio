@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
@@ -12,6 +13,36 @@ async function bookingServerClient() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin;
 }
+
+export const validatePublicCoupon = createServerFn({ method: "GET" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        slug: z.string().min(1),
+        code: z.string().min(1).max(40),
+        serviceIds: z.array(z.string().uuid()).max(20).default([]),
+        phone: z.string().max(30).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const supabase = await bookingServerClient();
+    const { data: result, error } = await (supabase as any).rpc("validate_public_coupon", {
+      _slug: data.slug,
+      _code: data.code,
+      _service_ids: data.serviceIds,
+      _client_phone: data.phone || null,
+    });
+    if (error) return { valid: false, message: "Não foi possível validar o cupom." };
+    const row = Array.isArray(result) ? result[0] : result;
+    return {
+      valid: Boolean(row?.valid),
+      message: row?.message ?? "Cupom inválido.",
+      couponId: row?.coupon_id ?? null,
+      percentage: Number(row?.percentage ?? 0),
+      code: row?.original_code ?? data.code.toUpperCase(),
+    };
+  });
 
 /** Converte caminho no bucket privado em URL assinada de longa duração. */
 async function signAll(paths: (string | null)[]) {
@@ -383,6 +414,7 @@ export const createPublicBooking = createServerFn({ method: "POST" })
         phone: z.string().min(8).max(30),
         email: z.string().email().optional().or(z.literal("")),
         notes: z.string().max(500).optional(),
+        couponCode: z.string().max(40).optional(),
       })
       .parse(input),
   )
@@ -413,6 +445,31 @@ export const createPublicBooking = createServerFn({ method: "POST" })
     let clientPackageId: string | null = null;
     let notes = data.notes || null;
     let appointmentPrice = price;
+    const originalAmount = packages.length
+      ? packages.reduce((sum, pkg) => sum + Number(pkg.price), 0)
+      : price;
+    let coupon: { id: string; percentage: number } | null = null;
+    let discountAmount = 0;
+
+    if (data.couponCode?.trim()) {
+      const couponServiceIds = packages.flatMap((pkg) => pkg.items.map((item) => item.service_id));
+      const { data: couponResult, error: couponError } = await (supabaseAdmin as any).rpc(
+        "validate_public_coupon",
+        {
+          _slug: data.slug,
+          _code: data.couponCode.trim(),
+          _service_ids: [...new Set([...couponServiceIds, ...(data.serviceIds ?? [])])],
+          _client_phone: data.phone,
+        },
+      );
+      const couponRow = Array.isArray(couponResult) ? couponResult[0] : couponResult;
+      if (couponError || !couponRow?.valid || !couponRow.coupon_id) {
+        return { ok: false as const, message: couponRow?.message ?? "Cupom inválido." };
+      }
+      coupon = { id: couponRow.coupon_id, percentage: Number(couponRow.percentage) };
+      discountAmount = Math.min(originalAmount, (originalAmount * coupon.percentage) / 100);
+      if (!packages.length) appointmentPrice = Math.max(0, originalAmount - discountAmount);
+    }
 
     const digits = data.phone.replace(/\D/g, "");
     const existing = await supabaseAdmin
@@ -479,23 +536,42 @@ export const createPublicBooking = createServerFn({ method: "POST" })
         .join(" · ");
     }
 
-    const { error } = await supabaseAdmin.from("appointments").insert({
-      organization_id: ctx.orgId,
-      client_id: clientId,
-      client_package_id: clientPackageId,
-      service_id: ctx.serviceId,
-      professional_id: data.professionalId,
-      starts_at: start.toISOString(),
-      ends_at: end.toISOString(),
-      status: "agendado",
-      source: "online",
-      price: appointmentPrice,
-      guest_name: data.name,
-      guest_phone: data.phone,
-      guest_email: data.email || null,
-      notes,
-    });
+    const { data: appointment, error } = await supabaseAdmin
+      .from("appointments")
+      .insert({
+        organization_id: ctx.orgId,
+        client_id: clientId,
+        client_package_id: clientPackageId,
+        service_id: ctx.serviceId,
+        professional_id: data.professionalId,
+        starts_at: start.toISOString(),
+        ends_at: end.toISOString(),
+        status: "agendado",
+        source: "online",
+        price: appointmentPrice,
+        guest_name: data.name,
+        guest_phone: data.phone,
+        guest_email: data.email || null,
+        notes,
+      })
+      .select("id")
+      .single();
 
     if (error) return { ok: false as const, message: error.message };
+    if (coupon && appointment?.id) {
+      const { error: redemptionError } = await (supabaseAdmin as any).rpc(
+        "record_public_coupon_redemption",
+        {
+          _coupon_id: coupon.id,
+          _client_id: clientId,
+          _appointment_id: appointment.id,
+          _service_id: ctx.serviceId,
+          _original_amount: originalAmount,
+          _discount_amount: discountAmount,
+          _final_amount: originalAmount - discountAmount,
+        },
+      );
+      if (redemptionError) return { ok: false as const, message: redemptionError.message };
+    }
     return { ok: true as const, message: "Solicitação enviada! A clínica confirmará em breve." };
   });

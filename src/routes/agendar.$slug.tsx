@@ -14,7 +14,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { getBookingPage, createPublicBooking, getAvailableSlots } from "@/lib/booking.functions";
+import {
+  getBookingPage,
+  createPublicBooking,
+  getAvailableSlots,
+  validatePublicCoupon,
+} from "@/lib/booking.functions";
 import { brl, initials } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +63,7 @@ function PublicBooking() {
   const load = useServerFn(getBookingPage);
   const loadSlots = useServerFn(getAvailableSlots);
   const submit = useServerFn(createPublicBooking);
+  const validateCoupon = useServerFn(validatePublicCoupon);
 
   const page = useQuery({
     queryKey: ["booking-page", slug],
@@ -71,6 +77,13 @@ function PublicBooking() {
   const [day, setDay] = useState("");
   const [time, setTime] = useState("");
   const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "" });
+  const [couponCode, setCouponCode] = useState("");
+  const [couponResult, setCouponResult] = useState<{
+    valid: boolean;
+    message: string;
+    percentage: number;
+  } | null>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -133,6 +146,11 @@ function PublicBooking() {
   );
   const selectedPackages = selectedPro?.packages.filter((pkg) => packageIds.includes(pkg.id)) ?? [];
   const selectedPackagePrice = selectedPackages.reduce((sum, pkg) => sum + Number(pkg.price), 0);
+  const originalPrice = selectedPackages.length > 0 ? selectedPackagePrice : selectedPrice;
+  const discountAmount = couponResult?.valid
+    ? Math.min(originalPrice, (originalPrice * couponResult.percentage) / 100)
+    : 0;
+  const finalPrice = Math.max(0, originalPrice - discountAmount);
   const maxDay = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
   const addressLine = [org.address, [org.city, org.state].filter(Boolean).join(" — ")]
     .filter(Boolean)
@@ -146,6 +164,37 @@ function PublicBooking() {
     setServiceIds([]);
     setPackageIds([]);
     setTime("");
+    setCouponResult(null);
+  }
+
+  async function applyCoupon() {
+    if (!couponCode.trim() || !hasChoice) return;
+    setValidatingCoupon(true);
+    try {
+      const packageServiceIds = selectedPackages.flatMap((pkg) =>
+        pkg.items.map((item) => item.service_id),
+      );
+      const result = await validateCoupon({
+        data: {
+          slug,
+          code: couponCode.trim(),
+          serviceIds: [...new Set([...serviceIds, ...packageServiceIds])],
+          phone: form.phone || undefined,
+        },
+      });
+      setCouponResult(result);
+      if (result.valid) toast.success(`${result.percentage}% de desconto aplicado.`);
+      else toast.error(result.message);
+    } catch (err) {
+      setCouponResult({
+        valid: false,
+        message: "Não foi possível validar o cupom.",
+        percentage: 0,
+      });
+      toast.error(err instanceof Error ? err.message : "Não foi possível validar o cupom.");
+    } finally {
+      setValidatingCoupon(false);
+    }
   }
 
   async function send(e: React.FormEvent) {
@@ -166,6 +215,7 @@ function PublicBooking() {
           phone: form.phone,
           email: form.email,
           notes: form.notes,
+          ...(couponCode.trim() ? { couponCode: couponCode.trim() } : {}),
           ...(serviceIds.length ? { serviceIds } : {}),
           ...(packageIds.length ? { packageIds } : {}),
         },
@@ -550,6 +600,51 @@ function PublicBooking() {
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
               required
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bk-coupon">Cupom de desconto</Label>
+            <div className="flex gap-2">
+              <Input
+                id="bk-coupon"
+                value={couponCode}
+                placeholder="Ex.: DESCONTO10"
+                onChange={(e) => {
+                  setCouponCode(e.target.value.toUpperCase());
+                  setCouponResult(null);
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={applyCoupon}
+                disabled={validatingCoupon || !hasChoice}
+              >
+                {validatingCoupon ? <Loader2 className="size-4 animate-spin" /> : "Aplicar"}
+              </Button>
+            </div>
+            {couponResult ? (
+              <p
+                className={`text-xs ${couponResult.valid ? "text-emerald-700" : "text-destructive"}`}
+              >
+                {couponResult.message}
+              </p>
+            ) : null}
+            {couponResult?.valid ? (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+                <div className="flex justify-between">
+                  <span>Valor original</span>
+                  <span>{brl(originalPrice)}</span>
+                </div>
+                <div className="flex justify-between text-emerald-700">
+                  <span>Desconto ({couponResult.percentage}%)</span>
+                  <span>- {brl(discountAmount)}</span>
+                </div>
+                <div className="mt-1 flex justify-between border-t border-primary/10 pt-1 font-semibold">
+                  <span>Total</span>
+                  <span>{brl(finalPrice)}</span>
+                </div>
+              </div>
+            ) : null}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="bk-email">E-mail (opcional)</Label>
