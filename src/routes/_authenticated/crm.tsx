@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
+  Archive,
   Bell,
   CheckCircle2,
   Loader2,
@@ -27,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -113,6 +115,8 @@ function CrmPage() {
   const [contactLead, setContactLead] = useState<Lead | null>(null);
   const [followUpLead, setFollowUpLead] = useState<Lead | null>(null);
   const [term, setTerm] = useState("");
+  const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
+  const [movingLeadId, setMovingLeadId] = useState<string | null>(null);
   const leads = useQuery({
     enabled: !!orgId,
     queryKey: ["crm-leads", orgId],
@@ -123,7 +127,8 @@ function CrmPage() {
         .from("crm_leads")
         .select("id,name,whatsapp,email,source,notes,stage,client_id,created_at")
         .eq("organization_id", orgId)
-        .order("updated_at", { ascending: false });
+        .order("updated_at", { ascending: false })
+        .limit(500);
       if (error) throw error;
       return data;
     },
@@ -139,7 +144,8 @@ function CrmPage() {
         .select("id,title,description,due_at,status,lead_id,client_id")
         .eq("organization_id", orgId)
         .eq("status", "pendente")
-        .order("due_at");
+        .order("due_at")
+        .limit(300);
       if (error) throw error;
       return data;
     },
@@ -156,6 +162,41 @@ function CrmPage() {
         .eq("organization_id", orgId)
         .order("occurred_at", { ascending: false })
         .limit(20);
+      if (error) throw error;
+      return data;
+    },
+  });
+  const stageHistory = useQuery({
+    enabled: !!orgId,
+    queryKey: ["crm-stage-history", orgId],
+    staleTime: 30_000,
+    queryFn: async () => {
+      if (!orgId) return [];
+      const { data, error } = await supabase
+        .from("crm_lead_stage_history")
+        .select("id,lead_id,new_stage,created_at,crm_leads(name)")
+        .eq("organization_id", orgId)
+        .order("created_at", { ascending: false })
+        .limit(12);
+      if (error) throw error;
+      return data;
+    },
+  });
+  const reactivationTemplate = useQuery({
+    enabled: !!orgId,
+    queryKey: ["crm-reactivation-template", orgId],
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      if (!orgId) return null;
+      const { data, error } = await supabase
+        .from("crm_message_templates")
+        .select("body")
+        .eq("organization_id", orgId)
+        .eq("channel", "whatsapp")
+        .eq("active", true)
+        .order("created_at")
+        .limit(1)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -200,27 +241,33 @@ function CrmPage() {
       const toRetentionClient = (
         client: { id: string; name: string; phone: string | null },
         history: AppointmentSummary[],
-      ): RetentionClient => ({
-        id: client.id,
-        name: client.name,
-        phone: client.phone,
-        last_attended: history[0].starts_at,
-        last_service: history[0].services?.name ?? null,
-        total_spent: history.reduce((sum, item) => sum + Number(item.price), 0),
-      });
+      ): RetentionClient | null => {
+        const latest = history[0];
+        if (!latest) return null;
+        return {
+          id: client.id,
+          name: client.name,
+          phone: client.phone,
+          last_attended: latest.starts_at,
+          last_service: latest.services?.name ?? null,
+          total_spent: history.reduce((sum, item) => sum + Number(item.price), 0),
+        };
+      };
       const inactive = (clientsResult.data ?? []).flatMap((client) => {
         const history = byClient.get(client.id) ?? [];
         const last = history[0];
-        return last && new Date(last.starts_at).getTime() <= cutoff
-          ? [toRetentionClient(client, history)]
+        const retentionClient = toRetentionClient(client, history);
+        return last && retentionClient && new Date(last.starts_at).getTime() <= cutoff
+          ? [retentionClient]
           : [];
       });
       const pendingReturns = (clientsResult.data ?? []).flatMap((client) => {
         const history = byClient.get(client.id) ?? [];
         const last = history[0];
         const date = last ? new Date(last.starts_at).getTime() : 0;
-        return last && date <= returnCutoff && date > cutoff
-          ? [toRetentionClient(client, history)]
+        const retentionClient = toRetentionClient(client, history);
+        return last && retentionClient && date <= returnCutoff && date > cutoff
+          ? [retentionClient]
           : [];
       });
       return { inactive, pendingReturns, inactivityDays, returnDays };
@@ -250,29 +297,38 @@ function CrmPage() {
     void queryClient.invalidateQueries({ queryKey: ["crm-leads", orgId] });
     void queryClient.invalidateQueries({ queryKey: ["crm-follow-ups", orgId] });
     void queryClient.invalidateQueries({ queryKey: ["crm-interactions", orgId] });
+    void queryClient.invalidateQueries({ queryKey: ["crm-stage-history", orgId] });
     void queryClient.invalidateQueries({ queryKey: ["crm-retention", orgId] });
   };
   async function moveLead(lead: Lead, stage: string) {
     if (!orgId) return;
-    const { error } = await supabase
-      .from("crm_leads")
-      .update({ stage })
-      .eq("organization_id", orgId)
-      .eq("id", lead.id);
-    if (error) {
-      toast.error(error.message);
-      return;
+    setMovingLeadId(lead.id);
+    try {
+      const { error } = await supabase
+        .from("crm_leads")
+        .update({ stage })
+        .eq("organization_id", orgId)
+        .eq("id", lead.id);
+      if (error) throw error;
+      toast.success(stage === "perdido" ? "Lead arquivado." : "Etapa atualizada.");
+      invalidate();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível atualizar a etapa.");
+    } finally {
+      setMovingLeadId(null);
     }
-    toast.success("Etapa atualizada.");
-    invalidate();
   }
   async function convertLead(lead: Lead) {
+    if (convertingLeadId) return;
+    setConvertingLeadId(lead.id);
     try {
       const data = await convertCrmLeadFn({ data: { leadId: lead.id } });
       toast.success(`${data?.name ?? lead.name} convertido em cliente.`);
     } catch {
       toast.error("Não foi possível converter o lead.");
       return;
+    } finally {
+      setConvertingLeadId(null);
     }
     invalidate();
   }
@@ -295,9 +351,17 @@ function CrmPage() {
       toast.error("Este cliente não possui telefone cadastrado.");
       return;
     }
-    const message = `Olá, ${client.name}! Sentimos sua falta. Já faz um tempo desde seu último atendimento. Gostaria de verificar nossos horários disponíveis?`;
+    const digits = client.phone.replace(/\D/g, "");
+    if (digits.length < 10 || digits.length > 15) {
+      toast.error("Confira o telefone do cliente antes de abrir o WhatsApp.");
+      return;
+    }
+    const fallback = "Olá, {{nome}}! Sentimos sua falta. Já faz um tempo desde seu último atendimento. Gostaria de verificar nossos horários disponíveis?";
+    const message = (reactivationTemplate.data?.body ?? fallback)
+      .replaceAll("{{nome}}", client.name)
+      .replaceAll("{{ultimo_procedimento}}", client.last_service ?? "último atendimento");
     window.open(
-      `https://wa.me/${client.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`,
+      `https://wa.me/${digits}?text=${encodeURIComponent(message)}`,
       "_blank",
       "noopener,noreferrer",
     );
@@ -394,6 +458,21 @@ function CrmPage() {
                 );
               })}
             </div>
+            {(stageHistory.data ?? []).length > 0 ? (
+              <div className="mt-5 border-t border-border pt-4">
+                <h3 className="mb-2 text-sm font-semibold">Movimentações do funil</h3>
+                <div className="space-y-2">
+                  {(stageHistory.data ?? []).slice(0, 6).map((entry) => (
+                    <div key={entry.id} className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="font-medium">{entry.crm_leads?.name ?? "Lead"}</span>
+                      <span className="text-muted-foreground">foi movido para</span>
+                      <Pill>{STAGES.find(([key]) => key === entry.new_stage)?.[1] ?? entry.new_stage}</Pill>
+                      <span className="ml-auto text-muted-foreground">{new Date(entry.created_at).toLocaleString("pt-BR")}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         </TabsContent>
         <TabsContent value="leads" className="space-y-4">
@@ -449,8 +528,14 @@ function CrmPage() {
                       Follow-up
                     </Button>
                     {lead.stage !== "converteu" && lead.stage !== "fidelizado" ? (
-                      <Button size="sm" onClick={() => convertLead(lead)}>
+                      <Button size="sm" disabled={convertingLeadId === lead.id} onClick={() => convertLead(lead)}>
+                        {convertingLeadId === lead.id ? <Loader2 className="size-4 animate-spin" /> : null}
                         Converter
+                      </Button>
+                    ) : null}
+                    {!["perdido", "converteu", "fidelizado"].includes(lead.stage) ? (
+                      <Button variant="ghost" size="icon" title="Arquivar lead" disabled={movingLeadId === lead.id} onClick={() => moveLead(lead, "perdido")}>
+                        <Archive className="size-4" />
                       </Button>
                     ) : null}
                   </div>
@@ -486,6 +571,7 @@ function CrmPage() {
                         <select
                           className="h-8 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-xs"
                           value={lead.stage}
+                          disabled={movingLeadId === lead.id}
                           onChange={(event) => moveLead(lead, event.target.value)}
                           aria-label={`Mover ${lead.name}`}
                         >
@@ -523,7 +609,7 @@ function CrmPage() {
             ) : (
               followUps.data?.map((followUp) => (
                 <div className="flex items-center gap-3 p-4" key={followUp.id}>
-                  <div className="grid size-9 place-items-center rounded-full bg-gold/15 text-gold">
+                  <div className={`grid size-9 place-items-center rounded-full ${new Date(followUp.due_at).getTime() < Date.now() ? "bg-destructive-soft text-destructive" : "bg-gold/15 text-gold"}`}>
                     <CheckCircle2 className="size-4" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -532,6 +618,7 @@ function CrmPage() {
                       {followUp.description ?? "Sem descrição"} ·{" "}
                       {new Date(followUp.due_at).toLocaleString("pt-BR")}
                     </p>
+                    {new Date(followUp.due_at).getTime() < Date.now() ? <Pill tone="danger">Atrasado</Pill> : null}
                   </div>
                   <Button size="sm" variant="outline" onClick={() => finishFollowUp(followUp.id)}>
                     Concluir
@@ -707,6 +794,17 @@ function LeadDialog({
       source: form.source || null,
       notes: form.notes || null,
     };
+    if (!lead) {
+      const checks = [];
+      if (form.whatsapp) checks.push(supabase.from("crm_leads").select("id").eq("organization_id", orgId).eq("whatsapp", form.whatsapp).limit(1));
+      if (form.email) checks.push(supabase.from("crm_leads").select("id").eq("organization_id", orgId).ilike("email", form.email).limit(1));
+      const duplicates = await Promise.all(checks);
+      if (duplicates.some((result) => (result.data?.length ?? 0) > 0)) {
+        setSaving(false);
+        toast.error("Já existe um lead com este WhatsApp ou e-mail.");
+        return;
+      }
+    }
     const result = lead
       ? await supabase.from("crm_leads").update(payload).eq("organization_id", orgId).eq("id", lead.id)
       : await supabase.from("crm_leads").insert({
@@ -726,6 +824,7 @@ function LeadDialog({
     <DialogContent>
       <DialogHeader>
         <DialogTitle>{lead ? "Editar lead" : "Novo lead"}</DialogTitle>
+        <DialogDescription>Preencha os dados de contato e a origem deste lead.</DialogDescription>
       </DialogHeader>
       <form onSubmit={save} className="space-y-4">
         <div className="space-y-1.5">
@@ -814,6 +913,7 @@ function InteractionDialog({
     <DialogContent>
       <DialogHeader>
         <DialogTitle>Registrar contato · {lead.name}</DialogTitle>
+        <DialogDescription>Registre o canal, o resultado e a próxima ação comercial.</DialogDescription>
       </DialogHeader>
       <form onSubmit={save} className="space-y-4">
         <div className="space-y-1.5">
@@ -888,6 +988,7 @@ function FollowUpDialog({
     <DialogContent>
       <DialogHeader>
         <DialogTitle>Novo follow-up · {lead.name}</DialogTitle>
+        <DialogDescription>Defina quando sua equipe deve retomar o contato.</DialogDescription>
       </DialogHeader>
       <form onSubmit={save} className="space-y-4">
         <div className="space-y-1.5">
