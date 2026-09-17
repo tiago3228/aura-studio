@@ -355,7 +355,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         aria-hidden="true"
         className="pointer-events-none fixed right-4 bottom-16 z-20 select-none text-[10px] font-medium tracking-wide text-muted-foreground/35 lg:right-6 lg:bottom-3"
       >
-        By Tiago Cardoso
+        By: Tiago Cardoso
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
