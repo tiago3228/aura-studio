@@ -6,6 +6,7 @@ import { BarChart3, CalendarRange, Loader2, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/lib/session";
+import { useLanguage } from "@/lib/language";
 import { addDays, brl } from "@/lib/format";
 import { PageHeader, Pill, SkeletonCard, StatCard } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ const iso = (date: Date) => date.toISOString().slice(0, 10);
 function RelatoriosPage() {
   const fetchFinancialIntelligence = useServerFn(getFinancialIntelligence);
   const { data: membership } = useMembership();
+  const { t } = useLanguage();
   const [locationId, setLocationId] = useState("");
   const [to, setTo] = useState(iso(new Date()));
   const [from, setFrom] = useState(iso(addDays(new Date(), -89)));
@@ -43,9 +45,13 @@ function RelatoriosPage() {
     enabled: !!membership?.organization.id,
     queryKey: ["financial-intelligence", membership?.organization.id, from, to, locationId],
     queryFn: async () => {
-      return await fetchFinancialIntelligence({ data: {
-        from, to, locationId: locationId || null,
-      } }) as {
+      return (await fetchFinancialIntelligence({
+        data: {
+          from,
+          to,
+          locationId: locationId || null,
+        },
+      })) as {
         summary: any;
         top_services: { service: string; revenue: number; quantity: number }[];
         by_month: { month: string; revenue: number; costs: number }[];
@@ -56,31 +62,35 @@ function RelatoriosPage() {
   return (
     <div className="mx-auto max-w-7xl">
       <PageHeader
-        title="Relatórios e inteligência financeira"
-        subtitle="Transforme os dados da clínica em decisões práticas."
+        title={t("Relatórios e inteligência financeira")}
+        subtitle={t("Transforme os dados da clínica em decisões práticas.")}
         actions={
           <Button variant="outline" onClick={() => report.refetch()}>
-            <TrendingUp className="size-4" /> Atualizar relatório
+            <TrendingUp className="size-4" /> {t("Atualizar relatório")}
           </Button>
         }
       />
       <div className="surface mb-5 flex flex-wrap items-end gap-3 p-4">
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">Início</label>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            {t("Início")}
+          </label>
           <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">Fim</label>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("Fim")}</label>
           <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">Filial</label>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            {t("Filial")}
+          </label>
           <select
             className="h-10 rounded-md border border-input bg-background px-3 text-sm"
             value={locationId}
             onChange={(e) => setLocationId(e.target.value)}
           >
-            <option value="">Todas as filiais</option>
+            <option value="">{t("Todas as filiais")}</option>
             {locations.data?.map((location: { id: string; name: string }) => (
               <option value={location.id} key={location.id}>
                 {location.name}
@@ -95,7 +105,7 @@ function RelatoriosPage() {
             setTo(iso(new Date()));
           }}
         >
-          <CalendarRange className="size-4" /> Últimos 30 dias
+          <CalendarRange className="size-4" /> {t("Últimos 30 dias")}
         </Button>
         <Button
           variant="outline"
@@ -104,7 +114,7 @@ function RelatoriosPage() {
             setTo(iso(new Date()));
           }}
         >
-          Este ano
+          {t("Este ano")}
         </Button>
       </div>
       {report.isLoading ? (
@@ -113,45 +123,59 @@ function RelatoriosPage() {
         <div className="surface p-6 text-sm text-destructive">
           {report.error instanceof Error
             ? report.error.message
-            : "Não foi possível gerar o relatório."}
+            : t("Não foi possível gerar o relatório.")}
         </div>
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Receita" value={brl(Number(summary?.revenue ?? 0))} tone="success" />
             <StatCard
-              label="Margem bruta"
+              label={t("Receita")}
+              value={brl(Number(summary?.revenue ?? 0))}
+              tone="success"
+            />
+            <StatCard
+              label={t("Margem bruta")}
               value={brl(Number(summary?.gross_margin ?? 0))}
               tone="gold"
             />
-            <StatCard label="Ticket médio" value={brl(Number(summary?.average_ticket ?? 0))} />
-            <StatCard label="Recebido" value={brl(Number(summary?.paid ?? 0))} tone="success" />
+            <StatCard label={t("Ticket médio")} value={brl(Number(summary?.average_ticket ?? 0))} />
+            <StatCard
+              label={t("Recebido")}
+              value={brl(Number(summary?.paid ?? 0))}
+              tone="success"
+            />
           </div>
           <div className="mt-5 grid gap-5 lg:grid-cols-2">
             <section className="surface p-5">
               <div className="mb-4 flex items-center gap-2">
                 <BarChart3 className="size-5 text-primary" />
                 <div>
-                  <h2 className="font-display text-lg font-semibold">Operação e agenda</h2>
+                  <h2 className="font-display text-lg font-semibold">{t("Operação e agenda")}</h2>
                   <p className="text-xs text-muted-foreground">
-                    Indicadores do período selecionado
+                    {t("Indicadores do período selecionado")}
                   </p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <Metric label="Atendimentos" value={summary?.attended} />
-                <Metric label="Comparecimento" value={`${summary?.attendance_rate ?? 0}%`} />
-                <Metric label="Faltas" value={summary?.missed} />
-                <Metric label="Cancelamentos" value={summary?.cancelled} />
+                <Metric label={t("Atendimentos")} value={summary?.attended} />
+                <Metric label={t("Comparecimento")} value={`${summary?.attendance_rate ?? 0}%`} />
+                <Metric label={t("Faltas")} value={summary?.missed} />
+                <Metric label={t("Cancelamentos")} value={summary?.cancelled} />
               </div>
               <div className="mt-5 flex flex-wrap gap-2">
-                <Pill tone="success">Margem: {summary?.margin_percent ?? 0}%</Pill>
-                <Pill tone="gold">Faltas: {summary?.no_show_rate ?? 0}%</Pill>
-                <Pill>Agendamentos: {summary?.appointments ?? 0}</Pill>
+                <Pill tone="success">
+                  {t("Margem")}: {summary?.margin_percent ?? 0}%
+                </Pill>
+                <Pill tone="gold">
+                  {t("Faltas")}: {summary?.no_show_rate ?? 0}%
+                </Pill>
+                <Pill>
+                  {t("Agendamentos")}: {summary?.appointments ?? 0}
+                </Pill>
               </div>
             </section>
             <section className="surface p-5">
-              <h2 className="mb-4 font-display text-lg font-semibold">Receita por mês</h2>
+              <h2 className="mb-4 font-display text-lg font-semibold">{t("Receita por mês")}</h2>
               {report.data?.by_month?.length ? (
                 <div className="space-y-3">
                   {report.data.by_month.map((item) => (
@@ -172,13 +196,15 @@ function RelatoriosPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Ainda não há vendas no período.</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("Ainda não há vendas no período.")}
+                </p>
               )}
             </section>
           </div>
           <section className="surface mt-5 p-5">
             <h2 className="mb-4 font-display text-lg font-semibold">
-              Procedimentos e serviços que mais geram receita
+              {t("Procedimentos e serviços que mais geram receita")}
             </h2>
             {report.data?.top_services?.length ? (
               <div className="divide-y divide-border">
@@ -191,7 +217,7 @@ function RelatoriosPage() {
                       {item.service}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {Number(item.quantity).toFixed(0)} venda(s)
+                      {Number(item.quantity).toFixed(0)} {t("venda(s)")}
                     </span>
                     <strong className="text-sm">{brl(Number(item.revenue))}</strong>
                   </div>
@@ -199,7 +225,7 @@ function RelatoriosPage() {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Ainda não há itens detalhados de venda no período.
+                {t("Ainda não há itens detalhados de venda no período.")}
               </p>
             )}
           </section>

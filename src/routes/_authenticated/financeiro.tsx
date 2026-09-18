@@ -15,6 +15,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/lib/session";
+import { useLanguage } from "@/lib/language";
 import { addDays, brl, brlShort, dateFmt, isoDay } from "@/lib/format";
 import { PageHeader, Pill, SkeletonCard, StatCard, EmptyState } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
@@ -46,9 +47,15 @@ export const Route = createFileRoute("/_authenticated/financeiro")({
   head: () => ({
     meta: [
       { title: "Financeiro — Aura Clínicas" },
-      { name: "description", content: "Fluxo de caixa, vendas, contas a pagar e a receber da clínica." },
+      {
+        name: "description",
+        content: "Fluxo de caixa, vendas, contas a pagar e a receber da clínica.",
+      },
       { property: "og:title", content: "Financeiro — Aura Clínicas" },
-      { property: "og:description", content: "Fluxo de caixa e contas da sua clínica de estética." },
+      {
+        property: "og:description",
+        content: "Fluxo de caixa e contas da sua clínica de estética.",
+      },
     ],
   }),
   component: Financeiro,
@@ -56,6 +63,7 @@ export const Route = createFileRoute("/_authenticated/financeiro")({
 
 function Financeiro() {
   const { data: membership } = useMembership();
+  const { t } = useLanguage();
   const orgId = membership?.organization.id;
   const queryClient = useQueryClient();
   const [openSale, setOpenSale] = useState(false);
@@ -112,14 +120,14 @@ function Financeiro() {
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
-        title="Financeiro"
-        subtitle="Últimos 30 dias"
+        title={t("Financeiro")}
+        subtitle={t("Últimos 30 dias")}
         actions={
           <>
             <Dialog open={openSale} onOpenChange={setOpenSale}>
               <DialogTrigger asChild>
                 <Button>
-                  <Plus className="size-4" /> Registrar venda
+                  <Plus className="size-4" /> {t("Registrar venda")}
                 </Button>
               </DialogTrigger>
               <SaleDialog
@@ -131,7 +139,7 @@ function Financeiro() {
             </Dialog>
             <Dialog open={openBill} onOpenChange={setOpenBill}>
               <DialogTrigger asChild>
-                <Button variant="outline">Conta a pagar</Button>
+                <Button variant="outline">{t("Conta a pagar")}</Button>
               </DialogTrigger>
               <BillDialog
                 onDone={() => {
@@ -145,20 +153,25 @@ function Financeiro() {
       />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Receita" value={brl(revenue)} tone="success" />
-        <StatCard label="Custos de venda" value={brl(cost)} tone="danger" />
-        <StatCard label="A receber" value={brl(openReceivable)} tone="gold" />
-        <StatCard label="A pagar" value={brl(openPayable)} tone="danger" />
+        <StatCard label={t("Receita")} value={brl(revenue)} tone="success" />
+        <StatCard label={t("Custos de venda")} value={brl(cost)} tone="danger" />
+        <StatCard label={t("A receber")} value={brl(openReceivable)} tone="gold" />
+        <StatCard label={t("A pagar")} value={brl(openPayable)} tone="danger" />
       </div>
 
       <section className="surface mt-6 p-5">
-        <h2 className="mb-4 font-display text-base font-semibold">Receita por dia</h2>
+        <h2 className="mb-4 font-display text-base font-semibold">{t("Receita por dia")}</h2>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={byDay}>
               <CartesianGrid vertical={false} stroke="var(--color-border)" />
               <XAxis dataKey="dia" tickLine={false} axisLine={false} fontSize={11} />
-              <YAxis tickFormatter={(v) => brlShort(Number(v))} tickLine={false} axisLine={false} fontSize={11} />
+              <YAxis
+                tickFormatter={(v) => brlShort(Number(v))}
+                tickLine={false}
+                axisLine={false}
+                fontSize={11}
+              />
               <ChartTooltip
                 formatter={(v) => brl(Number(v))}
                 contentStyle={{
@@ -176,20 +189,23 @@ function Financeiro() {
 
       <Tabs defaultValue="vendas" className="mt-6">
         <TabsList>
-          <TabsTrigger value="vendas">Vendas</TabsTrigger>
-          <TabsTrigger value="pagar">A pagar</TabsTrigger>
-          <TabsTrigger value="receber">A receber</TabsTrigger>
+          <TabsTrigger value="vendas">{t("Vendas")}</TabsTrigger>
+          <TabsTrigger value="pagar">{t("A pagar")}</TabsTrigger>
+          <TabsTrigger value="receber">{t("A receber")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="vendas" className="mt-4">
           {d.sales.length === 0 ? (
-            <EmptyState title="Nenhuma venda" description="Registre vendas para acompanhar o caixa." />
+            <EmptyState
+              title={t("Nenhuma venda")}
+              description={t("Registre vendas para acompanhar o caixa.")}
+            />
           ) : (
             <ul className="surface divide-y divide-border p-0">
               {d.sales.map((s) => (
                 <li key={s.id} className="flex items-center justify-between px-5 py-3 text-sm">
                   <div>
-                    <p className="font-medium">{s.clients?.name ?? "Venda avulsa"}</p>
+                    <p className="font-medium">{s.clients?.name ?? t("Venda avulsa")}</p>
                     <p className="text-xs text-muted-foreground">{dateFmt(s.created_at)}</p>
                   </div>
                   <span className="font-semibold tabular-nums">{brl(Number(s.total))}</span>
@@ -228,7 +244,9 @@ function BillList({
   onPaid: () => void;
 }) {
   if (items.length === 0)
-    return <EmptyState title="Nada por aqui" description="Nenhum lançamento registrado até o momento." />;
+    return (
+      <EmptyState title="Nada por aqui" description="Nenhum lançamento registrado até o momento." />
+    );
 
   async function markPaid(id: string) {
     const { error } = await supabase
@@ -283,7 +301,10 @@ function SaleDialog({ onDone }: { onDone: () => void }) {
     queryFn: async () => {
       const [clients, professionals] = await Promise.all([
         supabase.from("clients").select("id, name").is("deleted_at", null).order("name"),
-        supabase.from("professionals").select("id, name, commission_default, commission_type").eq("active", true),
+        supabase
+          .from("professionals")
+          .select("id, name, commission_default, commission_type")
+          .eq("active", true),
       ]);
       return { clients: clients.data ?? [], professionals: professionals.data ?? [] };
     },
@@ -375,7 +396,10 @@ function SaleDialog({ onDone }: { onDone: () => void }) {
         </div>
         <div className="space-y-1.5">
           <Label>Profissional (gera comissão)</Label>
-          <Select value={form.professional_id} onValueChange={(v) => setForm({ ...form, professional_id: v })}>
+          <Select
+            value={form.professional_id}
+            onValueChange={(v) => setForm({ ...form, professional_id: v })}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Opcional" />
             </SelectTrigger>
@@ -424,7 +448,10 @@ function SaleDialog({ onDone }: { onDone: () => void }) {
         </div>
         <div className="space-y-1.5">
           <Label>Forma de pagamento</Label>
-          <Select value={form.method} onValueChange={(v) => setForm({ ...form, method: v as Method })}>
+          <Select
+            value={form.method}
+            onValueChange={(v) => setForm({ ...form, method: v as Method })}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
