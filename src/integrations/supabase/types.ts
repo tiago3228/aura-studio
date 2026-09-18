@@ -1765,6 +1765,167 @@ export type Database = {
           },
         ]
       }
+      discount_coupon_redemptions: {
+        Row: {
+          appointment_id: string | null
+          client_id: string | null
+          coupon_id: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          organization_id: string
+          original_amount: number
+          redeemed_at: string
+          service_id: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          client_id?: string | null
+          coupon_id: string
+          discount_amount: number
+          final_amount: number
+          id?: string
+          organization_id: string
+          original_amount: number
+          redeemed_at?: string
+          service_id?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          client_id?: string | null
+          coupon_id?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          organization_id?: string
+          original_amount?: number
+          redeemed_at?: string
+          service_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_coupon_redemptions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_coupon_redemptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_coupon_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "discount_coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_coupon_redemptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_coupon_redemptions_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discount_coupon_services: {
+        Row: {
+          coupon_id: string
+          service_id: string
+        }
+        Insert: {
+          coupon_id: string
+          service_id: string
+        }
+        Update: {
+          coupon_id?: string
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_coupon_services_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "discount_coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_coupon_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discount_coupons: {
+        Row: {
+          active: boolean
+          applies_to_all_services: boolean
+          code: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          internal_note: string | null
+          max_uses: number | null
+          organization_id: string
+          percentage: number
+          single_use_per_client: boolean
+          starts_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          applies_to_all_services?: boolean
+          code: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          internal_note?: string | null
+          max_uses?: number | null
+          organization_id: string
+          percentage: number
+          single_use_per_client?: boolean
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          applies_to_all_services?: boolean
+          code?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          internal_note?: string | null
+          max_uses?: number | null
+          organization_id?: string
+          percentage?: number
+          single_use_per_client?: boolean
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_coupons_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_movements: {
         Row: {
           appointment_id: string | null
@@ -1923,6 +2084,8 @@ export type Database = {
         Row: {
           body: string | null
           created_at: string
+          entity_id: string | null
+          entity_type: string | null
           id: string
           kind: string
           organization_id: string
@@ -1932,6 +2095,8 @@ export type Database = {
         Insert: {
           body?: string | null
           created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
           kind?: string
           organization_id: string
@@ -1941,6 +2106,8 @@ export type Database = {
         Update: {
           body?: string | null
           created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
           kind?: string
           organization_id?: string
@@ -2154,6 +2321,35 @@ export type Database = {
             foreignKeyName: "organization_permissions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_recovery_settings: {
+        Row: {
+          enabled: boolean
+          inactivity_days: number
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          inactivity_days?: number
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          inactivity_days?: number
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_recovery_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -4156,6 +4352,22 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      record_public_coupon_redemption: {
+        Args: {
+          _appointment_id: string
+          _client_id: string
+          _coupon_id: string
+          _discount_amount: number
+          _final_amount: number
+          _original_amount: number
+          _service_id: string
+        }
+        Returns: string
+      }
+      refresh_recovery_notifications: {
+        Args: { _org_id: string }
+        Returns: number
+      }
       review_pix_payment: {
         Args: { _approve: boolean; _note?: string; _payment_id: string }
         Returns: {
@@ -4181,6 +4393,21 @@ export type Database = {
         }
       }
       user_has_location: { Args: { _location_id: string }; Returns: boolean }
+      validate_public_coupon: {
+        Args: {
+          _client_phone?: string
+          _code: string
+          _service_ids?: string[]
+          _slug: string
+        }
+        Returns: {
+          coupon_id: string
+          message: string
+          original_code: string
+          percentage: number
+          valid: boolean
+        }[]
+      }
       write_audit_log: {
         Args: {
           _action: string
