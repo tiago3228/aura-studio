@@ -2366,6 +2366,7 @@ export type Database = {
           city: string | null
           cover_url: string | null
           created_at: string
+          created_by: string | null
           description: string | null
           google_review_url: string | null
           id: string
@@ -2396,6 +2397,7 @@ export type Database = {
           city?: string | null
           cover_url?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           google_review_url?: string | null
           id?: string
@@ -2426,6 +2428,7 @@ export type Database = {
           city?: string | null
           cover_url?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           google_review_url?: string | null
           id?: string
@@ -4267,6 +4270,7 @@ export type Database = {
           city: string | null
           cover_url: string | null
           created_at: string
+          created_by: string | null
           description: string | null
           google_review_url: string | null
           id: string
