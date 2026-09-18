@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/lib/session";
+import { useLanguage } from "@/lib/language";
 import { brl } from "@/lib/format";
 import { PageHeader, Pill, SkeletonCard, EmptyState } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,7 @@ type PackageRow = {
 
 function Servicos() {
   const { data: membership } = useMembership();
+  const { t } = useLanguage();
   const orgId = membership?.organization.id;
   const queryClient = useQueryClient();
   const [openService, setOpenService] = useState(false);
@@ -123,7 +125,7 @@ function Servicos() {
     const { error } = await supabase.from("services").delete().eq("id", service.id);
     if (error) toast.error(error.message);
     else {
-      toast.success("Procedimento excluído.");
+      toast.success(t("Procedimento excluído."));
       refresh();
     }
   }
@@ -138,7 +140,7 @@ function Servicos() {
     const { error } = await supabase.from("packages").delete().eq("id", pkg.id);
     if (error) toast.error(error.message);
     else {
-      toast.success("Pacote excluído.");
+      toast.success(t("Pacote excluído."));
       refresh();
     }
   }
@@ -149,14 +151,14 @@ function Servicos() {
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
-        title="Procedimentos"
-        subtitle="Preço, duração, comissão e disponibilidade para agendamento online."
+        title={t("Procedimentos")}
+        subtitle={t("Preço, duração, comissão e disponibilidade para agendamento online.")}
       />
 
       <Tabs defaultValue="procedimentos">
         <TabsList>
-          <TabsTrigger value="procedimentos">Procedimentos</TabsTrigger>
-          <TabsTrigger value="pacotes">Pacotes</TabsTrigger>
+          <TabsTrigger value="procedimentos">{t("Procedimentos")}</TabsTrigger>
+          <TabsTrigger value="pacotes">{t("Pacotes")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="procedimentos" className="mt-4 space-y-4">
@@ -164,7 +166,7 @@ function Servicos() {
             <Dialog open={openService} onOpenChange={setOpenService}>
               <DialogTrigger asChild>
                 <Button>
-                  <Plus className="size-4" /> Novo procedimento
+                  <Plus className="size-4" /> {t("Novo procedimento")}
                 </Button>
               </DialogTrigger>
               <ServiceDialog
@@ -177,7 +179,7 @@ function Servicos() {
             <Dialog open={openLibrary} onOpenChange={setOpenLibrary}>
               <DialogTrigger asChild>
                 <Button variant="outline">
-                  <Sparkles className="size-4" /> Biblioteca pronta
+                  <Sparkles className="size-4" /> {t("Biblioteca pronta")}
                 </Button>
               </DialogTrigger>
               <LibraryDialog
@@ -194,8 +196,10 @@ function Servicos() {
             <SkeletonCard />
           ) : (data.data?.services.length ?? 0) === 0 ? (
             <EmptyState
-              title="Nenhum procedimento cadastrado"
-              description="Cadastre limpeza de pele, botox, drenagem... ou use a biblioteca pronta."
+              title={t("Nenhum procedimento cadastrado")}
+              description={t(
+                "Cadastre limpeza de pele, botox, drenagem... ou use a biblioteca pronta.",
+              )}
             />
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2">
@@ -217,14 +221,14 @@ function Servicos() {
                   </div>
                   <div className="mt-3 grid gap-2 text-xs">
                     <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
-                      Ativo
+                      {t("Ativo")}
                       <Switch
                         checked={s.active}
                         onCheckedChange={(v) => toggleService(s.id, "active", v)}
                       />
                     </label>
                     <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
-                      Agendamento online
+                      {t("Agendamento online")}
                       <Switch
                         checked={s.online_booking}
                         onCheckedChange={(v) => toggleService(s.id, "online_booking", v)}
@@ -236,7 +240,7 @@ function Servicos() {
                       size="sm"
                       onClick={() => setEditingService(s)}
                     >
-                      <Pencil className="size-3.5" /> Editar procedimento
+                      <Pencil className="size-3.5" /> {t("Editar procedimento")}
                     </Button>
                     <Button
                       type="button"
@@ -245,7 +249,7 @@ function Servicos() {
                       className="w-full justify-center text-destructive hover:text-destructive"
                       onClick={() => deleteService(s)}
                     >
-                      <Trash2 className="size-3.5" /> Excluir procedimento
+                      <Trash2 className="size-3.5" /> {t("Excluir procedimento")}
                     </Button>
                   </div>
                 </li>
@@ -258,7 +262,7 @@ function Servicos() {
           <Dialog open={openPackage} onOpenChange={setOpenPackage}>
             <DialogTrigger asChild>
               <Button>
-                <Plus className="size-4" /> Novo pacote
+                <Plus className="size-4" /> {t("Novo pacote")}
               </Button>
             </DialogTrigger>
             <PackageDialog
@@ -272,8 +276,8 @@ function Servicos() {
 
           {(data.data?.packages.length ?? 0) === 0 ? (
             <EmptyState
-              title="Nenhum pacote"
-              description="Pacotes de sessões aumentam a recorrência e o ticket médio."
+              title={t("Nenhum pacote")}
+              description={t("Pacotes de sessões aumentam a recorrência e o ticket médio.")}
             />
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2">
@@ -286,7 +290,7 @@ function Servicos() {
                         <p className="text-sm font-semibold">{p.name}</p>
                         <p className="text-xs text-muted-foreground">
                           {items.reduce((sum, i) => sum + i.sessions, 0) || p.sessions} sessões ·
-                          validade {p.validity_days} dias
+                          {t("validade")} {p.validity_days} {t("dias")}
                         </p>
                       </div>
                       <p className="font-display text-base font-semibold tabular-nums">
@@ -304,14 +308,14 @@ function Servicos() {
                     </ul>
                     <div className="mt-3 grid gap-2 text-xs">
                       <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
-                        Ativo
+                        {t("Ativo")}
                         <Switch
                           checked={p.active}
                           onCheckedChange={(v) => togglePackage(p.id, "active", v)}
                         />
                       </label>
                       <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
-                        Agendamento online
+                        {t("Agendamento online")}
                         <Switch
                           checked={p.online_booking}
                           onCheckedChange={(v) => togglePackage(p.id, "online_booking", v)}
@@ -323,7 +327,7 @@ function Servicos() {
                         size="sm"
                         onClick={() => setEditingPackage(p)}
                       >
-                        <Pencil className="size-3.5" /> Editar pacote
+                        <Pencil className="size-3.5" /> {t("Editar pacote")}
                       </Button>
                       <Button
                         type="button"
@@ -332,7 +336,7 @@ function Servicos() {
                         className="w-full justify-center text-destructive hover:text-destructive"
                         onClick={() => deletePackage(p)}
                       >
-                        <Trash2 className="size-3.5" /> Excluir pacote
+                        <Trash2 className="size-3.5" /> {t("Excluir pacote")}
                       </Button>
                     </div>
                   </li>
@@ -374,6 +378,7 @@ function Servicos() {
 
 function ServiceDialog({ onDone, service }: { onDone: () => void; service?: ServiceRow }) {
   const { data: membership } = useMembership();
+  const { t } = useLanguage();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: service?.name ?? "",
@@ -404,7 +409,7 @@ function ServiceDialog({ onDone, service }: { onDone: () => void; service?: Serv
         ? await supabase.from("services").update(values).eq("id", service.id)
         : await supabase.from("services").insert(values);
       if (error) throw error;
-      toast.success(service ? "Procedimento atualizado." : "Procedimento cadastrado.");
+      toast.success(service ? t("Procedimento atualizado.") : t("Procedimento cadastrado."));
       onDone();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao salvar.");
@@ -417,23 +422,23 @@ function ServiceDialog({ onDone, service }: { onDone: () => void; service?: Serv
     <DialogContent className="max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle className="font-display">
-          {service ? "Editar procedimento" : "Novo procedimento"}
+          {service ? t("Editar procedimento") : t("Novo procedimento")}
         </DialogTitle>
       </DialogHeader>
       <form onSubmit={save} className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="s-name">Nome</Label>
+          <Label htmlFor="s-name">{t("Nome")}</Label>
           <Input
             id="s-name"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Limpeza de pele profunda"
+            placeholder={t("Limpeza de pele profunda")}
             required
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="s-duration">Duração (min)</Label>
+            <Label htmlFor="s-duration">{t("Duração (min)")}</Label>
             <Input
               id="s-duration"
               type="number"
@@ -444,7 +449,7 @@ function ServiceDialog({ onDone, service }: { onDone: () => void; service?: Serv
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="s-price">Preço (R$)</Label>
+            <Label htmlFor="s-price">{t("Preço (R$)")}</Label>
             <Input
               id="s-price"
               type="number"
@@ -458,7 +463,7 @@ function ServiceDialog({ onDone, service }: { onDone: () => void; service?: Serv
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="s-comm">Comissão</Label>
+            <Label htmlFor="s-comm">{t("Comissão")}</Label>
             <Input
               id="s-comm"
               type="number"
@@ -469,7 +474,7 @@ function ServiceDialog({ onDone, service }: { onDone: () => void; service?: Serv
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Tipo</Label>
+            <Label>{t("Tipo")}</Label>
             <Select
               value={form.commission_type}
               onValueChange={(v) =>
@@ -480,14 +485,14 @@ function ServiceDialog({ onDone, service }: { onDone: () => void; service?: Serv
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="percentual">Percentual (%)</SelectItem>
-                <SelectItem value="fixo">Valor fixo (R$)</SelectItem>
+                <SelectItem value="percentual">{t("Percentual (%)")}</SelectItem>
+                <SelectItem value="fixo">{t("Valor fixo (R$)")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="s-desc">Descrição</Label>
+          <Label htmlFor="s-desc">{t("Descrição")}</Label>
           <Textarea
             id="s-desc"
             rows={2}
@@ -497,7 +502,7 @@ function ServiceDialog({ onDone, service }: { onDone: () => void; service?: Serv
         </div>
         <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2.5">
           <Label htmlFor="s-online" className="text-sm">
-            Disponível para agendamento online
+            {t("Disponível para agendamento online")}
           </Label>
           <Switch
             id="s-online"
@@ -507,7 +512,7 @@ function ServiceDialog({ onDone, service }: { onDone: () => void; service?: Serv
         </div>
         <DialogFooter>
           <Button type="submit" disabled={saving}>
-            {saving ? <Loader2 className="size-4 animate-spin" /> : null} Salvar
+            {saving ? <Loader2 className="size-4 animate-spin" /> : null} {t("Salvar")}
           </Button>
         </DialogFooter>
       </form>
@@ -518,6 +523,7 @@ function ServiceDialog({ onDone, service }: { onDone: () => void; service?: Serv
 /** Biblioteca pronta: procedimentos comuns por categoria, com preço e duração editáveis depois. */
 function LibraryDialog({ existing, onDone }: { existing: string[]; onDone: () => void }) {
   const { data: membership } = useMembership();
+  const { t } = useLanguage();
   const [saving, setSaving] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
 
@@ -554,7 +560,7 @@ function LibraryDialog({ existing, onDone }: { existing: string[]; onDone: () =>
         }));
       const { error } = await supabase.from("services").insert(rows);
       if (error) throw error;
-      toast.success("Procedimentos adicionados. Defina os preços em seguida.");
+      toast.success(t("Procedimentos adicionados. Defina os preços em seguida."));
       onDone();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao salvar.");
@@ -566,11 +572,12 @@ function LibraryDialog({ existing, onDone }: { existing: string[]; onDone: () =>
   return (
     <DialogContent className="max-h-[85vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle className="font-display">Biblioteca de procedimentos</DialogTitle>
+        <DialogTitle className="font-display">{t("Biblioteca de procedimentos")}</DialogTitle>
       </DialogHeader>
       <p className="text-xs text-muted-foreground">
-        Selecione os procedimentos que sua clínica realiza. Eles entram com preço zerado — ajuste
-        depois.
+        {t(
+          "Selecione os procedimentos que sua clínica realiza. Eles entram com preço zerado — ajuste depois.",
+        )}
       </p>
       <div className="space-y-4">
         {Object.entries(grouped).map(([category, items]) => (
@@ -603,7 +610,7 @@ function LibraryDialog({ existing, onDone }: { existing: string[]; onDone: () =>
                       </span>
                     </Label>
                     {already ? (
-                      <span className="text-xs text-muted-foreground">já cadastrado</span>
+                      <span className="text-xs text-muted-foreground">{t("já cadastrado")}</span>
                     ) : null}
                   </li>
                 );
@@ -614,7 +621,7 @@ function LibraryDialog({ existing, onDone }: { existing: string[]; onDone: () =>
       </div>
       <DialogFooter>
         <Button onClick={save} disabled={saving || picked.length === 0}>
-          {saving ? <Loader2 className="size-4 animate-spin" /> : null} Adicionar{" "}
+          {saving ? <Loader2 className="size-4 animate-spin" /> : null} {t("Adicionar")}{" "}
           {picked.length || ""}
         </Button>
       </DialogFooter>
@@ -634,6 +641,7 @@ function PackageDialog({
   onDone: () => void;
 }) {
   const { data: membership } = useMembership();
+  const { t } = useLanguage();
   const [saving, setSaving] = useState(false);
   const [items, setItems] = useState<Record<string, number>>(
     Object.fromEntries((existingItems ?? []).map((item) => [item.service_id, item.sessions])),
@@ -653,7 +661,7 @@ function PackageDialog({
     if (!membership) return;
     const entries = Object.entries(items).filter(([, n]) => n > 0);
     if (entries.length === 0) {
-      toast.error("Selecione ao menos um procedimento para o pacote.");
+      toast.error(t("Selecione ao menos um procedimento para o pacote."));
       return;
     }
     setSaving(true);
@@ -695,7 +703,7 @@ function PackageDialog({
       );
       if (itemsError) throw itemsError;
 
-      toast.success(pkg ? "Pacote atualizado." : "Pacote criado.");
+      toast.success(pkg ? t("Pacote atualizado.") : t("Pacote criado."));
       onDone();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao salvar.");
@@ -707,32 +715,36 @@ function PackageDialog({
   return (
     <DialogContent className="max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle className="font-display">{pkg ? "Editar pacote" : "Novo pacote"}</DialogTitle>
+        <DialogTitle className="font-display">
+          {pkg ? t("Editar pacote") : t("Novo pacote")}
+        </DialogTitle>
       </DialogHeader>
       <form onSubmit={save} className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="p-name">Nome do pacote</Label>
+          <Label htmlFor="p-name">{t("Nome do pacote")}</Label>
           <Input
             id="p-name"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Pacote Corporal Completo"
+            placeholder={t("Pacote Corporal Completo")}
             required
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="p-desc">Descrição</Label>
+          <Label htmlFor="p-desc">{t("Descrição")}</Label>
           <Textarea
             id="p-desc"
             rows={2}
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
-            placeholder="O que está incluído no pacote"
+            placeholder={t("O que está incluído no pacote")}
           />
         </div>
 
         <div className="space-y-2">
-          <Label>Procedimentos incluídos ({totalSessions} sessões)</Label>
+          <Label>
+            {t("Procedimentos incluídos")} ({totalSessions} {t("sessões")})
+          </Label>
           <ul className="grid max-h-56 gap-1.5 overflow-y-auto">
             {services.map((s) => {
               const checked = items[s.id] !== undefined;
@@ -775,7 +787,7 @@ function PackageDialog({
             })}
             {services.length === 0 ? (
               <li className="text-xs text-muted-foreground">
-                Cadastre procedimentos antes de criar pacotes.
+                {t("Cadastre procedimentos antes de criar pacotes.")}
               </li>
             ) : null}
           </ul>
@@ -783,7 +795,7 @@ function PackageDialog({
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor="p-price">Preço</Label>
+            <Label htmlFor="p-price">{t("Preço")}</Label>
             <Input
               id="p-price"
               type="number"
@@ -795,7 +807,7 @@ function PackageDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="p-validity">Validade (dias)</Label>
+            <Label htmlFor="p-validity">{t("Validade (dias)")}</Label>
             <Input
               id="p-validity"
               type="number"
@@ -808,7 +820,7 @@ function PackageDialog({
 
         <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2.5">
           <Label htmlFor="p-online" className="text-sm">
-            Disponível para agendamento online
+            {t("Disponível para agendamento online")}
           </Label>
           <Switch
             id="p-online"
@@ -820,7 +832,7 @@ function PackageDialog({
         <DialogFooter>
           <Button type="submit" disabled={saving}>
             {saving ? <Loader2 className="size-4 animate-spin" /> : null}{" "}
-            {pkg ? "Salvar alterações" : "Criar pacote"}
+            {pkg ? t("Salvar alterações") : t("Criar pacote")}
           </Button>
         </DialogFooter>
       </form>

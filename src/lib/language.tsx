@@ -236,6 +236,182 @@ const UI_LABELS: Record<string, Record<LanguageCode, string>> = {
   Data: { "pt-BR": "Data", "pt-PT": "Data", "en-US": "Date" },
   Horário: { "pt-BR": "Horário", "pt-PT": "Horário", "en-US": "Time" },
   Salvar: { "pt-BR": "Salvar", "pt-PT": "Guardar", "en-US": "Save" },
+  Pacotes: { "pt-BR": "Pacotes", "pt-PT": "Pacotes", "en-US": "Packages" },
+  "Preço, duração, comissão e disponibilidade para agendamento online.": {
+    "pt-BR": "Preço, duração, comissão e disponibilidade para agendamento online.",
+    "pt-PT": "Preço, duração, comissão e disponibilidade para agendamento online.",
+    "en-US": "Price, duration, commission and online booking availability.",
+  },
+  "Novo procedimento": {
+    "pt-BR": "Novo procedimento",
+    "pt-PT": "Novo procedimento",
+    "en-US": "New treatment",
+  },
+  "Biblioteca pronta": {
+    "pt-BR": "Biblioteca pronta",
+    "pt-PT": "Biblioteca pronta",
+    "en-US": "Ready-made library",
+  },
+  "Nenhum procedimento cadastrado": {
+    "pt-BR": "Nenhum procedimento cadastrado",
+    "pt-PT": "Nenhum procedimento registado",
+    "en-US": "No treatments added",
+  },
+  "Cadastre limpeza de pele, botox, drenagem... ou use a biblioteca pronta.": {
+    "pt-BR": "Cadastre limpeza de pele, botox, drenagem... ou use a biblioteca pronta.",
+    "pt-PT": "Registe limpeza de pele, botox, drenagem... ou use a biblioteca pronta.",
+    "en-US": "Add facials, Botox, lymphatic drainage... or use the ready-made library.",
+  },
+  Ativo: { "pt-BR": "Ativo", "pt-PT": "Ativo", "en-US": "Active" },
+  "Editar procedimento": {
+    "pt-BR": "Editar procedimento",
+    "pt-PT": "Editar procedimento",
+    "en-US": "Edit treatment",
+  },
+  "Excluir procedimento": {
+    "pt-BR": "Excluir procedimento",
+    "pt-PT": "Excluir procedimento",
+    "en-US": "Delete treatment",
+  },
+  "Novo pacote": { "pt-BR": "Novo pacote", "pt-PT": "Novo pacote", "en-US": "New package" },
+  "Nenhum pacote": { "pt-BR": "Nenhum pacote", "pt-PT": "Nenhum pacote", "en-US": "No packages" },
+  "Pacotes de sessões aumentam a recorrência e o ticket médio.": {
+    "pt-BR": "Pacotes de sessões aumentam a recorrência e o ticket médio.",
+    "pt-PT": "Os pacotes de sessões aumentam a recorrência e o valor médio.",
+    "en-US": "Session packages increase repeat visits and average spend.",
+  },
+  validade: { "pt-BR": "validade", "pt-PT": "validade", "en-US": "valid for" },
+  dias: { "pt-BR": "dias", "pt-PT": "dias", "en-US": "days" },
+  "Editar pacote": { "pt-BR": "Editar pacote", "pt-PT": "Editar pacote", "en-US": "Edit package" },
+  "Excluir pacote": {
+    "pt-BR": "Excluir pacote",
+    "pt-PT": "Excluir pacote",
+    "en-US": "Delete package",
+  },
+  "Procedimento excluído.": {
+    "pt-BR": "Procedimento excluído.",
+    "pt-PT": "Procedimento eliminado.",
+    "en-US": "Treatment deleted.",
+  },
+  "Pacote excluído.": {
+    "pt-BR": "Pacote excluído.",
+    "pt-PT": "Pacote eliminado.",
+    "en-US": "Package deleted.",
+  },
+  Nome: { "pt-BR": "Nome", "pt-PT": "Nome", "en-US": "Name" },
+  "Limpeza de pele profunda": {
+    "pt-BR": "Limpeza de pele profunda",
+    "pt-PT": "Limpeza de pele profunda",
+    "en-US": "Deep facial cleansing",
+  },
+  "Duração (min)": {
+    "pt-BR": "Duração (min)",
+    "pt-PT": "Duração (min)",
+    "en-US": "Duration (min)",
+  },
+  "Preço (R$)": { "pt-BR": "Preço (R$)", "pt-PT": "Preço (€)", "en-US": "Price" },
+  Comissão: { "pt-BR": "Comissão", "pt-PT": "Comissão", "en-US": "Commission" },
+  Tipo: { "pt-BR": "Tipo", "pt-PT": "Tipo", "en-US": "Type" },
+  "Percentual (%)": {
+    "pt-BR": "Percentual (%)",
+    "pt-PT": "Percentagem (%)",
+    "en-US": "Percentage (%)",
+  },
+  "Valor fixo (R$)": {
+    "pt-BR": "Valor fixo (R$)",
+    "pt-PT": "Valor fixo (€)",
+    "en-US": "Fixed amount",
+  },
+  Descrição: { "pt-BR": "Descrição", "pt-PT": "Descrição", "en-US": "Description" },
+  "Disponível para agendamento online": {
+    "pt-BR": "Disponível para agendamento online",
+    "pt-PT": "Disponível para agendamento online",
+    "en-US": "Available for online booking",
+  },
+  "Procedimento atualizado.": {
+    "pt-BR": "Procedimento atualizado.",
+    "pt-PT": "Procedimento atualizado.",
+    "en-US": "Treatment updated.",
+  },
+  "Procedimento cadastrado.": {
+    "pt-BR": "Procedimento cadastrado.",
+    "pt-PT": "Procedimento registado.",
+    "en-US": "Treatment added.",
+  },
+  "Procedimentos adicionados. Defina os preços em seguida.": {
+    "pt-BR": "Procedimentos adicionados. Defina os preços em seguida.",
+    "pt-PT": "Procedimentos adicionados. Defina os preços em seguida.",
+    "en-US": "Treatments added. Set their prices next.",
+  },
+  "Biblioteca de procedimentos": {
+    "pt-BR": "Biblioteca de procedimentos",
+    "pt-PT": "Biblioteca de procedimentos",
+    "en-US": "Treatment library",
+  },
+  "Selecione os procedimentos que sua clínica realiza. Eles entram com preço zerado — ajuste depois.":
+    {
+      "pt-BR":
+        "Selecione os procedimentos que sua clínica realiza. Eles entram com preço zerado — ajuste depois.",
+      "pt-PT":
+        "Selecione os procedimentos que a sua clínica realiza. Serão adicionados com preço zero — ajuste depois.",
+      "en-US":
+        "Select the treatments your clinic offers. They will be added with a zero price — adjust it later.",
+    },
+  "já cadastrado": { "pt-BR": "já cadastrado", "pt-PT": "já registado", "en-US": "already added" },
+  Adicionar: { "pt-BR": "Adicionar", "pt-PT": "Adicionar", "en-US": "Add" },
+  "Selecione ao menos um procedimento para o pacote.": {
+    "pt-BR": "Selecione ao menos um procedimento para o pacote.",
+    "pt-PT": "Selecione pelo menos um procedimento para o pacote.",
+    "en-US": "Select at least one treatment for the package.",
+  },
+  "Pacote atualizado.": {
+    "pt-BR": "Pacote atualizado.",
+    "pt-PT": "Pacote atualizado.",
+    "en-US": "Package updated.",
+  },
+  "Pacote criado.": {
+    "pt-BR": "Pacote criado.",
+    "pt-PT": "Pacote criado.",
+    "en-US": "Package created.",
+  },
+  "Nome do pacote": {
+    "pt-BR": "Nome do pacote",
+    "pt-PT": "Nome do pacote",
+    "en-US": "Package name",
+  },
+  "Pacote Corporal Completo": {
+    "pt-BR": "Pacote Corporal Completo",
+    "pt-PT": "Pacote Corporal Completo",
+    "en-US": "Full body package",
+  },
+  "O que está incluído no pacote": {
+    "pt-BR": "O que está incluído no pacote",
+    "pt-PT": "O que está incluído no pacote",
+    "en-US": "What is included in the package",
+  },
+  "Procedimentos incluídos": {
+    "pt-BR": "Procedimentos incluídos",
+    "pt-PT": "Procedimentos incluídos",
+    "en-US": "Included treatments",
+  },
+  sessões: { "pt-BR": "sessões", "pt-PT": "sessões", "en-US": "sessions" },
+  "Cadastre procedimentos antes de criar pacotes.": {
+    "pt-BR": "Cadastre procedimentos antes de criar pacotes.",
+    "pt-PT": "Registe procedimentos antes de criar pacotes.",
+    "en-US": "Add treatments before creating packages.",
+  },
+  Preço: { "pt-BR": "Preço", "pt-PT": "Preço", "en-US": "Price" },
+  "Validade (dias)": {
+    "pt-BR": "Validade (dias)",
+    "pt-PT": "Validade (dias)",
+    "en-US": "Validity (days)",
+  },
+  "Salvar alterações": {
+    "pt-BR": "Salvar alterações",
+    "pt-PT": "Guardar alterações",
+    "en-US": "Save changes",
+  },
+  "Criar pacote": { "pt-BR": "Criar pacote", "pt-PT": "Criar pacote", "en-US": "Create package" },
   Serviço: { "pt-BR": "Serviço", "pt-PT": "Serviço", "en-US": "Service" },
   "Sem profissional": {
     "pt-BR": "Sem profissional",
