@@ -718,6 +718,52 @@ const UI_LABELS: Record<string, Record<LanguageCode, string>> = {
       "en-US":
         "Ask the AI assistant which clients have not returned in 60 days and launch a reactivation campaign on WhatsApp.",
     },
+  "Quantidade de produtos": {
+    "pt-BR": "Quantidade de produtos",
+    "pt-PT": "Quantidade de produtos",
+    "en-US": "Product quantity",
+  },
+  "Informe quantas unidades você pretende vender para projetar o resultado.": {
+    "pt-BR": "Informe quantas unidades você pretende vender para projetar o resultado.",
+    "pt-PT": "Indique quantas unidades pretende vender para projetar o resultado.",
+    "en-US": "Enter how many units you plan to sell to project the result.",
+  },
+  "Meta de faturamento": {
+    "pt-BR": "Meta de faturamento",
+    "pt-PT": "Meta de faturação",
+    "en-US": "Revenue target",
+  },
+  "Descubra quantos produtos precisa vender para atingir uma meta de faturamento.": {
+    "pt-BR": "Descubra quantos produtos precisa vender para atingir uma meta de faturamento.",
+    "pt-PT": "Descubra quantos produtos precisa vender para atingir uma meta de faturação.",
+    "en-US": "Find out how many products you need to sell to reach a revenue target.",
+  },
+  "Faturamento projetado": {
+    "pt-BR": "Faturamento projetado",
+    "pt-PT": "Faturação projetada",
+    "en-US": "Projected revenue",
+  },
+  "Lucro total projetado": {
+    "pt-BR": "Lucro total projetado",
+    "pt-PT": "Lucro total projetado",
+    "en-US": "Projected total profit",
+  },
+  "Faturamento com desconto": {
+    "pt-BR": "Faturamento com desconto",
+    "pt-PT": "Faturação com desconto",
+    "en-US": "Revenue with discount",
+  },
+  "Lucro total com desconto": {
+    "pt-BR": "Lucro total com desconto",
+    "pt-PT": "Lucro total com desconto",
+    "en-US": "Total profit with discount",
+  },
+  "Quantidade para atingir a meta": {
+    "pt-BR": "Quantidade para atingir a meta",
+    "pt-PT": "Quantidade para atingir a meta",
+    "en-US": "Quantity to reach target",
+  },
+  unidades: { "pt-BR": "unidades", "pt-PT": "unidades", "en-US": "units" },
 };
 
 function initialLanguage(): LanguageCode {

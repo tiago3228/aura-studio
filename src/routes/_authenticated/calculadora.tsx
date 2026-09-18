@@ -148,9 +148,13 @@ function MarginCalculator() {
   const [cost, setCost] = useState("");
   const [margin, setMargin] = useState("30");
   const [discount, setDiscount] = useState("0");
+  const [quantity, setQuantity] = useState("1");
+  const [targetRevenue, setTargetRevenue] = useState("");
   const costValue = parseNumber(cost);
   const marginValue = Math.min(99.99, Math.max(0, parseNumber(margin)));
   const discountValue = Math.min(99.99, Math.max(0, parseNumber(discount)));
+  const quantityValue = Math.max(0, Math.floor(parseNumber(quantity)));
+  const targetRevenueValue = Math.max(0, parseNumber(targetRevenue));
   const result = useMemo(() => {
     if (costValue <= 0) return null;
     const suggested = costValue / (1 - marginValue / 100);
@@ -164,14 +168,22 @@ function MarginCalculator() {
       discounted,
       discountedProfit,
       discountedMargin: discounted > 0 ? (discountedProfit / discounted) * 100 : 0,
+      projectedRevenue: suggested * quantityValue,
+      projectedProfit: profit * quantityValue,
+      discountedRevenue: discounted * quantityValue,
+      discountedTotalProfit: discountedProfit * quantityValue,
+      unitsForTarget:
+        suggested > 0 && targetRevenueValue > 0 ? Math.ceil(targetRevenueValue / suggested) : 0,
     };
-  }, [costValue, marginValue, discountValue]);
+  }, [costValue, marginValue, discountValue, quantityValue, targetRevenueValue]);
   const money = (value: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
   const reset = () => {
     setCost("");
     setMargin("30");
     setDiscount("0");
+    setQuantity("1");
+    setTargetRevenue("");
   };
 
   return (
@@ -229,6 +241,33 @@ function MarginCalculator() {
             {t("Use este campo para verificar quanto sobrará caso você ofereça um desconto.")}
           </p>
         </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="calc-quantity">{t("Quantidade de produtos")}</Label>
+          <Input
+            id="calc-quantity"
+            type="number"
+            min={0}
+            step={1}
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            {t("Informe quantas unidades você pretende vender para projetar o resultado.")}
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="calc-target">{t("Meta de faturamento")}</Label>
+          <Input
+            id="calc-target"
+            inputMode="decimal"
+            value={targetRevenue}
+            onChange={(e) => setTargetRevenue(e.target.value)}
+            placeholder="100.000,00"
+          />
+          <p className="text-xs text-muted-foreground">
+            {t("Descubra quantos produtos precisa vender para atingir uma meta de faturamento.")}
+          </p>
+        </div>
         <Button type="button" variant="outline" onClick={reset}>
           <RotateCcw className="size-4" /> {t("Limpar")}
         </Button>
@@ -255,6 +294,31 @@ function MarginCalculator() {
               value={`${result.discountedMargin.toFixed(2)}%`}
               danger={result.discountedMargin < 0}
             />
+            <Result
+              label={t("Faturamento projetado")}
+              value={money(result.projectedRevenue)}
+              highlight
+            />
+            <Result
+              label={t("Lucro total projetado")}
+              value={money(result.projectedProfit)}
+              danger={result.projectedProfit < 0}
+            />
+            <Result label={t("Faturamento com desconto")} value={money(result.discountedRevenue)} />
+            <Result
+              label={t("Lucro total com desconto")}
+              value={money(result.discountedTotalProfit)}
+              danger={result.discountedTotalProfit < 0}
+            />
+            {targetRevenueValue > 0 ? (
+              <Result
+                label={t("Quantidade para atingir a meta")}
+                value={
+                  result.unitsForTarget > 0 ? `${result.unitsForTarget} ${t("unidades")}` : "—"
+                }
+                highlight
+              />
+            ) : null}
           </div>
         ) : (
           <p className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">
