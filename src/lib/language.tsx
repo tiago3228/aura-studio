@@ -55,6 +55,117 @@ const NAV_LABELS: Record<string, Record<LanguageCode, string>> = {
 };
 
 const UI_LABELS: Record<string, Record<LanguageCode, string>> = {
+  Calculadora: { "pt-BR": "Calculadora", "pt-PT": "Calculadora", "en-US": "Calculator" },
+  "Faça simulações rápidas para a operação da sua clínica.": {
+    "pt-BR": "Faça simulações rápidas para a operação da sua clínica.",
+    "pt-PT": "Faça simulações rápidas para a operação da sua clínica.",
+    "en-US": "Run quick simulations for your clinic operations.",
+  },
+  "Calculadora comum": {
+    "pt-BR": "Calculadora comum",
+    "pt-PT": "Calculadora comum",
+    "en-US": "Basic calculator",
+  },
+  "Operações básicas para o dia a dia.": {
+    "pt-BR": "Operações básicas para o dia a dia.",
+    "pt-PT": "Operações básicas para o dia a dia.",
+    "en-US": "Basic operations for everyday use.",
+  },
+  "Calculadora de preço e margem": {
+    "pt-BR": "Calculadora de preço e margem",
+    "pt-PT": "Calculadora de preço e margem",
+    "en-US": "Price and margin calculator",
+  },
+  "Simule preços, lucro, markup e descontos.": {
+    "pt-BR": "Simule preços, lucro, markup e descontos.",
+    "pt-PT": "Simule preços, lucro, markup e descontos.",
+    "en-US": "Simulate prices, profit, markup and discounts.",
+  },
+  Limpar: { "pt-BR": "Limpar", "pt-PT": "Limpar", "en-US": "Clear" },
+  "Dados do produto": {
+    "pt-BR": "Dados do produto",
+    "pt-PT": "Dados do produto",
+    "en-US": "Product data",
+  },
+  "Custo total do produto": {
+    "pt-BR": "Custo total do produto",
+    "pt-PT": "Custo total do produto",
+    "en-US": "Total product cost",
+  },
+  "Informe matéria-prima, embalagem e outros custos diretos do produto.": {
+    "pt-BR": "Informe matéria-prima, embalagem e outros custos diretos do produto.",
+    "pt-PT": "Indique matéria-prima, embalagem e outros custos diretos do produto.",
+    "en-US": "Enter raw materials, packaging and other direct product costs.",
+  },
+  "Margem de lucro desejada": {
+    "pt-BR": "Margem de lucro desejada",
+    "pt-PT": "Margem de lucro pretendida",
+    "en-US": "Desired profit margin",
+  },
+  "A margem representa o lucro como percentual do preço final.": {
+    "pt-BR": "A margem representa o lucro como percentual do preço final.",
+    "pt-PT": "A margem representa o lucro como percentagem do preço final.",
+    "en-US": "Margin represents profit as a percentage of the final price.",
+  },
+  "Desconto simulado": {
+    "pt-BR": "Desconto simulado",
+    "pt-PT": "Desconto simulado",
+    "en-US": "Simulated discount",
+  },
+  "Use este campo para verificar quanto sobrará caso você ofereça um desconto.": {
+    "pt-BR": "Use este campo para verificar quanto sobrará caso você ofereça um desconto.",
+    "pt-PT": "Use este campo para verificar quanto restará se oferecer um desconto.",
+    "en-US": "Use this field to see what remains if you offer a discount.",
+  },
+  "Resultado da simulação": {
+    "pt-BR": "Resultado da simulação",
+    "pt-PT": "Resultado da simulação",
+    "en-US": "Simulation result",
+  },
+  "Preço de venda sugerido": {
+    "pt-BR": "Preço de venda sugerido",
+    "pt-PT": "Preço de venda sugerido",
+    "en-US": "Suggested sale price",
+  },
+  "Lucro por unidade": {
+    "pt-BR": "Lucro por unidade",
+    "pt-PT": "Lucro por unidade",
+    "en-US": "Profit per unit",
+  },
+  "Markup sobre o custo": {
+    "pt-BR": "Markup sobre o custo",
+    "pt-PT": "Markup sobre o custo",
+    "en-US": "Markup over cost",
+  },
+  "Preço com desconto": {
+    "pt-BR": "Preço com desconto",
+    "pt-PT": "Preço com desconto",
+    "en-US": "Discounted price",
+  },
+  "Lucro após desconto": {
+    "pt-BR": "Lucro após desconto",
+    "pt-PT": "Lucro após desconto",
+    "en-US": "Profit after discount",
+  },
+  "Margem depois do desconto": {
+    "pt-BR": "Margem depois do desconto",
+    "pt-PT": "Margem depois do desconto",
+    "en-US": "Margin after discount",
+  },
+  "Informe o custo do produto para visualizar os resultados.": {
+    "pt-BR": "Informe o custo do produto para visualizar os resultados.",
+    "pt-PT": "Indique o custo do produto para visualizar os resultados.",
+    "en-US": "Enter the product cost to view the results.",
+  },
+  "Esta é uma simulação. Considere taxas, impostos, frete, comissões e despesas fixas antes de definir o preço final.":
+    {
+      "pt-BR":
+        "Esta é uma simulação. Considere taxas, impostos, frete, comissões e despesas fixas antes de definir o preço final.",
+      "pt-PT":
+        "Esta é uma simulação. Considere taxas, impostos, portes, comissões e despesas fixas antes de definir o preço final.",
+      "en-US":
+        "This is a simulation. Consider fees, taxes, shipping, commissions and fixed expenses before setting the final price.",
+    },
   Olá: { "pt-BR": "Olá", "pt-PT": "Olá", "en-US": "Hello" },
   "Novo agendamento": {
     "pt-BR": "Novo agendamento",

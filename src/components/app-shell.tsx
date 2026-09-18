@@ -25,6 +25,7 @@ import {
   Flower2,
   ChevronDown,
   ChevronRight,
+  Calculator,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -60,6 +61,7 @@ const NAV: NavItem[] = [
   { to: "/financeiro", label: "Financeiro", area: "financeiro", icon: Wallet, mobile: true },
   { to: "/pagamentos", label: "Pagamentos", area: "financeiro", icon: CreditCard, mobile: true },
   { to: "/relatorios", label: "Relatórios avançados", area: "financeiro", icon: BarChart3 },
+  { to: "/calculadora", label: "Calculadora", area: "financeiro", icon: Calculator, mobile: true },
   { to: "/estoque", label: "Estoque", area: "estoque", icon: Package },
   { to: "/comissoes", label: "Comissões", area: "comissoes", icon: Percent },
   {
@@ -221,7 +223,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                     active
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      ? item.to === "/calculadora"
+                        ? "bg-gold-soft text-gold"
+                        : "bg-sidebar-accent text-sidebar-accent-foreground"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >

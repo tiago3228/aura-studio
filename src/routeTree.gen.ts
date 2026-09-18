@@ -16,6 +16,7 @@ import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedAjudaRouteImport } from './routes/_authenticated/ajuda'
 import { Route as AuthenticatedAssinaturaRouteImport } from './routes/_authenticated/assinatura'
 import { Route as AuthenticatedAssistenteRouteImport } from './routes/_authenticated/assistente'
+import { Route as AuthenticatedCalculadoraRouteImport } from './routes/_authenticated/calculadora'
 import { Route as AuthenticatedComissoesRouteImport } from './routes/_authenticated/comissoes'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedCrmRouteImport } from './routes/_authenticated/crm'
@@ -73,6 +74,12 @@ const AuthenticatedAssistenteRoute = AuthenticatedAssistenteRouteImport.update({
   path: '/assistente',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCalculadoraRoute =
+  AuthenticatedCalculadoraRouteImport.update({
+    id: '/calculadora',
+    path: '/calculadora',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedComissoesRoute = AuthenticatedComissoesRouteImport.update({
   id: '/comissoes',
   path: '/comissoes',
@@ -196,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/ajuda': typeof AuthenticatedAjudaRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/assistente': typeof AuthenticatedAssistenteRoute
+  '/calculadora': typeof AuthenticatedCalculadoraRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/crm': typeof AuthenticatedCrmRoute
@@ -226,6 +234,7 @@ export interface FileRoutesByTo {
   '/ajuda': typeof AuthenticatedAjudaRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/assistente': typeof AuthenticatedAssistenteRoute
+  '/calculadora': typeof AuthenticatedCalculadoraRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/crm': typeof AuthenticatedCrmRoute
@@ -258,6 +267,7 @@ export interface FileRoutesById {
   '/_authenticated/ajuda': typeof AuthenticatedAjudaRoute
   '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
   '/_authenticated/assistente': typeof AuthenticatedAssistenteRoute
+  '/_authenticated/calculadora': typeof AuthenticatedCalculadoraRoute
   '/_authenticated/comissoes': typeof AuthenticatedComissoesRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/crm': typeof AuthenticatedCrmRoute
@@ -290,6 +300,7 @@ export interface FileRouteTypes {
     | '/ajuda'
     | '/assinatura'
     | '/assistente'
+    | '/calculadora'
     | '/comissoes'
     | '/configuracoes'
     | '/crm'
@@ -320,6 +331,7 @@ export interface FileRouteTypes {
     | '/ajuda'
     | '/assinatura'
     | '/assistente'
+    | '/calculadora'
     | '/comissoes'
     | '/configuracoes'
     | '/crm'
@@ -351,6 +363,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ajuda'
     | '/_authenticated/assinatura'
     | '/_authenticated/assistente'
+    | '/_authenticated/calculadora'
     | '/_authenticated/comissoes'
     | '/_authenticated/configuracoes'
     | '/_authenticated/crm'
@@ -432,6 +445,13 @@ declare module '@tanstack/react-router' {
       path: '/assistente'
       fullPath: '/assistente'
       preLoaderRoute: typeof AuthenticatedAssistenteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/calculadora': {
+      id: '/_authenticated/calculadora'
+      path: '/calculadora'
+      fullPath: '/calculadora'
+      preLoaderRoute: typeof AuthenticatedCalculadoraRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/comissoes': {
@@ -596,6 +616,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAjudaRoute: typeof AuthenticatedAjudaRoute
   AuthenticatedAssinaturaRoute: typeof AuthenticatedAssinaturaRoute
   AuthenticatedAssistenteRoute: typeof AuthenticatedAssistenteRoute
+  AuthenticatedCalculadoraRoute: typeof AuthenticatedCalculadoraRoute
   AuthenticatedComissoesRoute: typeof AuthenticatedComissoesRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedCrmRoute: typeof AuthenticatedCrmRoute
@@ -623,6 +644,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAjudaRoute: AuthenticatedAjudaRoute,
   AuthenticatedAssinaturaRoute: AuthenticatedAssinaturaRoute,
   AuthenticatedAssistenteRoute: AuthenticatedAssistenteRoute,
+  AuthenticatedCalculadoraRoute: AuthenticatedCalculadoraRoute,
   AuthenticatedComissoesRoute: AuthenticatedComissoesRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedCrmRoute: AuthenticatedCrmRoute,
