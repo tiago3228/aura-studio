@@ -185,7 +185,6 @@ function PublicBooking() {
       });
       setCouponResult(result);
       if (result.valid) toast.success(`${result.percentage}% de desconto aplicado.`);
-      else toast.error(result.message);
     } catch (err) {
       setCouponResult({
         valid: false,
