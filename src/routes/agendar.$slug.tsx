@@ -168,8 +168,8 @@ function PublicBooking() {
     setCouponResult(null);
   }
 
-  async function applyCoupon() {
-    if (!couponCode.trim() || !hasChoice) return;
+  async function validateCouponCode() {
+    if (!couponCode.trim() || !hasChoice) return null;
     setValidatingCoupon(true);
     try {
       const packageServiceIds = selectedPackages.flatMap((pkg) =>
@@ -184,29 +184,35 @@ function PublicBooking() {
         },
       });
       setCouponResult(result);
-      if (result.valid) toast.success(`${result.percentage}% de desconto aplicado.`);
+      return result;
     } catch (err) {
-      setCouponResult({
+      const result = {
         valid: false,
         message: "Não foi possível validar o cupom.",
         percentage: 0,
-      });
-      toast.error(err instanceof Error ? err.message : "Não foi possível validar o cupom.");
+      };
+      setCouponResult(result);
+      if (err instanceof Error) toast.error(err.message);
+      return result;
     } finally {
       setValidatingCoupon(false);
     }
   }
 
+  async function applyCoupon() {
+    const result = await validateCouponCode();
+    if (result?.valid) toast.success(`${result.percentage}% de desconto aplicado.`);
+  }
+
   async function send(e: React.FormEvent) {
     e.preventDefault();
-    if (couponResult && !couponResult.valid) {
-      toast.error("Escolha se deseja inserir outro cupom ou prosseguir sem cupom.");
-      couponInputRef.current?.focus();
-      return;
-    }
     if (!professionalId || !hasChoice || !day || !time) {
       toast.error("Escolha profissional, serviço, data e horário.");
       return;
+    }
+    if (couponCode.trim()) {
+      const result = await validateCouponCode();
+      if (!result?.valid) return;
     }
     setSending(true);
     try {
@@ -709,7 +715,7 @@ function PublicBooking() {
         <Button
           type="submit"
           className="w-full"
-          disabled={sending || !time}
+          disabled={sending || validatingCoupon || !time}
           style={{ backgroundColor: brand, color: "#fff" }}
         >
           {sending ? <Loader2 className="size-4 animate-spin" /> : null} Confirmar agendamento
