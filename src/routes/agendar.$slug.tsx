@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -83,6 +83,7 @@ function PublicBooking() {
     message: string;
     percentage: number;
   } | null>(null);
+  const couponInputRef = useRef<HTMLInputElement>(null);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
@@ -199,6 +200,11 @@ function PublicBooking() {
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
+    if (couponResult && !couponResult.valid) {
+      toast.error("Escolha se deseja inserir outro cupom ou prosseguir sem cupom.");
+      couponInputRef.current?.focus();
+      return;
+    }
     if (!professionalId || !hasChoice || !day || !time) {
       toast.error("Escolha profissional, serviço, data e horário.");
       return;
@@ -606,6 +612,7 @@ function PublicBooking() {
             <div className="flex gap-2">
               <Input
                 id="bk-coupon"
+                ref={couponInputRef}
                 value={couponCode}
                 placeholder="Ex.: DESCONTO10"
                 onChange={(e) => {
@@ -628,6 +635,40 @@ function PublicBooking() {
               >
                 {couponResult.message}
               </p>
+            ) : null}
+            {couponResult && !couponResult.valid ? (
+              <div
+                className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3"
+                role="alert"
+              >
+                <p className="text-sm font-medium text-destructive">
+                  Este cupom não é válido. Deseja inserir outro cupom ou prosseguir sem desconto?
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setCouponCode("");
+                      setCouponResult(null);
+                      couponInputRef.current?.focus();
+                    }}
+                  >
+                    Inserir outro cupom
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      setCouponCode("");
+                      setCouponResult(null);
+                    }}
+                  >
+                    Prosseguir sem cupom
+                  </Button>
+                </div>
+              </div>
             ) : null}
             {couponResult?.valid ? (
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
