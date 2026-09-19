@@ -642,7 +642,7 @@ function PublicBooking() {
                 role="alert"
               >
                 <p className="text-sm font-medium text-destructive">
-                  Este cupom não é válido. Deseja inserir outro cupom ou prosseguir sem desconto?
+                  Este cupom não é válido. Deseja continuar o agendamento sem usar cupom?
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -655,7 +655,7 @@ function PublicBooking() {
                       couponInputRef.current?.focus();
                     }}
                   >
-                    Inserir outro cupom
+                    Não, inserir outro cupom
                   </Button>
                   <Button
                     type="button"
@@ -665,7 +665,7 @@ function PublicBooking() {
                       setCouponResult(null);
                     }}
                   >
-                    Prosseguir sem cupom
+                    Sim, continuar agendamento
                   </Button>
                 </div>
               </div>
