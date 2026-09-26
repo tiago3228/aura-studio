@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ChevronDown, Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -80,6 +80,8 @@ function Servicos() {
   const [openPackage, setOpenPackage] = useState(false);
   const [editingPackage, setEditingPackage] = useState<PackageRow | null>(null);
   const [openLibrary, setOpenLibrary] = useState(false);
+  const [expandedServiceId, setExpandedServiceId] = useState<string | null>(null);
+  const [expandedPackageId, setExpandedPackageId] = useState<string | null>(null);
 
   const data = useQuery({
     enabled: !!orgId,
@@ -203,57 +205,74 @@ function Servicos() {
             />
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2">
-              {data.data!.services.map((s) => (
-                <li key={s.id} className="surface p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold">{s.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {s.duration_min} min · comissão{" "}
-                        {s.commission_type === "percentual"
-                          ? `${Number(s.commission_value)}%`
-                          : brl(Number(s.commission_value))}
-                      </p>
-                    </div>
-                    <p className="font-display text-base font-semibold tabular-nums">
-                      {brl(Number(s.price))}
-                    </p>
-                  </div>
-                  <div className="mt-3 grid gap-2 text-xs">
-                    <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
-                      {t("Ativo")}
-                      <Switch
-                        checked={s.active}
-                        onCheckedChange={(v) => toggleService(s.id, "active", v)}
-                      />
-                    </label>
-                    <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
-                      {t("Agendamento online")}
-                      <Switch
-                        checked={s.online_booking}
-                        onCheckedChange={(v) => toggleService(s.id, "online_booking", v)}
-                      />
-                    </label>
-                    <Button
+              {data.data!.services.map((s) => {
+                const expanded = expandedServiceId === s.id;
+                return (
+                  <li key={s.id} className="surface overflow-hidden p-4">
+                    <button
                       type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditingService(s)}
+                      aria-expanded={expanded}
+                      className="flex w-full items-center justify-between gap-3 text-left"
+                      onClick={() => setExpandedServiceId(expanded ? null : s.id)}
                     >
-                      <Pencil className="size-3.5" /> {t("Editar procedimento")}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-center text-destructive hover:text-destructive"
-                      onClick={() => deleteService(s)}
-                    >
-                      <Trash2 className="size-3.5" /> {t("Excluir procedimento")}
-                    </Button>
-                  </div>
-                </li>
-              ))}
+                      <div>
+                        <p className="text-sm font-semibold">{s.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {s.duration_min} min · comissão{" "}
+                          {s.commission_type === "percentual"
+                            ? `${Number(s.commission_value)}%`
+                            : brl(Number(s.commission_value))}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-display text-base font-semibold tabular-nums">
+                          {brl(Number(s.price))}
+                        </p>
+                        <ChevronDown
+                          className={`size-4 text-muted-foreground transition-transform ${
+                            expanded ? "rotate-180" : ""
+                          }`}
+                        />
+                      </div>
+                    </button>
+                    {expanded ? (
+                      <div className="mt-3 grid gap-2 border-t border-border/60 pt-3 text-xs">
+                        <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
+                          {t("Ativo")}
+                          <Switch
+                            checked={s.active}
+                            onCheckedChange={(v) => toggleService(s.id, "active", v)}
+                          />
+                        </label>
+                        <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
+                          {t("Agendamento online")}
+                          <Switch
+                            checked={s.online_booking}
+                            onCheckedChange={(v) => toggleService(s.id, "online_booking", v)}
+                          />
+                        </label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingService(s)}
+                        >
+                          <Pencil className="size-3.5" /> {t("Editar procedimento")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-center text-destructive hover:text-destructive"
+                          onClick={() => deleteService(s)}
+                        >
+                          <Trash2 className="size-3.5" /> {t("Excluir procedimento")}
+                        </Button>
+                      </div>
+                    ) : null}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </TabsContent>
@@ -283,9 +302,15 @@ function Servicos() {
             <ul className="grid gap-3 sm:grid-cols-2">
               {data.data!.packages.map((p) => {
                 const items = (data.data?.items ?? []).filter((i) => i.package_id === p.id);
+                const expanded = expandedPackageId === p.id;
                 return (
-                  <li key={p.id} className="surface p-4">
-                    <div className="flex items-start justify-between gap-2">
+                  <li key={p.id} className="surface overflow-hidden p-4">
+                    <button
+                      type="button"
+                      aria-expanded={expanded}
+                      className="flex w-full items-center justify-between gap-3 text-left"
+                      onClick={() => setExpandedPackageId(expanded ? null : p.id)}
+                    >
                       <div>
                         <p className="text-sm font-semibold">{p.name}</p>
                         <p className="text-xs text-muted-foreground">
@@ -293,52 +318,63 @@ function Servicos() {
                           {t("validade")} {p.validity_days} {t("dias")}
                         </p>
                       </div>
-                      <p className="font-display text-base font-semibold tabular-nums">
-                        {brl(Number(p.price))}
-                      </p>
-                    </div>
-                    <ul className="mt-2 flex flex-wrap gap-1.5">
-                      {items.map((i) => (
-                        <li key={i.service_id}>
-                          <Pill tone="neutral">
-                            {i.sessions}x {serviceName(i.service_id)}
-                          </Pill>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="mt-3 grid gap-2 text-xs">
-                      <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
-                        {t("Ativo")}
-                        <Switch
-                          checked={p.active}
-                          onCheckedChange={(v) => togglePackage(p.id, "active", v)}
+                      <div className="flex items-center gap-2">
+                        <p className="font-display text-base font-semibold tabular-nums">
+                          {brl(Number(p.price))}
+                        </p>
+                        <ChevronDown
+                          className={`size-4 text-muted-foreground transition-transform ${
+                            expanded ? "rotate-180" : ""
+                          }`}
                         />
-                      </label>
-                      <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
-                        {t("Agendamento online")}
-                        <Switch
-                          checked={p.online_booking}
-                          onCheckedChange={(v) => togglePackage(p.id, "online_booking", v)}
-                        />
-                      </label>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditingPackage(p)}
-                      >
-                        <Pencil className="size-3.5" /> {t("Editar pacote")}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-center text-destructive hover:text-destructive"
-                        onClick={() => deletePackage(p)}
-                      >
-                        <Trash2 className="size-3.5" /> {t("Excluir pacote")}
-                      </Button>
-                    </div>
+                      </div>
+                    </button>
+                    {expanded ? (
+                      <>
+                        <ul className="mt-2 flex flex-wrap gap-1.5">
+                          {items.map((i) => (
+                            <li key={i.service_id}>
+                              <Pill tone="neutral">
+                                {i.sessions}x {serviceName(i.service_id)}
+                              </Pill>
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="mt-3 grid gap-2 border-t border-border/60 pt-3 text-xs">
+                          <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
+                            {t("Ativo")}
+                            <Switch
+                              checked={p.active}
+                              onCheckedChange={(v) => togglePackage(p.id, "active", v)}
+                            />
+                          </label>
+                          <label className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
+                            {t("Agendamento online")}
+                            <Switch
+                              checked={p.online_booking}
+                              onCheckedChange={(v) => togglePackage(p.id, "online_booking", v)}
+                            />
+                          </label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingPackage(p)}
+                          >
+                            <Pencil className="size-3.5" /> {t("Editar pacote")}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full justify-center text-destructive hover:text-destructive"
+                            onClick={() => deletePackage(p)}
+                          >
+                            <Trash2 className="size-3.5" /> {t("Excluir pacote")}
+                          </Button>
+                        </div>
+                      </>
+                    ) : null}
                   </li>
                 );
               })}
