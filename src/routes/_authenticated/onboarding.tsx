@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +66,14 @@ function Onboarding() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-5 py-16">
+      <button
+        type="button"
+        className="mb-6 flex w-fit items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        onClick={() => navigate({ to: "/auth", replace: true })}
+      >
+        <ArrowLeft className="size-4" />
+        Voltar para o login
+      </button>
       <p className="text-xs font-semibold tracking-widest text-primary uppercase">Primeiro passo</p>
       <h1 className="mt-2 font-display text-3xl font-semibold text-balance">
         Vamos criar sua clínica
