@@ -29,7 +29,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "set-password">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -38,7 +38,10 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
+      if (data.session && window.location.hash.includes("type=invite")) {
+        setEmail(data.session.user.email ?? "");
+        setMode("set-password");
+      } else if (data.session) navigate({ to: "/dashboard", replace: true });
     });
   }, [navigate]);
 
@@ -46,7 +49,11 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      if (mode === "signup") {
+      if (mode === "set-password") {
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        toast.success("Senha criada. Bem-vindo ao Aura.");
+      } else if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -112,12 +119,18 @@ function AuthPage() {
             Aura<span className="text-gold">.</span>
           </Link>
           <h1 className="mt-6 font-display text-2xl font-semibold lg:mt-0">
-            {mode === "login" ? "Entrar na sua conta" : "Criar conta da clínica"}
+            {mode === "set-password"
+              ? "Crie sua senha de acesso"
+              : mode === "login"
+                ? "Entrar na sua conta"
+                : "Criar conta da clínica"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "login"
-              ? "Use seu e-mail profissional para acessar o painel."
-              : "Leva menos de um minuto para começar."}
+            {mode === "set-password"
+              ? "Defina uma senha para acessar a clínica."
+              : mode === "login"
+                ? "Use seu e-mail profissional para acessar o painel."
+                : "Leva menos de um minuto para começar."}
           </p>
 
           <Button variant="outline" className="mt-6 w-full" onClick={google} type="button">
@@ -183,18 +196,30 @@ function AuthPage() {
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? <Loader2 className="size-4 animate-spin" /> : null}
-              {mode === "login" ? "Entrar" : "Criar conta"}
+              {mode === "set-password"
+                ? "Criar senha e entrar"
+                : mode === "login"
+                  ? "Entrar"
+                  : "Criar conta"}
             </Button>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            {mode === "login" ? "Ainda não tem conta?" : "Já tem conta?"}{" "}
+            {mode === "set-password"
+              ? "Convite de colaborador"
+              : mode === "login"
+                ? "Ainda não tem conta?"
+                : "Já tem conta?"}{" "}
             <button
               type="button"
               className="font-semibold text-primary hover:underline"
               onClick={() => setMode(mode === "login" ? "signup" : "login")}
             >
-              {mode === "login" ? "Criar agora" : "Entrar"}
+              {mode === "set-password"
+                ? "Usar outra conta"
+                : mode === "login"
+                  ? "Criar agora"
+                  : "Entrar"}
             </button>
           </p>
         </div>

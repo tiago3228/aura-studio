@@ -3,7 +3,7 @@ import { useEffect } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/app-shell";
-import { useMembership } from "@/lib/session";
+import { can, useMembership } from "@/lib/session";
 import { SkeletonCard } from "@/components/ui-kit";
 import { LanguageProvider } from "@/lib/language";
 import { useServerFn } from "@tanstack/react-start";
@@ -32,12 +32,14 @@ function AuthenticatedLayout() {
     const sessionId = existing ?? crypto.randomUUID();
     window.localStorage.setItem(key, sessionId);
     const send = (eventType: "entered" | "heartbeat" | "left") => {
-      void touchSession({ data: {
-        sessionId,
-        organizationId: membership.organization.id,
-        eventType,
-        userAgent: navigator.userAgent,
-      } });
+      void touchSession({
+        data: {
+          sessionId,
+          organizationId: membership.organization.id,
+          eventType,
+          userAgent: navigator.userAgent,
+        },
+      });
     };
     send(existing ? "heartbeat" : "entered");
     const interval = window.setInterval(() => send("heartbeat"), 30_000);
@@ -67,6 +69,47 @@ function AuthenticatedLayout() {
 
   if (!membership) {
     return <Outlet />;
+  }
+
+  const area = pathname.startsWith("/agenda")
+    ? "agenda"
+    : pathname.startsWith("/clientes")
+      ? "clientes"
+      : pathname.startsWith("/financeiro") ||
+          pathname.startsWith("/pagamentos") ||
+          pathname.startsWith("/calculadora")
+        ? "financeiro"
+        : pathname.startsWith("/equipe")
+          ? "equipe"
+          : pathname.startsWith("/servicos")
+            ? "procedimentos"
+            : pathname.startsWith("/relatorios")
+              ? "relatorios"
+              : pathname.startsWith("/configuracoes") ||
+                  pathname.startsWith("/horarios") ||
+                  pathname.startsWith("/globalizacao") ||
+                  pathname.startsWith("/gateways") ||
+                  pathname.startsWith("/seguranca") ||
+                  pathname.startsWith("/filiais") ||
+                  pathname.startsWith("/ajuda")
+                ? "configuracoes"
+                : pathname.startsWith("/dashboard")
+                  ? "dashboard"
+                  : null;
+  if (area && !can(membership.role, area, membership.permissions)) {
+    return (
+      <LanguageProvider>
+        <AppShell>
+          <div className="mx-auto max-w-xl py-20 text-center">
+            <h1 className="font-display text-2xl font-semibold">Acesso negado</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Seu acesso não inclui esta área. Solicite ao proprietário da clínica uma permissão
+              adequada.
+            </p>
+          </div>
+        </AppShell>
+      </LanguageProvider>
+    );
   }
 
   return (

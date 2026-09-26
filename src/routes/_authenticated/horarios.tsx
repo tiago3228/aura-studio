@@ -4,7 +4,7 @@ import { Check, Clock3, Coffee, Copy, Plus, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { useMembership, isAdminRole } from "@/lib/session";
+import { useMembership, hasPermission } from "@/lib/session";
 import { PageHeader, Surface, SkeletonCard } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,7 +93,7 @@ export const Route = createFileRoute("/_authenticated/horarios")({
 function Horarios() {
   const { data: membership, isLoading } = useMembership();
   const org = membership?.organization;
-  const canEdit = isAdminRole(membership?.role);
+  const canEdit = hasPermission(membership, "agenda.disponibilidade");
   const [hours, setHours] = useState<Record<string, ClinicDay>>(() => normalizeHours(null));
   const [saving, setSaving] = useState(false);
 

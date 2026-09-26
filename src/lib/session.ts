@@ -2,10 +2,68 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 export type AppRole = Database["public"]["Enums"]["app_role"];
 export type Organization = Database["public"]["Tables"]["organizations"]["Row"];
+export type PermissionKey = string;
+export type PermissionMap = Record<string, boolean>;
+export const PERMISSION_GROUPS = [
+  { area: "Visão geral", permissions: [{ key: "dashboard.ver", label: "Visualizar" }] },
+  {
+    area: "Agenda",
+    permissions: [
+      "agenda.ver",
+      "agenda.todos",
+      "agenda.propria",
+      "agenda.criar",
+      "agenda.editar",
+      "agenda.cancelar",
+      "agenda.bloquear",
+      "agenda.disponibilidade",
+    ].map((key) => ({ key, label: key.replace("agenda.", "").replaceAll(".", " ") })),
+  },
+  {
+    area: "Clientes",
+    permissions: [
+      "clientes.ver",
+      "clientes.criar",
+      "clientes.editar",
+      "clientes.historico",
+      "clientes.excluir",
+    ].map((key) => ({ key, label: key.replace("clientes.", "").replaceAll(".", " ") })),
+  },
+  {
+    area: "Procedimentos",
+    permissions: [
+      { key: "procedimentos.ver", label: "Visualizar" },
+      { key: "procedimentos.editar", label: "Editar" },
+    ],
+  },
+  {
+    area: "Pacotes",
+    permissions: [
+      { key: "pacotes.ver", label: "Visualizar" },
+      { key: "pacotes.editar", label: "Editar" },
+    ],
+  },
+  {
+    area: "Financeiro",
+    permissions: [
+      { key: "financeiro.ver", label: "Visualizar" },
+      { key: "financeiro.editar", label: "Editar" },
+    ],
+  },
+  {
+    area: "Equipe",
+    permissions: [
+      { key: "equipe.ver", label: "Visualizar" },
+      { key: "equipe.editar", label: "Gerenciar acessos" },
+    ],
+  },
+  { area: "Relatórios", permissions: [{ key: "relatorios.ver", label: "Visualizar" }] },
+  { area: "Ajustes", permissions: [{ key: "configuracoes.ver", label: "Visualizar" }] },
+];
 
 export function useSession() {
   const [session, setSession] = useState<Session | null>(null);
@@ -27,7 +85,15 @@ export type Membership = {
   organization: Organization;
   role: AppRole;
   userId: string;
+  professionalId: string | null;
+  permissions: PermissionMap;
 };
+function parsePermissions(value: Json | null | undefined): PermissionMap {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(([, allowed]) => typeof allowed === "boolean"),
+  ) as PermissionMap;
+}
 
 /** Organização ativa do usuário autenticado (multi-tenant: RLS já filtra tudo). */
 export function useMembership() {
@@ -39,7 +105,7 @@ export function useMembership() {
       if (!auth.user) return null;
       const { data, error } = await supabase
         .from("organization_members")
-        .select("role, organization_id, organizations(*)")
+        .select("role, organization_id, professional_id, permissions, organizations(*)")
         .eq("user_id", auth.user.id)
         .eq("active", true)
         .order("created_at", { ascending: true })
@@ -51,6 +117,8 @@ export function useMembership() {
         organization: data.organizations as Organization,
         role: data.role,
         userId: auth.user.id,
+        professionalId: data.professional_id,
+        permissions: parsePermissions(data.permissions),
       };
     },
   });
@@ -65,16 +133,32 @@ export const roleLabel: Record<AppRole, string> = {
   professional: "Profissional",
 };
 
-/** Permissões granulares por perfil (RBAC de interface; o banco reforça via RLS). */
-const PERMISSIONS: Record<AppRole, string[]> = {
-  owner: ["*"],
-  manager: ["*"],
-  reception: ["dashboard", "agenda", "clientes", "procedimentos", "pacotes", "anamnese", "crm"],
-  professional: ["dashboard", "agenda", "clientes", "anamnese", "comissoes", "pacotes"],
+export const can = (
+  role: AppRole | undefined | null,
+  area: string,
+  permissions?: PermissionMap,
+) => {
+  if (!role) return false;
+  if (isAdminRole(role)) return true;
+  if (permissions && Object.keys(permissions).length > 0) {
+    const key =
+      area === "agenda"
+        ? "agenda.ver"
+        : area === "clientes"
+          ? "clientes.ver"
+          : area === "financeiro"
+            ? "financeiro.ver"
+            : area === "equipe"
+              ? "equipe.ver"
+              : `${area}.ver`;
+    return permissions[key] === true;
+  }
+  return role === "reception"
+    ? ["dashboard", "agenda", "clientes", "procedimentos", "pacotes"].includes(area)
+    : ["dashboard", "agenda", "clientes", "pacotes"].includes(area);
 };
 
-export const can = (role: AppRole | undefined | null, area: string) => {
-  if (!role) return false;
-  const list = PERMISSIONS[role];
-  return list.includes("*") || list.includes(area);
-};
+export const hasPermission = (
+  membership: Membership | null | undefined,
+  permission: PermissionKey,
+) => !!membership && (isAdminRole(membership.role) || membership.permissions[permission] === true);

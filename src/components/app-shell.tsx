@@ -149,7 +149,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     ].some((path) => pathname.startsWith(path)),
   }));
 
-  const items = NAV.filter((item) => can(membership?.role, item.area));
+  const items = NAV.filter((item) => can(membership?.role, item.area, membership?.permissions));
   const isPlatformAdmin = user?.email?.toLowerCase() === "tiago3228@yahoo.com.br";
   const orgId = membership?.organization.id;
   const scheduledAppointments = useQuery({
@@ -258,7 +258,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
           const Icon = item.icon;
           const children =
-            item.children?.filter((child) => can(membership?.role, child.area)) ?? [];
+            item.children?.filter((child) =>
+              can(membership?.role, child.area, membership?.permissions),
+            ) ?? [];
           const expanded = expandedGroups[item.to] ?? false;
           return (
             <div key={item.to}>

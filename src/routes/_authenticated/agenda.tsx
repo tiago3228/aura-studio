@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { isAdminRole, useMembership } from "@/lib/session";
+import { hasPermission, useMembership } from "@/lib/session";
 import { useLanguage } from "@/lib/language";
 import { addDays, brl, isoDay, longDate, startOfWeek, timeFmt, dateFmt } from "@/lib/format";
 import { brInstant } from "@/lib/availability";
@@ -168,7 +168,10 @@ function Agenda() {
   const { data: membership } = useMembership();
   const { language, t } = useLanguage();
   const orgId = membership?.organization.id;
-  const canManageBlocks = isAdminRole(membership?.role);
+  const canManageBlocks = hasPermission(membership, "agenda.bloquear");
+  const canCreateAppointment = hasPermission(membership, "agenda.criar");
+  const canEditAppointment = hasPermission(membership, "agenda.editar");
+  const canCancelAppointment = hasPermission(membership, "agenda.cancelar");
   const queryClient = useQueryClient();
   const [anchor, setAnchor] = useState(() => isoDay(new Date()));
   const [view, setView] = useState<"dia" | "semana">("dia");
@@ -383,7 +386,7 @@ function Agenda() {
             </Dialog>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button disabled={!canCreateAppointment}>
                   <Plus className="size-4" /> {t("Agendar")}
                 </Button>
               </DialogTrigger>
@@ -623,6 +626,8 @@ function Agenda() {
                   key={a.id}
                   appointment={a}
                   onStatus={setStatus.mutate}
+                  canEdit={canEditAppointment}
+                  canCancel={canCancelAppointment}
                   onMessage={setMessageTarget}
                   t={t}
                 />
@@ -690,6 +695,8 @@ type AppointmentRowProps = {
     professionals: { name: string } | null;
   };
   onStatus: (input: { id: string; status: Status }) => void;
+  canEdit: boolean;
+  canCancel: boolean;
   onMessage: (target: MessageTarget) => void;
   t: (value: string) => string;
 };
@@ -701,7 +708,14 @@ const SUGGESTED: Partial<Record<Status, MsgEvent>> = {
   atendido: "satisfacao",
 };
 
-function AppointmentRow({ appointment: a, onStatus, onMessage, t }: AppointmentRowProps) {
+function AppointmentRow({
+  appointment: a,
+  onStatus,
+  canEdit,
+  canCancel,
+  onMessage,
+  t,
+}: AppointmentRowProps) {
   const meta = STATUS_META[a.status];
   const target: MessageTarget = {
     appointmentId: a.id,
@@ -751,13 +765,16 @@ function AppointmentRow({ appointment: a, onStatus, onMessage, t }: AppointmentR
       </Button>
       <Select
         value={a.status}
+        disabled={!canEdit && !canCancel}
         onValueChange={(status) => onStatus({ id: a.id, status: status as Status })}
       >
         <SelectTrigger className="w-36" aria-label={t("Alterar status")}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {STATUSES.map((s) => (
+          {STATUSES.filter(
+            (s) => canEdit || (canCancel && s === "cancelado") || s === a.status,
+          ).map((s) => (
             <SelectItem key={s} value={s}>
               {t(STATUS_META[s].label)}
             </SelectItem>

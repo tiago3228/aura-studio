@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, CalendarClock, ListChecks } from "lucide-react";
+import { Loader2, Plus, CalendarClock, ListChecks, ShieldCheck, Link2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { useMembership, roleLabel } from "@/lib/session";
+import { useMembership, roleLabel, PERMISSION_GROUPS, type PermissionMap } from "@/lib/session";
+import { useServerFn } from "@tanstack/react-start";
+import { inviteCollaborator } from "@/lib/collaborator.functions";
 import { brl, initials } from "@/lib/format";
 import { resizeImage } from "@/lib/image";
 import { Textarea } from "@/components/ui/textarea";
@@ -52,6 +54,7 @@ function Equipe() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Tables<"professionals"> | null>(null);
   const [offeringFor, setOfferingFor] = useState<Tables<"professionals"> | null>(null);
+  const [accessFor, setAccessFor] = useState<Tables<"professionals"> | null>(null);
 
   const data = useQuery({
     enabled: !!orgId,
@@ -59,7 +62,9 @@ function Equipe() {
     queryFn: async () => {
       const [professionals, members] = await Promise.all([
         supabase.from("professionals").select("*").order("name"),
-        supabase.from("organization_members").select("id, role, user_id, active"),
+        supabase
+          .from("organization_members")
+          .select("id, role, user_id, active, permissions, professional_id"),
       ]);
       if (professionals.error) throw professionals.error;
       return { professionals: professionals.data, members: members.data ?? [] };
@@ -148,6 +153,9 @@ function Equipe() {
                 <Button variant="outline" size="sm" onClick={() => setOfferingFor(p)}>
                   <ListChecks className="size-4" /> Serviços e pacotes
                 </Button>
+                <Button variant="outline" size="sm" onClick={() => setAccessFor(p)}>
+                  <ShieldCheck className="size-4" /> Acesso e permissões
+                </Button>
               </div>
             </li>
           ))}
@@ -186,6 +194,18 @@ function Equipe() {
             professional={offeringFor}
             onDone={() => {
               setOfferingFor(null);
+              queryClient.invalidateQueries({ queryKey: ["team"] });
+            }}
+          />
+        ) : null}
+      </Dialog>
+      <Dialog open={!!accessFor} onOpenChange={(v) => !v && setAccessFor(null)}>
+        {accessFor ? (
+          <AccessDialog
+            professional={accessFor}
+            member={data.data?.members.find((item) => item.professional_id === accessFor.id)}
+            onDone={() => {
+              setAccessFor(null);
               queryClient.invalidateQueries({ queryKey: ["team"] });
             }}
           />
@@ -685,6 +705,152 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
             {saving ? <Loader2 className="size-4 animate-spin" /> : null} Salvar
           </Button>
         </DialogFooter>
+      </form>
+    </DialogContent>
+  );
+}
+
+function AccessDialog({
+  professional,
+  member,
+  onDone,
+}: {
+  professional: Tables<"professionals">;
+  member?: Tables<"organization_members">;
+  onDone: () => void;
+}) {
+  const { data: membership } = useMembership();
+  const sendInvite = useServerFn(inviteCollaborator);
+  const [email, setEmail] = useState(professional.email ?? "");
+  const [role, setRole] = useState<"manager" | "reception" | "professional">(
+    member?.role === "manager" || member?.role === "reception" ? member.role : "professional",
+  );
+  const [active, setActive] = useState(member?.active ?? true);
+  const [permissions, setPermissions] = useState<PermissionMap>(
+    (member?.permissions as PermissionMap | null) ?? {
+      "agenda.ver": true,
+      "agenda.propria": true,
+      "agenda.criar": true,
+      "agenda.editar": true,
+      "clientes.ver": true,
+      "clientes.criar": true,
+      "clientes.editar": true,
+    },
+  );
+  const [saving, setSaving] = useState(false);
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (!membership || !email.trim()) {
+      toast.error("Informe o e-mail de acesso.");
+      return;
+    }
+    setSaving(true);
+    try {
+      if (member) {
+        const { error } = await supabase
+          .from("organization_members")
+          .update({ role, active, permissions, professional_id: professional.id })
+          .eq("id", member.id);
+        if (error) throw error;
+        toast.success(active ? "Acesso atualizado." : "Acesso bloqueado.");
+      } else {
+        await sendInvite({
+          data: {
+            organizationId: membership.organization.id,
+            professionalId: professional.id,
+            email: email.trim(),
+            role,
+            permissions,
+          },
+        });
+        const { error } = await supabase
+          .from("professionals")
+          .update({ email: email.trim() })
+          .eq("id", professional.id);
+        if (error) throw error;
+        toast.success("Convite enviado. O colaborador criará a própria senha pelo link recebido.");
+      }
+      onDone();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar o acesso.");
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function copyLink() {
+    await navigator.clipboard.writeText(`${window.location.origin}/auth?collaborator=1`);
+    toast.success("Link de acesso copiado.");
+  }
+  return (
+    <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle className="font-display">Acesso de {professional.name}</DialogTitle>
+      </DialogHeader>
+      <form onSubmit={save} className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="access-email">E-mail de acesso</Label>
+            <Input
+              id="access-email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="profissional@clinica.com.br"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Perfil</Label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as typeof role)}
+              className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+            >
+              <option value="professional">Profissional</option>
+              <option value="reception">Recepção</option>
+              <option value="manager">Gerente</option>
+            </select>
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />{" "}
+            Acesso ativo
+          </label>
+        </div>
+        <div className="rounded-xl border border-border p-3">
+          <p className="mb-3 text-sm font-semibold">Permissões personalizadas</p>
+          <div className="space-y-4">
+            {PERMISSION_GROUPS.map((group) => (
+              <div key={group.area}>
+                <p className="mb-2 text-xs font-semibold text-muted-foreground">{group.area}</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {group.permissions.map((permission) => (
+                    <label key={permission.key} className="flex items-center gap-2 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={permissions[permission.key] === true}
+                        onChange={(e) =>
+                          setPermissions((current) => ({
+                            ...current,
+                            [permission.key]: e.target.checked,
+                          }))
+                        }
+                      />
+                      {permission.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={copyLink}>
+            <Link2 className="size-4" /> Copiar link de acesso
+          </Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? <Loader2 className="size-4 animate-spin" /> : null} Salvar acesso
+          </Button>
+        </div>
       </form>
     </DialogContent>
   );
