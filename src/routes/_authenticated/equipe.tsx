@@ -24,6 +24,7 @@ import {
 } from "@/lib/session";
 import { useServerFn } from "@tanstack/react-start";
 import { generateCollaboratorAccessLink, inviteCollaborator } from "@/lib/collaborator.functions";
+import { createProfessionalCredentials } from "@/lib/professional-credentials.functions";
 import { brl, initials } from "@/lib/format";
 import { resizeImage } from "@/lib/image";
 import { Textarea } from "@/components/ui/textarea";
@@ -739,6 +740,7 @@ function ScheduleDialog({
 
 function ProfessionalDialog({ onDone }: { onDone: () => void }) {
   const { data: membership } = useMembership();
+  const createCredentials = useServerFn(createProfessionalCredentials);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -748,6 +750,8 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
     bio: "",
     certifications: "",
     phone: "",
+    login_username: "",
+    login_password: "",
     commission_default: "40",
     commission_type: "percentual" as "percentual" | "fixo",
     work_start: "09:00",
@@ -759,19 +763,33 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
     if (!membership) return;
     setSaving(true);
     try {
-      const { data: professional, error } = await supabase.from("professionals").insert({
-        organization_id: membership.organization.id,
-        name: form.name,
-        specialty: form.specialty || null,
-        bio: form.bio || null,
-        certifications: form.certifications || null,
-        phone: form.phone || null,
-        commission_default: Number(form.commission_default || 0),
-        commission_type: form.commission_type,
-        work_start: form.work_start,
-        work_end: form.work_end,
-      });
+      const { data: professional, error } = await supabase
+        .from("professionals")
+        .insert({
+          organization_id: membership.organization.id,
+          name: form.name,
+          specialty: form.specialty || null,
+          bio: form.bio || null,
+          certifications: form.certifications || null,
+          phone: form.phone || null,
+          commission_default: Number(form.commission_default || 0),
+          commission_type: form.commission_type,
+          work_start: form.work_start,
+          work_end: form.work_end,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+      if (form.login_username.trim() && form.login_password) {
+        await createCredentials({
+          data: {
+            organizationId: membership.organization.id,
+            professionalId: professional.id,
+            username: form.login_username.trim(),
+            password: form.login_password,
+          },
+        });
+      }
       if (photoFile && professional) {
         setUploading(true);
         const resized = await resizeImage(photoFile, 600);
@@ -829,6 +847,38 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
             />
           </div>
+        </div>
+        <div className="rounded-xl border border-border bg-muted/30 p-3">
+          <p className="text-sm font-semibold">Acesso do profissional (opcional)</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Crie um usuário e uma senha temporária para ele entrar sem depender de e-mail.
+          </p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="pro-login-username">Usuário</Label>
+              <Input
+                id="pro-login-username"
+                value={form.login_username}
+                onChange={(e) => setForm({ ...form, login_username: e.target.value })}
+                placeholder="atena"
+                autoCapitalize="none"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pro-login-password">Senha temporária</Label>
+              <Input
+                id="pro-login-password"
+                type="password"
+                minLength={6}
+                value={form.login_password}
+                onChange={(e) => setForm({ ...form, login_password: e.target.value })}
+                placeholder="mínimo de 6 caracteres"
+              />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            A senha não fica salva no cadastro; o Supabase armazena somente o hash seguro.
+          </p>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="pro-bio">Descrição profissional</Label>

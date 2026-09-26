@@ -3395,6 +3395,7 @@ export type Database = {
           lunch_end: string
           lunch_start: string
           name: string
+          login_username: string | null
           online_booking: boolean
           organization_id: string
           phone: string | null
@@ -3424,6 +3425,7 @@ export type Database = {
           lunch_end?: string
           lunch_start?: string
           name: string
+          login_username?: string | null
           online_booking?: boolean
           organization_id: string
           phone?: string | null
@@ -3453,6 +3455,7 @@ export type Database = {
           lunch_end?: string
           lunch_start?: string
           name?: string
+          login_username?: string | null
           online_booking?: boolean
           organization_id?: string
           phone?: string | null

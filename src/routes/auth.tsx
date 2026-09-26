@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
@@ -8,6 +9,7 @@ import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { resolveProfessionalLogin } from "@/lib/professional-credentials.functions";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -37,6 +39,7 @@ function AuthPage() {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const resolveLogin = useServerFn(resolveProfessionalLogin);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -82,7 +85,10 @@ function AuthPage() {
         if (error) throw error;
         toast.success("Conta criada! Vamos configurar sua clínica.");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const login = email.includes("@")
+          ? email
+          : (await resolveLogin({ data: { username: email } })).email;
+        const { error } = await supabase.auth.signInWithPassword({ email: login, password });
         if (error) throw error;
       }
       navigate({ to: "/dashboard", replace: true });
@@ -189,10 +195,10 @@ function AuthPage() {
               </div>
             ) : null}
             <div className="space-y-1.5">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="email">E-mail ou usuário</Label>
               <Input
                 id="email"
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="voce@clinica.com.br"
