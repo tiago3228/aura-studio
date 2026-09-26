@@ -777,19 +777,6 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
       setCredentialError("Informe um usuário para esta senha.");
       return;
     }
-    if (password) {
-      const weakPassword =
-        password.length < 8 ||
-        /^(.)\1+$/.test(password) ||
-        /^(?:0123456789|1234567890|9876543210)$/.test(password) ||
-        ["12345678", "password", "senha123", "320011"].includes(password.toLowerCase());
-      if (weakPassword) {
-        setCredentialError(
-          "Essa senha é fácil de adivinhar. Use pelo menos 8 caracteres, misturando letras, números e símbolos.",
-        );
-        return;
-      }
-    }
     setCredentialError(null);
     setSaving(true);
     let createdProfessionalId: string | null = null;
@@ -842,12 +829,12 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
       if (createdProfessionalId) {
         await supabase.from("professionals").delete().eq("id", createdProfessionalId);
       }
-      const message = err instanceof Error ? err.message : "Erro ao salvar.";
-      const friendlyMessage = message.toLowerCase().includes("weak")
-        ? "A senha é fraca ou fácil de adivinhar. Escolha outra com pelo menos 8 caracteres."
-        : message;
-      setCredentialError(friendlyMessage);
-      toast.error(friendlyMessage);
+      const rawMessage = err instanceof Error ? err.message : "Erro ao salvar.";
+      const message = rawMessage.toLowerCase().includes("weak")
+        ? "Não foi possível criar o acesso com essa senha."
+        : rawMessage;
+      setCredentialError(message);
+      toast.error(message);
     } finally {
       setUploading(false);
       setSaving(false);
@@ -912,7 +899,6 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
               <Input
                 id="pro-login-password"
                 type="password"
-                minLength={6}
                 value={form.login_password}
                 onChange={(e) => {
                   setCredentialError(null);

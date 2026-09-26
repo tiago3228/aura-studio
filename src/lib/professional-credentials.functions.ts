@@ -17,7 +17,7 @@ export const createProfessionalCredentials = createServerFn({ method: "POST" })
           .min(3)
           .max(40)
           .regex(/^[a-zA-Z0-9._-]+$/),
-        password: z.string().min(6).max(72),
+        password: z.string().min(1),
       })
       .parse(input),
   )
