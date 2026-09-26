@@ -110,7 +110,7 @@ export function useMembership() {
         organization: data.organization as Organization,
         role: data.role,
         userId: data.userId,
-        professionalId: data.professional_id,
+        professionalId: data.professionalId,
         permissions: parsePermissions(data.permissions),
       };
     },

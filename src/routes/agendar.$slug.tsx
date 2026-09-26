@@ -183,7 +183,11 @@ function PublicBooking() {
           phone: form.phone || undefined,
         },
       });
-      setCouponResult(result);
+      setCouponResult({
+        valid: result.valid,
+        message: result.message,
+        percentage: result.percentage ?? 0,
+      });
       return result;
     } catch (err) {
       const result = {

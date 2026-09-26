@@ -100,7 +100,10 @@ function MarketingPage() {
       })
       .select("id")
       .single();
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     const posts = (generated.posts ?? []).map((post: any, index: number) => ({
       organization_id: orgId,
       campaign_id: campaign.id,
@@ -117,10 +120,14 @@ function MarketingPage() {
       source_snapshot: { idea, objective, sources },
     }));
     const { error: postsError } = await (supabase as any).from("ai_marketing_posts").insert(posts);
-    if (postsError) return toast.error(postsError.message);
+    if (postsError) {
+      toast.error(postsError.message);
+      return;
+    }
     toast.success("Campanha salva como rascunho.");
     setGenerated(null);
     void queryClient.invalidateQueries({ queryKey: ["ai-campaigns", orgId] });
+    return;
   }
   function toggleSource(key: keyof typeof sources) {
     setSources((current) => ({ ...current, [key]: !current[key] }));

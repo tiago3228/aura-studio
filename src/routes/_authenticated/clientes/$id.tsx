@@ -265,7 +265,7 @@ function ClientDetail() {
                   : null
               }
             />
-            <Row label="Profissional preferido" value={preferredProfessionalName} />
+            <Row label="Profissional preferido" value={preferredProfessionalName ?? null} />
             <Row
               label="Último contato"
               value={crmClient.last_contact_at ? dateFmt(crmClient.last_contact_at) : null}
