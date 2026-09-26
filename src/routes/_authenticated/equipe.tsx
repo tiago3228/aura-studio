@@ -10,6 +10,8 @@ import {
   Link2,
   MessageCircle,
   Trash2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -750,6 +752,7 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
   const [uploading, setUploading] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [credentialError, setCredentialError] = useState<string | null>(null);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [form, setForm] = useState({
     name: "",
     specialty: "",
@@ -896,16 +899,27 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="pro-login-password">Senha temporária</Label>
-              <Input
-                id="pro-login-password"
-                type="password"
-                value={form.login_password}
-                onChange={(e) => {
-                  setCredentialError(null);
-                  setForm({ ...form, login_password: e.target.value });
-                }}
-                placeholder="mínimo de 6 caracteres"
-              />
+              <div className="relative">
+                <Input
+                  id="pro-login-password"
+                  type={showLoginPassword ? "text" : "password"}
+                  value={form.login_password}
+                  onChange={(e) => {
+                    setCredentialError(null);
+                    setForm({ ...form, login_password: e.target.value });
+                  }}
+                  placeholder="Senha temporária"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  aria-label={showLoginPassword ? "Ocultar senha" : "Mostrar senha"}
+                  onClick={() => setShowLoginPassword((visible) => !visible)}
+                  className="absolute inset-y-0 right-0 grid w-10 place-items-center text-muted-foreground hover:text-foreground"
+                >
+                  {showLoginPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
             </div>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
