@@ -29,7 +29,9 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "signup" | "set-password">("login");
+  const [mode, setMode] = useState<
+    "login" | "signup" | "forgot-password" | "set-password" | "reset-password"
+  >("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -41,6 +43,9 @@ function AuthPage() {
       if (data.session && window.location.hash.includes("type=invite")) {
         setEmail(data.session.user.email ?? "");
         setMode("set-password");
+      } else if (data.session && window.location.hash.includes("type=recovery")) {
+        setEmail(data.session.user.email ?? "");
+        setMode("reset-password");
       } else if (data.session) navigate({ to: "/dashboard", replace: true });
     });
   }, [navigate]);
@@ -49,10 +54,22 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      if (mode === "set-password") {
+      if (mode === "forgot-password") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth?mode=reset-password`,
+        });
+        if (error) throw error;
+        toast.success("Enviamos um link para redefinir sua senha. Verifique seu e-mail.");
+        setMode("login");
+        return;
+      } else if (mode === "set-password" || mode === "reset-password") {
         const { error } = await supabase.auth.updateUser({ password });
         if (error) throw error;
-        toast.success("Senha criada. Bem-vindo ao Aura.");
+        toast.success(
+          mode === "set-password"
+            ? "Senha criada. Bem-vindo ao Aura."
+            : "Senha redefinida. Bem-vindo ao Aura.",
+        );
       } else if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
@@ -121,31 +138,42 @@ function AuthPage() {
           <h1 className="mt-6 font-display text-2xl font-semibold lg:mt-0">
             {mode === "set-password"
               ? "Crie sua senha de acesso"
-              : mode === "login"
-                ? "Entrar na sua conta"
-                : "Criar conta da clínica"}
+              : mode === "reset-password"
+                ? "Redefina sua senha"
+                : mode === "forgot-password"
+                  ? "Recuperar acesso"
+                  : mode === "login"
+                    ? "Entrar na sua conta"
+                    : "Criar conta da clínica"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "set-password"
-              ? "Defina uma senha para acessar a clínica."
-              : mode === "login"
-                ? "Use seu e-mail profissional para acessar o painel."
-                : "Leva menos de um minuto para começar."}
+            {mode === "set-password" || mode === "reset-password"
+              ? "Defina uma nova senha para acessar o Aura."
+              : mode === "forgot-password"
+                ? "Informe seu e-mail e enviaremos um link para redefinir sua senha."
+                : mode === "login"
+                  ? "Use seu e-mail profissional para acessar o painel."
+                  : "Leva menos de um minuto para começar."}
           </p>
 
-          <Button variant="outline" className="mt-6 w-full" onClick={google} type="button">
-            <svg viewBox="0 0 24 24" className="size-4" aria-hidden>
-              <path
-                fill="currentColor"
-                d="M21.35 11.1H12v2.98h5.35c-.23 1.4-1.63 4.1-5.35 4.1-3.22 0-5.85-2.66-5.85-5.94S8.78 6.3 12 6.3c1.83 0 3.06.78 3.76 1.45l2.56-2.47C16.7 3.76 14.55 2.9 12 2.9 6.98 2.9 2.9 6.98 2.9 12s4.08 9.1 9.1 9.1c5.25 0 8.73-3.69 8.73-8.89 0-.6-.07-1.05-.16-1.5Z"
-              />
-            </svg>
-            Continuar com Google
-          </Button>
+          {mode !== "forgot-password" && mode !== "reset-password" && mode !== "set-password" ? (
+            <Button variant="outline" className="mt-6 w-full" onClick={google} type="button">
+              <svg viewBox="0 0 24 24" className="size-4" aria-hidden>
+                <path
+                  fill="currentColor"
+                  d="M21.35 11.1H12v2.98h5.35c-.23 1.4-1.63 4.1-5.35 4.1-3.22 0-5.85-2.66-5.85-5.94S8.78 6.3 12 6.3c1.83 0 3.06.78 3.76 1.45l2.56-2.47C16.7 3.76 14.55 2.9 12 2.9 6.98 2.9 2.9 6.98 2.9 12s4.08 9.1 9.1 9.1c5.25 0 8.73-3.69 8.73-8.89 0-.6-.07-1.05-.16-1.5Z"
+                />
+              </svg>
+              Continuar com Google
+            </Button>
+          ) : null}
 
-          <div className="my-5 flex items-center gap-3 text-[11px] text-muted-foreground">
-            <span className="h-px flex-1 bg-border" /> ou <span className="h-px flex-1 bg-border" />
-          </div>
+          {mode !== "forgot-password" && mode !== "reset-password" && mode !== "set-password" ? (
+            <div className="my-5 flex items-center gap-3 text-[11px] text-muted-foreground">
+              <span className="h-px flex-1 bg-border" /> ou{" "}
+              <span className="h-px flex-1 bg-border" />
+            </div>
+          ) : null}
 
           <form onSubmit={submit} className="space-y-4">
             {mode === "signup" ? (
@@ -171,45 +199,64 @@ function AuthPage() {
                 required
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Senha</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  minLength={6}
-                  required
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                  className="absolute inset-y-0 right-0 grid w-10 place-items-center text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
+            {mode !== "forgot-password" ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Senha</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    minLength={6}
+                    required
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    className="absolute inset-y-0 right-0 grid w-10 place-items-center text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : null}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? <Loader2 className="size-4 animate-spin" /> : null}
               {mode === "set-password"
                 ? "Criar senha e entrar"
-                : mode === "login"
-                  ? "Entrar"
-                  : "Criar conta"}
+                : mode === "reset-password"
+                  ? "Redefinir senha e entrar"
+                  : mode === "forgot-password"
+                    ? "Enviar link de recuperação"
+                    : mode === "login"
+                      ? "Entrar"
+                      : "Criar conta"}
             </Button>
+            {mode === "login" ? (
+              <button
+                type="button"
+                className="w-full text-center text-sm font-semibold text-primary hover:underline"
+                onClick={() => setMode("forgot-password")}
+              >
+                Esqueci minha senha
+              </button>
+            ) : null}
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {mode === "set-password"
               ? "Convite de colaborador"
-              : mode === "login"
-                ? "Ainda não tem conta?"
-                : "Já tem conta?"}{" "}
+              : mode === "reset-password"
+                ? "Link de recuperação"
+                : mode === "forgot-password"
+                  ? "Lembrou sua senha?"
+                  : mode === "login"
+                    ? "Ainda não tem conta?"
+                    : "Já tem conta?"}{" "}
             <button
               type="button"
               className="font-semibold text-primary hover:underline"
