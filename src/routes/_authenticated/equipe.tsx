@@ -923,6 +923,10 @@ function AccessDialog({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="profissional@clinica.com.br"
             />
+            <p className="text-xs text-muted-foreground">
+              A senha não é cadastrada pela clínica. Depois do convite, o colaborador acessa o link
+              recebido e cria a própria senha.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label>Perfil</Label>
