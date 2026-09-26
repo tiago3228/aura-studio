@@ -49,7 +49,11 @@ function GatewaysPage() {
   async function connect() {
     if (!orgId) return;
     setSaving(true);
-    const selected = providers.find((item) => item.id === provider)!;
+    const selected = providers.find((item) => item.id === provider);
+    if (!selected) {
+      setSaving(false);
+      return;
+    }
     const { error } = await (supabase as any).from("payment_gateways").upsert(
       {
         organization_id: orgId,
@@ -61,17 +65,25 @@ function GatewaysPage() {
       { onConflict: "organization_id,provider" },
     );
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success(`${selected.label} preparado em modo sandbox.`);
     void queryClient.invalidateQueries({ queryKey: ["payment-gateways", orgId] });
+    return;
   }
   async function toggle(gateway: any) {
     const { error } = await (supabase as any)
       .from("payment_gateways")
       .update({ active: !gateway.active, updated_at: new Date().toISOString() })
       .eq("id", gateway.id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     void queryClient.invalidateQueries({ queryKey: ["payment-gateways", orgId] });
+    return;
   }
   return (
     <div className="mx-auto max-w-5xl">

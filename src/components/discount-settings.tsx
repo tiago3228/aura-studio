@@ -55,6 +55,7 @@ export function DiscountSettings() {
     enabled: !!orgId,
     queryKey: ["discount-coupons", orgId],
     queryFn: async () => {
+      if (!orgId) throw new Error("Clínica não identificada.");
       const [coupons, services] = await Promise.all([
         (supabase as any)
           .from("discount_coupons")

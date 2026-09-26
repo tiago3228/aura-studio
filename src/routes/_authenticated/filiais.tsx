@@ -44,10 +44,14 @@ function FiliaisPage() {
       code: form.code.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
     });
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Filial cadastrada.");
     setForm({ name: "", code: "", city: "", address: "" });
     void queryClient.invalidateQueries({ queryKey: ["locations", orgId] });
+    return;
   }
   return (
     <div className="mx-auto max-w-4xl">

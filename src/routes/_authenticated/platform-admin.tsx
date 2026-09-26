@@ -216,7 +216,7 @@ function PlatformAdmin() {
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value)}
         />
-        <Pill tone="muted">Atualização automática a cada 30s</Pill>
+        <Pill tone="neutral">Atualização automática a cada 30s</Pill>
       </div>
       <div className="surface overflow-x-auto">
         <table className="w-full min-w-[800px] text-sm">
@@ -252,7 +252,7 @@ function PlatformAdmin() {
                       </p>
                     </td>
                     <td className="p-4">
-                      <Pill tone={sub?.status === "active" ? "green" : "gold"}>
+                      <Pill tone={sub?.status === "active" ? "success" : "gold"}>
                         {sub?.plan ?? "—"} · {sub?.status ?? "sem assinatura"}
                       </Pill>
                       <select
@@ -270,11 +270,11 @@ function PlatformAdmin() {
                     </td>
                     <td className="p-4">
                       {org.access_blocked ? (
-                        <Pill tone="red">
+                        <Pill tone="danger">
                           <Ban className="mr-1 size-3" /> Bloqueado
                         </Pill>
                       ) : (
-                        <Pill tone="green">
+                        <Pill tone="success">
                           <CheckCircle2 className="mr-1 size-3" /> Liberado
                         </Pill>
                       )}

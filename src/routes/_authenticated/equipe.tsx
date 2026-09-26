@@ -258,7 +258,12 @@ function Equipe() {
         {accessFor ? (
           <AccessDialog
             professional={accessFor}
-            member={data.data?.members.find((item) => item.professional_id === accessFor.id)}
+            {...(() => {
+              const member = data.data?.members.find(
+                (item) => item.professional_id === accessFor.id,
+              );
+              return member ? { member } : {};
+            })()}
             onDone={() => {
               setAccessFor(null);
               queryClient.invalidateQueries({ queryKey: ["team"] });
@@ -978,7 +983,10 @@ function AccessDialog({
   onDone,
 }: {
   professional: Tables<"professionals">;
-  member?: Tables<"organization_members">;
+  member?: Pick<
+    Tables<"organization_members">,
+    "active" | "id" | "permissions" | "professional_id" | "role" | "user_id"
+  >;
   onDone: () => void;
 }) {
   const { data: membership } = useMembership();

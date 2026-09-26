@@ -54,7 +54,7 @@ function PagamentosPage() {
       charges.reduce(
         (acc: Record<string, number>, charge: any) => {
           const value = Number(charge.final_amount ?? 0);
-          acc.total += value;
+          acc["total"] = (acc["total"] ?? 0) + value;
           acc[charge.status] = (acc[charge.status] ?? 0) + value;
           return acc;
         },
