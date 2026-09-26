@@ -2298,6 +2298,13 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "organization_members_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
         ]
       }
       organization_permissions: {
@@ -3391,11 +3398,11 @@ export type Database = {
           extra_windows: Json
           id: string
           location_id: string | null
+          login_username: string | null
           lunch_enabled: boolean
           lunch_end: string
           lunch_start: string
           name: string
-          login_username: string | null
           online_booking: boolean
           organization_id: string
           phone: string | null
@@ -3421,11 +3428,11 @@ export type Database = {
           extra_windows?: Json
           id?: string
           location_id?: string | null
+          login_username?: string | null
           lunch_enabled?: boolean
           lunch_end?: string
           lunch_start?: string
           name: string
-          login_username?: string | null
           online_booking?: boolean
           organization_id: string
           phone?: string | null
@@ -3451,11 +3458,11 @@ export type Database = {
           extra_windows?: Json
           id?: string
           location_id?: string | null
+          login_username?: string | null
           lunch_enabled?: boolean
           lunch_end?: string
           lunch_start?: string
           name?: string
-          login_username?: string | null
           online_booking?: boolean
           organization_id?: string
           phone?: string | null
@@ -4079,6 +4086,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_view_appointment: {
+        Args: { _organization_id: string; _professional_id: string }
+        Returns: boolean
+      }
       convert_organization_amount: {
         Args: {
           _amount: number
@@ -4198,6 +4209,10 @@ export type Database = {
       is_org_admin: { Args: { _org: string }; Returns: boolean }
       is_org_member: { Args: { _org: string }; Returns: boolean }
       is_platform_admin: { Args: never; Returns: boolean }
+      member_has_permission: {
+        Args: { _organization_id: string; _permission: string }
+        Returns: boolean
+      }
       payment_apply_webhook: {
         Args: {
           _event_type: string
