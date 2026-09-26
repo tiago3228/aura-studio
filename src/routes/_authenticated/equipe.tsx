@@ -27,6 +27,7 @@ import {
 import { useServerFn } from "@tanstack/react-start";
 import { generateCollaboratorAccessLink, inviteCollaborator } from "@/lib/collaborator.functions";
 import { createProfessionalCredentials } from "@/lib/professional-credentials.functions";
+import { createProfessional } from "@/lib/professional.functions";
 import { brl, initials } from "@/lib/format";
 import { resizeImage } from "@/lib/image";
 import { Textarea } from "@/components/ui/textarea";
@@ -748,6 +749,7 @@ function ScheduleDialog({
 function ProfessionalDialog({ onDone }: { onDone: () => void }) {
   const { data: membership } = useMembership();
   const createCredentials = useServerFn(createProfessionalCredentials);
+  const createProfessionalOnServer = useServerFn(createProfessional);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -785,23 +787,20 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
     let createdProfessionalId: string | null = null;
     let uploadedPhotoPath: string | null = null;
     try {
-      const { data: professional, error } = await supabase
-        .from("professionals")
-        .insert({
-          organization_id: membership.organization.id,
+      const professional = await createProfessionalOnServer({
+        data: {
+          organizationId: membership.organization.id,
           name: form.name,
           specialty: form.specialty || null,
           bio: form.bio || null,
           certifications: form.certifications || null,
           phone: form.phone || null,
-          commission_default: Number(form.commission_default || 0),
-          commission_type: form.commission_type,
-          work_start: form.work_start,
-          work_end: form.work_end,
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
+          commissionDefault: Number(form.commission_default || 0),
+          commissionType: form.commission_type,
+          workStart: form.work_start,
+          workEnd: form.work_end,
+        },
+      });
       createdProfessionalId = professional.id;
       if (photoFile && professional) {
         setUploading(true);
