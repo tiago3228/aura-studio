@@ -4,6 +4,28 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const APP_AUTH_URL = "https://clinica-estetica-br.lovable.app/auth";
 
+async function requireTeamAccess(userId: string, organizationId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin
+    .from("organization_members")
+    .select("role, permissions")
+    .eq("organization_id", organizationId)
+    .eq("user_id", userId)
+    .eq("active", true)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  const permissions = data?.permissions;
+  const hasEditPermission =
+    !!permissions &&
+    typeof permissions === "object" &&
+    !Array.isArray(permissions) &&
+    (permissions as Record<string, unknown>)["equipe.editar"] === true;
+  if (!data || (!["owner", "manager"].includes(data.role) && !hasEditPermission)) {
+    throw new Error("Você não pode criar acessos para a equipe.");
+  }
+  return supabaseAdmin;
+}
+
 export const inviteCollaborator = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
@@ -18,22 +40,22 @@ export const inviteCollaborator = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const allowed = await context.supabase.rpc("has_org_permission", {
-      _organization_id: data.organizationId,
-      _permission: "equipe.editar",
-    });
-    if (allowed.error || !allowed.data)
-      throw new Error("Você não pode criar acessos para a equipe.");
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const supabaseAdmin = await requireTeamAccess(context.userId, data.organizationId);
     const invited = await supabaseAdmin.auth.admin.inviteUserByEmail(data.email, {
       redirectTo: APP_AUTH_URL,
       data: { invited_by_aura: true },
     });
-    if (invited.error || !invited.data.user) {
-      throw new Error(invited.error?.message ?? "Não foi possível enviar o convite.");
+    let userId = invited.data.user?.id;
+    if (!userId) {
+      const users = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const existing = users.data.users.find(
+        (user) => user.email?.toLowerCase() === data.email.toLowerCase(),
+      );
+      if (!existing) {
+        throw new Error(invited.error?.message ?? "Não foi possível enviar o convite.");
+      }
+      userId = existing.id;
     }
-    const userId = invited.data.user.id;
     const member = await supabaseAdmin
       .from("organization_members")
       .upsert(
@@ -56,7 +78,7 @@ export const inviteCollaborator = createServerFn({ method: "POST" })
       .eq("id", data.professionalId)
       .eq("organization_id", data.organizationId);
     if (professional.error) throw new Error(professional.error.message);
-    await supabaseAdmin.rpc("write_audit_log", {
+    await context.supabase.rpc("write_audit_log", {
       _organization_id: data.organizationId,
       _action: "invite_collaborator",
       _entity: "organization_members",
@@ -74,12 +96,7 @@ export const resendCollaboratorInvite = createServerFn({ method: "POST" })
     z.object({ organizationId: z.string().uuid(), email: z.string().email() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const allowed = await context.supabase.rpc("has_org_permission", {
-      _organization_id: data.organizationId,
-      _permission: "equipe.editar",
-    });
-    if (allowed.error || !allowed.data) throw new Error("Você não pode redefinir este acesso.");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const supabaseAdmin = await requireTeamAccess(context.userId, data.organizationId);
     const result = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email: data.email,
@@ -95,12 +112,7 @@ export const generateCollaboratorAccessLink = createServerFn({ method: "POST" })
     z.object({ organizationId: z.string().uuid(), email: z.string().email() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const allowed = await context.supabase.rpc("has_org_permission", {
-      _organization_id: data.organizationId,
-      _permission: "equipe.editar",
-    });
-    if (allowed.error || !allowed.data) throw new Error("Você não pode gerar links para a equipe.");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const supabaseAdmin = await requireTeamAccess(context.userId, data.organizationId);
     const result = await supabaseAdmin.auth.admin.generateLink({
       type: "magiclink",
       email: data.email,

@@ -960,7 +960,18 @@ function AccessDialog({
     }
     setSaving(true);
     try {
-      if (member) {
+      if (member && active) {
+        await sendInvite({
+          data: {
+            organizationId: membership.organization.id,
+            professionalId: professional.id,
+            email: email.trim(),
+            role,
+            permissions,
+          },
+        });
+        toast.success("Acesso liberado e vínculo atualizado.");
+      } else if (member) {
         const { error } = await supabase
           .from("organization_members")
           .update({ role, active, permissions, professional_id: professional.id })
