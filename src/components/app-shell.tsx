@@ -27,6 +27,7 @@ import {
   ChevronRight,
   Calculator,
   BellRing,
+  Clock3,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -97,6 +98,12 @@ const NAV: NavItem[] = [
     icon: Settings,
     children: [
       { to: "/configuracoes", label: "Ajustes", area: "configuracoes", icon: Settings },
+      {
+        to: "/horarios",
+        label: "Horários da clínica",
+        area: "configuracoes",
+        icon: Clock3,
+      },
       { to: "/globalizacao", label: "Idioma e moeda", area: "configuracoes", icon: Globe2 },
       {
         to: "/gateways",
@@ -133,9 +140,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { language, setLanguage, navLabel, t } = useLanguage();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => ({
     "/assistente": pathname.startsWith("/assistente") || pathname.startsWith("/marketing"),
-    "/configuracoes": ["/configuracoes", "/globalizacao", "/gateways", "/seguranca"].some((path) =>
-      pathname.startsWith(path),
-    ),
+    "/configuracoes": [
+      "/configuracoes",
+      "/horarios",
+      "/globalizacao",
+      "/gateways",
+      "/seguranca",
+    ].some((path) => pathname.startsWith(path)),
   }));
 
   const items = NAV.filter((item) => can(membership?.role, item.area));

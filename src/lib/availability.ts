@@ -37,6 +37,16 @@ export type SlotConfig = {
   slotMinutes: number;
   slotGap: number;
   horizonDays: number;
+  clinicHours?: Record<string, ClinicDayConfig>;
+};
+
+export type ClinicDayConfig = {
+  closed: boolean;
+  start: string;
+  end: string;
+  lunchEnabled: boolean;
+  lunchStart: string;
+  lunchEnd: string;
 };
 
 /** Intervalos ocupados no dia, em minutos locais. */
@@ -51,11 +61,18 @@ export function buildSlots(
 ): string[] {
   if (!cfg.workDays.includes(weekdayOf(day))) return [];
 
-  const startOfDay = toMinutes(cfg.workStart);
-  const endOfDay = toMinutes(cfg.workEnd);
+  const clinicDay = cfg.clinicHours?.[String(weekdayOf(day))];
+  if (clinicDay?.closed) return [];
+
+  const startOfDay = Math.max(toMinutes(cfg.workStart), clinicDay ? toMinutes(clinicDay.start) : 0);
+  const endOfDay = Math.min(toMinutes(cfg.workEnd), clinicDay ? toMinutes(clinicDay.end) : 24 * 60);
   const step = Math.max(5, cfg.slotMinutes + Math.max(0, cfg.slotGap));
   const blocks: BusyRange[] = [...busy];
-  if (cfg.lunchEnabled) blocks.push({ start: toMinutes(cfg.lunchStart), end: toMinutes(cfg.lunchEnd) });
+  if (cfg.lunchEnabled)
+    blocks.push({ start: toMinutes(cfg.lunchStart), end: toMinutes(cfg.lunchEnd) });
+  if (clinicDay?.lunchEnabled) {
+    blocks.push({ start: toMinutes(clinicDay.lunchStart), end: toMinutes(clinicDay.lunchEnd) });
+  }
 
   const slots: string[] = [];
   for (let s = startOfDay; s + durationMin <= endOfDay; s += step) {

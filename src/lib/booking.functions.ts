@@ -4,10 +4,37 @@ import { z } from "zod";
 import {
   brInstant,
   buildSlots,
-  toMinutes,
+  type ClinicDayConfig,
+  fromMinutes,
   type BusyRange,
   type SlotConfig,
 } from "@/lib/availability";
+
+function parseClinicHours(value: unknown): Record<string, ClinicDayConfig> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const source = value as Record<string, unknown>;
+  const result: Record<string, ClinicDayConfig> = {};
+  for (const weekday of Array.from({ length: 7 }, (_, index) => String(index))) {
+    const item = source[weekday];
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const day = item as Record<string, unknown>;
+    if (
+      typeof day.start !== "string" ||
+      typeof day.end !== "string" ||
+      typeof day.closed !== "boolean"
+    )
+      continue;
+    result[weekday] = {
+      closed: day.closed,
+      start: day.start,
+      end: day.end,
+      lunchEnabled: day.lunchEnabled === true,
+      lunchStart: typeof day.lunchStart === "string" ? day.lunchStart : "12:00",
+      lunchEnd: typeof day.lunchEnd === "string" ? day.lunchEnd : "13:00",
+    };
+  }
+  return Object.keys(result).length ? result : undefined;
+}
 
 async function bookingServerClient() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -241,7 +268,7 @@ async function loadContext(
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const org = await supabase
     .from("organizations")
-    .select("id")
+    .select("id, business_hours")
     .eq("booking_slug", slug)
     .eq("online_booking_enabled", true)
     .maybeSingle();
@@ -315,6 +342,7 @@ async function loadContext(
       slotMinutes: pro.data.slot_minutes,
       slotGap: pro.data.slot_gap_min,
       horizonDays: pro.data.booking_horizon_days,
+      clinicHours: parseClinicHours(org.data.business_hours),
     },
   };
   return {
