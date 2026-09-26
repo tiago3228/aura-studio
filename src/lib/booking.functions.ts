@@ -5,7 +5,9 @@ import {
   brInstant,
   buildSlots,
   type ClinicDayConfig,
+  type ExtraWindow,
   fromMinutes,
+  toMinutes,
   type BusyRange,
   type SlotConfig,
 } from "@/lib/availability";
@@ -19,18 +21,27 @@ function parseClinicHours(value: unknown): Record<string, ClinicDayConfig> | und
     if (!item || typeof item !== "object" || Array.isArray(item)) continue;
     const day = item as Record<string, unknown>;
     if (
-      typeof day.start !== "string" ||
-      typeof day.end !== "string" ||
-      typeof day.closed !== "boolean"
+      typeof day["start"] !== "string" ||
+      typeof day["end"] !== "string" ||
+      typeof day["closed"] !== "boolean"
     )
       continue;
     result[weekday] = {
-      closed: day.closed,
-      start: day.start,
-      end: day.end,
-      lunchEnabled: day.lunchEnabled === true,
-      lunchStart: typeof day.lunchStart === "string" ? day.lunchStart : "12:00",
-      lunchEnd: typeof day.lunchEnd === "string" ? day.lunchEnd : "13:00",
+      closed: day["closed"],
+      start: day["start"],
+      end: day["end"],
+      lunchEnabled: day["lunchEnabled"] === true,
+      lunchStart: typeof day["lunchStart"] === "string" ? day["lunchStart"] : "12:00",
+      lunchEnd: typeof day["lunchEnd"] === "string" ? day["lunchEnd"] : "13:00",
+      extraWindows: Array.isArray(day["extraWindows"])
+        ? day["extraWindows"].filter(
+            (window): window is ExtraWindow =>
+              !!window &&
+              typeof window === "object" &&
+              typeof (window as Record<string, unknown>)["start"] === "string" &&
+              typeof (window as Record<string, unknown>)["end"] === "string",
+          )
+        : [],
     };
   }
   return Object.keys(result).length ? result : undefined;
@@ -327,6 +338,7 @@ async function loadContext(
     return { error: "Um dos procedimentos selecionados está indisponível." as const };
   }
 
+  const clinicHours = parseClinicHours(org.data.business_hours);
   const ctx: Ctx = {
     orgId: org.data.id,
     serviceId: firstService.id,
@@ -342,7 +354,7 @@ async function loadContext(
       slotMinutes: pro.data.slot_minutes,
       slotGap: pro.data.slot_gap_min,
       horizonDays: pro.data.booking_horizon_days,
-      clinicHours: parseClinicHours(org.data.business_hours),
+      ...(clinicHours ? { clinicHours } : {}),
     },
   };
   return {

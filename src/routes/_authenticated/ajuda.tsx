@@ -55,6 +55,8 @@ const GUIDES: Guide[] = [
       "Use os filtros para alternar entre dia, semana, profissional, filial e status.",
       "Clique em Novo agendamento, selecione cliente, procedimento, profissional, data e horário.",
       "Confira o preço e confirme o agendamento. O sistema bloqueia conflitos de profissional e sala.",
+      "Para uma ausência pontual, clique em Bloquear horário, informe data, início, fim e se o bloqueio vale para toda a clínica ou apenas para um profissional.",
+      "Os bloqueios aparecem na Agenda e impedem novos agendamentos internos e públicos durante o período. Use o ícone de lixeira para remover um bloqueio.",
       "Altere o status conforme o atendimento evoluir: agendado, confirmado, aguardando, atendido, cancelado, faltou ou reagendado.",
       "Abra o menu de ações do atendimento para editar, cancelar, reagendar ou enviar uma mensagem ao cliente.",
       "Use o link público no topo da Agenda para receber solicitações de agendamento online.",
@@ -89,12 +91,14 @@ const GUIDES: Guide[] = [
       "Quando o dia estiver aberto, informe o horário de abertura e fechamento.",
       "Ative Intervalo para configurar o início e o fim do almoço ou de uma pausa da clínica.",
       "Use Copiar segunda para dias úteis quando segunda-feira tiver o mesmo horário de terça a sexta. Depois, ajuste individualmente o que for diferente.",
+      "Para abrir um período fora da jornada principal, use Adicionar janela em Janelas extras, por exemplo 20:00–22:00.",
       "Clique em Salvar horários. A configuração passa a limitar os horários exibidos no agendamento público.",
       "Lembre-se de que a disponibilidade final também depende dos dias, horários, intervalo e serviços oferecidos pelo profissional.",
     ],
     tips: [
       "Configure primeiro o horário geral da clínica e depois ajuste a jornada individual em Equipe. O Aura só oferece um horário quando as duas agendas estão livres.",
       "Se um dia ou horário não aparece no link público, confira se a clínica e o profissional estão marcados como abertos e disponíveis online.",
+      "Para uma janela extra aparecer, a jornada individual do profissional em Equipe também precisa cobrir esse período; almoço, bloqueios e conflitos continuam sendo respeitados.",
     ],
   },
   {
@@ -450,7 +454,7 @@ const GUIDES: Guide[] = [
 
 function AjudaPage() {
   const [search, setSearch] = useState("");
-  const [open, setOpen] = useState<string | null>(GUIDES[0].title);
+  const [open, setOpen] = useState<string | null>(GUIDES[0]?.title ?? null);
   const normalizedSearch = search.trim().toLowerCase();
   const filtered = useMemo(
     () =>

@@ -47,7 +47,10 @@ export type ClinicDayConfig = {
   lunchEnabled: boolean;
   lunchStart: string;
   lunchEnd: string;
+  extraWindows?: ExtraWindow[];
 };
+
+export type ExtraWindow = { start: string; end: string };
 
 /** Intervalos ocupados no dia, em minutos locais. */
 export type BusyRange = { start: number; end: number };
@@ -64,8 +67,18 @@ export function buildSlots(
   const clinicDay = cfg.clinicHours?.[String(weekdayOf(day))];
   if (clinicDay?.closed) return [];
 
-  const startOfDay = Math.max(toMinutes(cfg.workStart), clinicDay ? toMinutes(clinicDay.start) : 0);
-  const endOfDay = Math.min(toMinutes(cfg.workEnd), clinicDay ? toMinutes(clinicDay.end) : 24 * 60);
+  const professionalStart = toMinutes(cfg.workStart);
+  const professionalEnd = toMinutes(cfg.workEnd);
+  const primaryStart = Math.max(professionalStart, clinicDay ? toMinutes(clinicDay.start) : 0);
+  const primaryEnd = Math.min(professionalEnd, clinicDay ? toMinutes(clinicDay.end) : 24 * 60);
+  const windows: BusyRange[] = [];
+  if (primaryStart < primaryEnd) windows.push({ start: primaryStart, end: primaryEnd });
+  for (const extra of clinicDay?.extraWindows ?? []) {
+    const extraStart = Math.max(professionalStart, toMinutes(extra.start));
+    const extraEnd = Math.min(professionalEnd, toMinutes(extra.end));
+    if (extraStart < extraEnd) windows.push({ start: extraStart, end: extraEnd });
+  }
+  if (!windows.length) return [];
   const step = Math.max(5, cfg.slotMinutes + Math.max(0, cfg.slotGap));
   const blocks: BusyRange[] = [...busy];
   if (cfg.lunchEnabled)
@@ -75,11 +88,14 @@ export function buildSlots(
   }
 
   const slots: string[] = [];
-  for (let s = startOfDay; s + durationMin <= endOfDay; s += step) {
-    const e = s + durationMin;
-    if (blocks.some((b) => overlaps(s, e, b.start, b.end))) continue;
-    if (brInstant(day, s).getTime() <= now.getTime()) continue;
-    slots.push(fromMinutes(s));
+  for (const window of windows) {
+    for (let s = window.start; s + durationMin <= window.end; s += step) {
+      const e = s + durationMin;
+      if (blocks.some((b) => overlaps(s, e, b.start, b.end))) continue;
+      if (brInstant(day, s).getTime() <= now.getTime()) continue;
+      const slot = fromMinutes(s);
+      if (!slots.includes(slot)) slots.push(slot);
+    }
   }
-  return slots;
+  return slots.sort((a, b) => toMinutes(a) - toMinutes(b));
 }

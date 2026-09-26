@@ -10,13 +10,16 @@ import {
   Clipboard,
   ExternalLink,
   BellRing,
+  CalendarX2,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { useMembership } from "@/lib/session";
+import { isAdminRole, useMembership } from "@/lib/session";
 import { useLanguage } from "@/lib/language";
 import { addDays, brl, isoDay, longDate, startOfWeek, timeFmt, dateFmt } from "@/lib/format";
+import { brInstant } from "@/lib/availability";
 import { publicAppUrl } from "@/lib/public-url";
 import { PageHeader, Pill, SkeletonCard, EmptyState } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
@@ -54,6 +57,37 @@ type OnlineAlert = {
   guest_name: string | null;
   clients: { name: string } | null;
 };
+type CalendarBlock = {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  title: string | null;
+  kind: Database["public"]["Enums"]["block_type"];
+  professional_id: string | null;
+  professionals: { name: string } | null;
+};
+const BLOCK_KINDS: Database["public"]["Enums"]["block_type"][] = [
+  "ausencia",
+  "ferias",
+  "almoco",
+  "reuniao",
+  "manutencao",
+  "sala",
+  "equipamento",
+  "particular",
+];
+const BLOCK_LABELS: Record<Database["public"]["Enums"]["block_type"], string> = {
+  ausencia: "Ausência",
+  ferias: "Férias",
+  almoco: "Almoço",
+  reuniao: "Reunião",
+  manutencao: "Manutenção",
+  sala: "Sala",
+  equipamento: "Equipamento",
+  particular: "Particular",
+};
+const localInputDate = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
 const STATUSES: Status[] = [
   "agendado",
@@ -134,11 +168,13 @@ function Agenda() {
   const { data: membership } = useMembership();
   const { language, t } = useLanguage();
   const orgId = membership?.organization.id;
+  const canManageBlocks = isAdminRole(membership?.role);
   const queryClient = useQueryClient();
   const [anchor, setAnchor] = useState(() => isoDay(new Date()));
   const [view, setView] = useState<"dia" | "semana">("dia");
   const [locationId, setLocationId] = useState("");
   const [open, setOpen] = useState(false);
+  const [blockOpen, setBlockOpen] = useState(false);
   const [messageTarget, setMessageTarget] = useState<MessageTarget | null>(null);
   const [dismissedOnlineIds, setDismissedOnlineIds] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
@@ -197,6 +233,20 @@ function Agenda() {
       const { data, error } = await query;
       if (error) throw error;
       return data;
+    },
+  });
+  const blocks = useQuery({
+    enabled: !!orgId,
+    queryKey: ["calendar-blocks", orgId, range.from.toISOString(), view, locationId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("calendar_blocks")
+        .select("id, starts_at, ends_at, title, kind, professional_id, professionals(name)")
+        .gte("starts_at", range.from.toISOString())
+        .lt("starts_at", range.to.toISOString())
+        .order("starts_at");
+      if (error) throw error;
+      return (data ?? []) as CalendarBlock[];
     },
   });
 
@@ -294,6 +344,17 @@ function Agenda() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const deleteBlock = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("calendar_blocks").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["calendar-blocks"] });
+      toast.success("Bloqueio removido.");
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   const days =
     view === "dia" ? [range.from] : Array.from({ length: 7 }, (_, i) => addDays(range.from, i));
@@ -304,21 +365,38 @@ function Agenda() {
         title={t("Agenda")}
         subtitle={t("Conflitos de profissional e sala são bloqueados automaticamente.")}
         actions={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="size-4" /> {t("Agendar")}
-              </Button>
-            </DialogTrigger>
-            <NewAppointmentDialog
-              lists={lists.data}
-              {...(locationId ? { locationId } : {})}
-              onDone={() => {
-                setOpen(false);
-                queryClient.invalidateQueries({ queryKey: ["appointments"] });
-              }}
-            />
-          </Dialog>
+          <div className="flex flex-wrap gap-2">
+            <Dialog open={blockOpen} onOpenChange={setBlockOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" disabled={!canManageBlocks}>
+                  <CalendarX2 className="size-4" /> Bloquear horário
+                </Button>
+              </DialogTrigger>
+              <BlockDialog
+                professionals={lists.data?.professionals ?? []}
+                defaultDate={localInputDate(range.from)}
+                onDone={() => {
+                  setBlockOpen(false);
+                  queryClient.invalidateQueries({ queryKey: ["calendar-blocks"] });
+                }}
+              />
+            </Dialog>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="size-4" /> {t("Agendar")}
+                </Button>
+              </DialogTrigger>
+              <NewAppointmentDialog
+                lists={lists.data}
+                {...(locationId ? { locationId } : {})}
+                onDone={() => {
+                  setOpen(false);
+                  queryClient.invalidateQueries({ queryKey: ["appointments"] });
+                }}
+              />
+            </Dialog>
+          </div>
         }
       />
 
@@ -342,7 +420,9 @@ function Agenda() {
               variant="outline"
               className="border-amber-400 bg-white text-amber-900 hover:bg-amber-100"
               onClick={() => {
-                setAnchor(isoDay(new Date(visibleOnline[0].starts_at)));
+                const firstOnline = visibleOnline[0];
+                if (!firstOnline) return;
+                setAnchor(isoDay(new Date(firstOnline.starts_at)));
                 setView("dia");
               }}
             >
@@ -483,6 +563,42 @@ function Agenda() {
       </div>
 
       <StatusLegend t={t} />
+      {(blocks.data?.length ?? 0) > 0 ? (
+        <section className="surface mb-5 p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <CalendarX2 className="size-4 text-destructive" />
+            <h2 className="text-sm font-semibold">Bloqueios deste período</h2>
+          </div>
+          <div className="grid gap-2 md:grid-cols-2">
+            {(blocks.data ?? []).map((block) => (
+              <div
+                key={block.id}
+                className="flex items-center gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">
+                    {block.title || BLOCK_LABELS[block.kind]} · {timeFmt(block.starts_at)}–
+                    {timeFmt(block.ends_at)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {dateFmt(block.starts_at, { day: "2-digit", month: "2-digit" })} ·{" "}
+                    {block.professionals?.name || "Toda a clínica"}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={!canManageBlocks || deleteBlock.isPending}
+                  aria-label="Remover bloqueio"
+                  onClick={() => deleteBlock.mutate(block.id)}
+                >
+                  <Trash2 className="size-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {appointments.isLoading ? (
         <SkeletonCard />
@@ -649,6 +765,157 @@ function AppointmentRow({ appointment: a, onStatus, onMessage, t }: AppointmentR
         </SelectContent>
       </Select>
     </article>
+  );
+}
+
+function BlockDialog({
+  professionals,
+  defaultDate,
+  onDone,
+}: {
+  professionals: { id: string; name: string }[];
+  defaultDate: string;
+  onDone: () => void;
+}) {
+  const { data: membership } = useMembership();
+  const [form, setForm] = useState({
+    date: defaultDate,
+    start: "08:00",
+    end: "18:00",
+    kind: "ausencia" as Database["public"]["Enums"]["block_type"],
+    professionalId: "__all__",
+    title: "",
+  });
+  const [saving, setSaving] = useState(false);
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    if (!membership) return;
+    if (form.start >= form.end) {
+      toast.error("O fim do bloqueio deve ser depois do início.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("calendar_blocks").insert({
+        organization_id: membership.organization.id,
+        professional_id: form.professionalId === "__all__" ? null : form.professionalId,
+        kind: form.kind,
+        title: form.title.trim() || null,
+        starts_at: brInstant(
+          form.date,
+          Number(form.start.slice(0, 2)) * 60 + Number(form.start.slice(3)),
+        ).toISOString(),
+        ends_at: brInstant(
+          form.date,
+          Number(form.end.slice(0, 2)) * 60 + Number(form.end.slice(3)),
+        ).toISOString(),
+      });
+      if (error) throw error;
+      toast.success("Horário bloqueado na agenda.");
+      onDone();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível criar o bloqueio.");
+    } finally {
+      setSaving(false);
+    }
+  }
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle className="font-display">Bloquear horário</DialogTitle>
+      </DialogHeader>
+      <form onSubmit={save} className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          O período ficará indisponível para agendamentos internos e públicos. Selecione um
+          profissional ou toda a clínica.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="block-date">Data</Label>
+            <Input
+              id="block-date"
+              type="date"
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Tipo</Label>
+            <Select
+              value={form.kind}
+              onValueChange={(value) => setForm({ ...form, kind: value as typeof form.kind })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BLOCK_KINDS.map((kind) => (
+                  <SelectItem key={kind} value={kind}>
+                    {BLOCK_LABELS[kind]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="block-start">Início</Label>
+            <Input
+              id="block-start"
+              type="time"
+              value={form.start}
+              onChange={(e) => setForm({ ...form, start: e.target.value })}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="block-end">Fim</Label>
+            <Input
+              id="block-end"
+              type="time"
+              value={form.end}
+              onChange={(e) => setForm({ ...form, end: e.target.value })}
+              required
+            />
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Aplicar a</Label>
+          <Select
+            value={form.professionalId}
+            onValueChange={(value) => setForm({ ...form, professionalId: value })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Toda a clínica</SelectItem>
+              {professionals.map((professional) => (
+                <SelectItem key={professional.id} value={professional.id}>
+                  {professional.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="block-title">Observação (opcional)</Label>
+          <Input
+            id="block-title"
+            placeholder="Ex.: Ausência do proprietário"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+          />
+        </div>
+        <DialogFooter>
+          <Button type="submit" disabled={saving}>
+            {saving ? <Loader2 className="size-4 animate-spin" /> : null} Salvar bloqueio
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
   );
 }
 

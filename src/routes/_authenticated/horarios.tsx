@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Clock3, Coffee, Copy, Save } from "lucide-react";
+import { Check, Clock3, Coffee, Copy, Plus, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,7 @@ type ClinicDay = {
   lunchEnabled: boolean;
   lunchStart: string;
   lunchEnd: string;
+  extraWindows: { start: string; end: string }[];
 };
 
 const DAYS = [
@@ -36,6 +37,7 @@ const DEFAULT_DAY: ClinicDay = {
   lunchEnabled: true,
   lunchStart: "12:00",
   lunchEnd: "13:00",
+  extraWindows: [],
 };
 
 function normalizeHours(value: unknown): Record<string, ClinicDay> {
@@ -50,16 +52,30 @@ function normalizeHours(value: unknown): Record<string, ClinicDay> {
       return [
         id,
         {
-          closed: typeof raw.closed === "boolean" ? raw.closed : id === "0" || id === "6",
-          start: typeof raw.start === "string" ? raw.start.slice(0, 5) : DEFAULT_DAY.start,
-          end: typeof raw.end === "string" ? raw.end.slice(0, 5) : DEFAULT_DAY.end,
-          lunchEnabled: raw.lunchEnabled !== false,
+          closed: typeof raw["closed"] === "boolean" ? raw["closed"] : id === "0" || id === "6",
+          start: typeof raw["start"] === "string" ? raw["start"].slice(0, 5) : DEFAULT_DAY.start,
+          end: typeof raw["end"] === "string" ? raw["end"].slice(0, 5) : DEFAULT_DAY.end,
+          lunchEnabled: raw["lunchEnabled"] !== false,
           lunchStart:
-            typeof raw.lunchStart === "string"
-              ? raw.lunchStart.slice(0, 5)
+            typeof raw["lunchStart"] === "string"
+              ? raw["lunchStart"].slice(0, 5)
               : DEFAULT_DAY.lunchStart,
           lunchEnd:
-            typeof raw.lunchEnd === "string" ? raw.lunchEnd.slice(0, 5) : DEFAULT_DAY.lunchEnd,
+            typeof raw["lunchEnd"] === "string"
+              ? raw["lunchEnd"].slice(0, 5)
+              : DEFAULT_DAY.lunchEnd,
+          extraWindows: Array.isArray(raw["extraWindows"])
+            ? raw["extraWindows"]
+                .filter(
+                  (window): window is Record<string, unknown> =>
+                    !!window && typeof window === "object" && !Array.isArray(window),
+                )
+                .map((window) => ({
+                  start:
+                    typeof window["start"] === "string" ? window["start"].slice(0, 5) : "20:00",
+                  end: typeof window["end"] === "string" ? window["end"].slice(0, 5) : "22:00",
+                }))
+            : [],
         },
       ];
     }),
@@ -89,7 +105,7 @@ function Horarios() {
   if (isLoading || !org) return <SkeletonCard />;
 
   function updateDay(id: string, patch: Partial<ClinicDay>) {
-    setHours((current) => ({ ...current, [id]: { ...current[id], ...patch } }));
+    setHours((current) => ({ ...current, [id]: { ...DEFAULT_DAY, ...current[id], ...patch } }));
   }
 
   function applyToWeekdays() {
@@ -102,7 +118,7 @@ function Horarios() {
   }
 
   async function save() {
-    if (!canEdit) return;
+    if (!canEdit || !org) return;
     const invalid = DAYS.find(([id]) => {
       const day = hours[id];
       if (!day || day.closed) return false;
@@ -110,9 +126,15 @@ function Horarios() {
       const end = day.end.replace(":", "");
       const lunchStart = day.lunchStart.replace(":", "");
       const lunchEnd = day.lunchEnd.replace(":", "");
+      const extraInvalid = day.extraWindows.some((window) => {
+        const extraStart = window.start.replace(":", "");
+        const extraEnd = window.end.replace(":", "");
+        return extraStart >= extraEnd;
+      });
       return (
         start >= end ||
-        (day.lunchEnabled && (lunchStart >= lunchEnd || lunchStart < start || lunchEnd > end))
+        (day.lunchEnabled && (lunchStart >= lunchEnd || lunchStart < start || lunchEnd > end)) ||
+        extraInvalid
       );
     });
     if (invalid) {
@@ -250,6 +272,77 @@ function Horarios() {
                     ) : (
                       <div />
                     )}
+                    <div className="sm:col-span-2 lg:col-span-4 rounded-lg border border-dashed border-primary/30 bg-background/60 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="text-xs font-semibold">Janelas extras</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            Libere períodos fora do horário principal, como 20:00–22:00.
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={!canEdit}
+                          onClick={() =>
+                            updateDay(id, {
+                              extraWindows: [...day.extraWindows, { start: "20:00", end: "22:00" }],
+                            })
+                          }
+                        >
+                          <Plus className="size-3.5" /> Adicionar janela
+                        </Button>
+                      </div>
+                      {day.extraWindows.length ? (
+                        <div className="mt-3 space-y-2">
+                          {day.extraWindows.map((window, index) => (
+                            <div key={`${id}-extra-${index}`} className="flex items-end gap-2">
+                              <TimeField
+                                label="Início"
+                                value={window.start}
+                                disabled={!canEdit}
+                                onChange={(value) =>
+                                  updateDay(id, {
+                                    extraWindows: day.extraWindows.map((item, itemIndex) =>
+                                      itemIndex === index ? { ...item, start: value } : item,
+                                    ),
+                                  })
+                                }
+                              />
+                              <TimeField
+                                label="Fim"
+                                value={window.end}
+                                disabled={!canEdit}
+                                onChange={(value) =>
+                                  updateDay(id, {
+                                    extraWindows: day.extraWindows.map((item, itemIndex) =>
+                                      itemIndex === index ? { ...item, end: value } : item,
+                                    ),
+                                  })
+                                }
+                              />
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                disabled={!canEdit}
+                                aria-label="Remover janela extra"
+                                onClick={() =>
+                                  updateDay(id, {
+                                    extraWindows: day.extraWindows.filter(
+                                      (_, itemIndex) => itemIndex !== index,
+                                    ),
+                                  })
+                                }
+                              >
+                                <Trash2 className="size-4 text-destructive" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
               </div>
