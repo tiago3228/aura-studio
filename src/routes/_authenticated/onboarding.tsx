@@ -4,13 +4,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { slugify } from "@/lib/format";
 import { useMembership } from "@/lib/session";
+import { createClinicForOwner } from "@/lib/onboarding.functions";
+import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   component: Onboarding,
@@ -20,6 +21,7 @@ function Onboarding() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: membership, isLoading: membershipLoading } = useMembership();
+  const createClinic = useServerFn(createClinicForOwner);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -40,28 +42,16 @@ function Onboarding() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) throw new Error("Sessão expirada.");
-
       const slug = `${slugify(form.name)}-${Math.random().toString(36).slice(2, 6)}`;
-      const orgId = crypto.randomUUID();
-      const { error } = await supabase.from("organizations").insert({
-        id: orgId,
-        name: form.name,
-        phone: form.phone || null,
-        city: form.city || null,
-        description: form.description || null,
-        booking_slug: slug,
-        onboarding_done: true,
+      await createClinic({
+        data: {
+          name: form.name,
+          phone: form.phone,
+          city: form.city,
+          description: form.description,
+          slug,
+        },
       });
-      if (error) throw error;
-
-      const { error: memberError } = await supabase.from("organization_members").insert({
-        organization_id: orgId,
-        user_id: auth.user.id,
-        role: "owner",
-      });
-      if (memberError) throw memberError;
 
       await queryClient.invalidateQueries({ queryKey: ["membership"] });
       toast.success("Clínica criada! Bem-vinda ao Aura.");
