@@ -50,7 +50,7 @@ export type ClinicDayConfig = {
   extraWindows?: ExtraWindow[];
 };
 
-export type ExtraWindow = { start: string; end: string };
+export type ExtraWindow = { start: string; end: string; bookable?: boolean };
 
 /** Intervalos ocupados no dia, em minutos locais. */
 export type BusyRange = { start: number; end: number };
@@ -74,6 +74,7 @@ export function buildSlots(
   const windows: BusyRange[] = [];
   if (primaryStart < primaryEnd) windows.push({ start: primaryStart, end: primaryEnd });
   for (const extra of clinicDay?.extraWindows ?? []) {
+    if (extra.bookable === false) continue;
     const extraStart = Math.max(professionalStart, toMinutes(extra.start));
     const extraEnd = Math.min(professionalEnd, toMinutes(extra.end));
     if (extraStart < extraEnd) windows.push({ start: extraStart, end: extraEnd });

@@ -91,7 +91,7 @@ const GUIDES: Guide[] = [
       "Quando o dia estiver aberto, informe o horário de abertura e fechamento.",
       "Ative Intervalo para configurar o início e o fim do almoço ou de uma pausa da clínica.",
       "Use Copiar segunda para dias úteis quando segunda-feira tiver o mesmo horário de terça a sexta. Depois, ajuste individualmente o que for diferente.",
-      "Para abrir um período fora da jornada principal, use Adicionar janela em Janelas extras, por exemplo 20:00–22:00.",
+      "Em Janelas extras, adicione um período como 20:00–22:00 e escolha se ele fica Livre para agendamento ou Bloqueado sem agendamento. Janelas bloqueadas servem para registrar um período indisponível sem oferecer horários ao cliente.",
       "Clique em Salvar horários. A configuração passa a limitar os horários exibidos no agendamento público.",
       "Lembre-se de que a disponibilidade final também depende dos dias, horários, intervalo e serviços oferecidos pelo profissional.",
     ],

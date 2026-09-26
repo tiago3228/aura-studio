@@ -34,13 +34,19 @@ function parseClinicHours(value: unknown): Record<string, ClinicDayConfig> | und
       lunchStart: typeof day["lunchStart"] === "string" ? day["lunchStart"] : "12:00",
       lunchEnd: typeof day["lunchEnd"] === "string" ? day["lunchEnd"] : "13:00",
       extraWindows: Array.isArray(day["extraWindows"])
-        ? day["extraWindows"].filter(
-            (window): window is ExtraWindow =>
-              !!window &&
-              typeof window === "object" &&
-              typeof (window as Record<string, unknown>)["start"] === "string" &&
-              typeof (window as Record<string, unknown>)["end"] === "string",
-          )
+        ? day["extraWindows"]
+            .filter(
+              (window): window is ExtraWindow =>
+                !!window &&
+                typeof window === "object" &&
+                typeof (window as Record<string, unknown>)["start"] === "string" &&
+                typeof (window as Record<string, unknown>)["end"] === "string",
+            )
+            .map((window) => ({
+              start: window.start,
+              end: window.end,
+              bookable: (window as Record<string, unknown>)["bookable"] !== false,
+            }))
         : [],
     };
   }

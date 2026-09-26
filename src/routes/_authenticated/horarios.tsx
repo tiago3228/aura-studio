@@ -17,7 +17,7 @@ type ClinicDay = {
   lunchEnabled: boolean;
   lunchStart: string;
   lunchEnd: string;
-  extraWindows: { start: string; end: string }[];
+  extraWindows: { start: string; end: string; bookable: boolean }[];
 };
 
 const DAYS = [
@@ -74,6 +74,7 @@ function normalizeHours(value: unknown): Record<string, ClinicDay> {
                   start:
                     typeof window["start"] === "string" ? window["start"].slice(0, 5) : "20:00",
                   end: typeof window["end"] === "string" ? window["end"].slice(0, 5) : "22:00",
+                  bookable: window["bookable"] !== false,
                 }))
             : [],
         },
@@ -277,7 +278,8 @@ function Horarios() {
                         <div>
                           <p className="text-xs font-semibold">Janelas extras</p>
                           <p className="text-[11px] text-muted-foreground">
-                            Libere períodos fora do horário principal, como 20:00–22:00.
+                            Adicione períodos extras e escolha se ficam livres ou bloqueados para
+                            agendamento.
                           </p>
                         </div>
                         <Button
@@ -287,7 +289,10 @@ function Horarios() {
                           disabled={!canEdit}
                           onClick={() =>
                             updateDay(id, {
-                              extraWindows: [...day.extraWindows, { start: "20:00", end: "22:00" }],
+                              extraWindows: [
+                                ...day.extraWindows,
+                                { start: "20:00", end: "22:00", bookable: true },
+                              ],
                             })
                           }
                         >
@@ -322,6 +327,26 @@ function Horarios() {
                                   })
                                 }
                               />
+                              <label className="flex min-h-10 min-w-44 flex-1 flex-col justify-center gap-1 text-[11px] font-medium">
+                                <span className="text-muted-foreground">Tipo de janela</span>
+                                <select
+                                  value={window.bookable ? "bookable" : "blocked"}
+                                  disabled={!canEdit}
+                                  onChange={(event) =>
+                                    updateDay(id, {
+                                      extraWindows: day.extraWindows.map((item, itemIndex) =>
+                                        itemIndex === index
+                                          ? { ...item, bookable: event.target.value === "bookable" }
+                                          : item,
+                                      ),
+                                    })
+                                  }
+                                  className="h-9 rounded-md border border-border bg-background px-2 text-xs"
+                                >
+                                  <option value="bookable">Livre para agendamento</option>
+                                  <option value="blocked">Bloqueada sem agendamento</option>
+                                </select>
+                              </label>
                               <Button
                                 type="button"
                                 size="icon"
