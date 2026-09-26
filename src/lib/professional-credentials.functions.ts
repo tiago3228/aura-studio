@@ -39,7 +39,9 @@ export const createProfessionalCredentials = createServerFn({ method: "POST" })
       .maybeSingle();
     if (organization.error) throw new Error(organization.error.message);
     const isOrganizationCreator = organization.data?.created_by === context.userId;
+    const platformAdmin = await context.supabase.rpc("is_platform_admin");
     const allowed =
+      platformAdmin.data === true ||
       isOrganizationCreator ||
       (access.data &&
         (["owner", "manager"].includes(access.data.role) ||
