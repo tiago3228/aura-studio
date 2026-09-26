@@ -55,28 +55,29 @@ export const createProfessionalCredentials = createServerFn({ method: "POST" })
       });
       if (updated.error) throw new Error(updated.error.message);
     } else {
-      const created = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password: data.password,
-        email_confirm: true,
-        user_metadata: { login_username: data.username, invited_by_aura: true },
-      });
-      if (created.data.user) {
-        userId = created.data.user.id;
-      } else {
-        const users = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-        const existing = users.data.users.find(
-          (user) => user.email?.toLowerCase() === email.toLowerCase(),
-        );
-        if (!existing) {
-          throw new Error(created.error?.message ?? "Não foi possível criar o usuário.");
-        }
+      const users = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      if (users.error) throw new Error(users.error.message);
+      const existing = users.data.users.find(
+        (user) => user.email?.toLowerCase() === email.toLowerCase(),
+      );
+      if (existing) {
         const updated = await supabaseAdmin.auth.admin.updateUserById(existing.id, {
           password: data.password,
           user_metadata: { login_username: data.username, invited_by_aura: true },
         });
         if (updated.error) throw new Error(updated.error.message);
         userId = existing.id;
+      } else {
+        const created = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password: data.password,
+          email_confirm: true,
+          user_metadata: { login_username: data.username, invited_by_aura: true },
+        });
+        if (created.error || !created.data.user) {
+          throw new Error(created.error?.message ?? "Não foi possível criar o usuário.");
+        }
+        userId = created.data.user.id;
       }
     }
     const updatedProfessional = await supabaseAdmin

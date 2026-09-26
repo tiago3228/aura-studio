@@ -133,6 +133,7 @@ export const can = (
 ) => {
   if (!role) return false;
   if (isAdminRole(role)) return true;
+  if (role === "professional" && ["dashboard", "agenda"].includes(area)) return true;
   if (permissions && Object.keys(permissions).length > 0) {
     const key =
       area === "agenda"
