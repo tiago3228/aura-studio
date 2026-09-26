@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Clock3, Coffee, Copy, Plus, Save, Trash2 } from "lucide-react";
+import { Check, ChevronDown, Clock3, Coffee, Copy, Plus, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -96,6 +96,7 @@ function Horarios() {
   const canEdit = hasPermission(membership, "agenda.disponibilidade");
   const [hours, setHours] = useState<Record<string, ClinicDay>>(() => normalizeHours(null));
   const [saving, setSaving] = useState(false);
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   useEffect(() => {
     if (org) setHours(normalizeHours(org.business_hours));
@@ -215,12 +216,20 @@ function Horarios() {
                 className={`rounded-xl border p-4 transition-colors ${day.closed ? "border-border bg-muted/30" : "border-primary/20 bg-primary-soft/20"}`}
               >
                 <div className="flex flex-wrap items-center gap-3">
-                  <div className="min-w-32 flex-1">
+                  <button
+                    type="button"
+                    className="flex min-w-32 flex-1 items-center gap-2 text-left"
+                    onClick={() => setExpandedDay((current) => (current === id ? null : id))}
+                    aria-expanded={expandedDay === id}
+                  >
                     <p className="text-sm font-semibold">{label}</p>
                     <p className="text-xs text-muted-foreground">
                       {day.closed ? "Sem agendamentos" : `${day.start}–${day.end}`}
                     </p>
-                  </div>
+                    <ChevronDown
+                      className={`ml-auto size-4 shrink-0 text-muted-foreground transition-transform ${expandedDay === id ? "rotate-180" : ""}`}
+                    />
+                  </button>
                   <Switch
                     checked={!day.closed}
                     disabled={!canEdit}
@@ -231,7 +240,7 @@ function Horarios() {
                     {day.closed ? "Fechado" : "Aberto"}
                   </span>
                 </div>
-                {!day.closed ? (
+                {!day.closed && expandedDay === id ? (
                   <div className="mt-3 grid gap-3 border-t border-border/60 pt-3 sm:grid-cols-2 lg:grid-cols-4">
                     <TimeField
                       label="Abertura"
