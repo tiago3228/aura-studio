@@ -749,6 +749,7 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [credentialError, setCredentialError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     specialty: "",
@@ -766,7 +767,32 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!membership) return;
+    const username = form.login_username.trim();
+    const password = form.login_password;
+    if (username !== "" && password === "") {
+      setCredentialError("Informe uma senha para este usuário.");
+      return;
+    }
+    if (username === "" && password !== "") {
+      setCredentialError("Informe um usuário para esta senha.");
+      return;
+    }
+    if (password) {
+      const weakPassword =
+        password.length < 8 ||
+        /^(.)\1+$/.test(password) ||
+        /^(?:0123456789|1234567890|9876543210)$/.test(password) ||
+        ["12345678", "password", "senha123", "320011"].includes(password.toLowerCase());
+      if (weakPassword) {
+        setCredentialError(
+          "Essa senha é fácil de adivinhar. Use pelo menos 8 caracteres, misturando letras, números e símbolos.",
+        );
+        return;
+      }
+    }
+    setCredentialError(null);
     setSaving(true);
+    let createdProfessionalId: string | null = null;
     try {
       const { data: professional, error } = await supabase
         .from("professionals")
@@ -785,13 +811,14 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
         .select("id")
         .single();
       if (error) throw error;
-      if (form.login_username.trim() && form.login_password) {
+      createdProfessionalId = professional.id;
+      if (username && password) {
         await createCredentials({
           data: {
             organizationId: membership.organization.id,
             professionalId: professional.id,
-            username: form.login_username.trim(),
-            password: form.login_password,
+            username,
+            password,
           },
         });
       }
@@ -812,7 +839,15 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
       toast.success("Profissional cadastrado.");
       onDone();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao salvar.");
+      if (createdProfessionalId) {
+        await supabase.from("professionals").delete().eq("id", createdProfessionalId);
+      }
+      const message = err instanceof Error ? err.message : "Erro ao salvar.";
+      const friendlyMessage = message.toLowerCase().includes("weak")
+        ? "A senha é fraca ou fácil de adivinhar. Escolha outra com pelo menos 8 caracteres."
+        : message;
+      setCredentialError(friendlyMessage);
+      toast.error(friendlyMessage);
     } finally {
       setUploading(false);
       setSaving(false);
@@ -864,7 +899,10 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
               <Input
                 id="pro-login-username"
                 value={form.login_username}
-                onChange={(e) => setForm({ ...form, login_username: e.target.value })}
+                onChange={(e) => {
+                  setCredentialError(null);
+                  setForm({ ...form, login_username: e.target.value });
+                }}
                 placeholder="atena"
                 autoCapitalize="none"
               />
@@ -876,7 +914,10 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
                 type="password"
                 minLength={6}
                 value={form.login_password}
-                onChange={(e) => setForm({ ...form, login_password: e.target.value })}
+                onChange={(e) => {
+                  setCredentialError(null);
+                  setForm({ ...form, login_password: e.target.value });
+                }}
                 placeholder="mínimo de 6 caracteres"
               />
             </div>
@@ -884,6 +925,9 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
           <p className="mt-2 text-xs text-muted-foreground">
             A senha não fica salva no cadastro; o Supabase armazena somente o hash seguro.
           </p>
+          {credentialError ? (
+            <p className="mt-2 text-sm font-medium text-destructive">{credentialError}</p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="pro-bio">Descrição profissional</Label>
