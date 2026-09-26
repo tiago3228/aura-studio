@@ -67,6 +67,25 @@ begin
   end loop;
 end $$;
 
+-- Make this script safe to rerun after a partially applied SQL editor attempt.
+do $$
+declare item record;
+begin
+  for item in select * from (values
+    ('professionals','professionals_access'), ('professionals','professionals_manage'),
+    ('professionals','professionals_update'), ('professionals','professionals_delete'),
+    ('organization_members','members_self_or_admin_read'), ('organization_members','members_admin_insert'),
+    ('organization_members','members_admin_update'), ('organization_members','members_admin_delete'),
+    ('clients','clients_read'), ('clients','clients_insert'), ('clients','clients_update'), ('clients','clients_delete'),
+    ('client_files','client_files_access'), ('appointments','appointments_read'), ('appointments','appointments_insert'),
+    ('appointments','appointments_update'), ('appointments','appointments_delete'),
+    ('calendar_blocks','calendar_blocks_read'), ('calendar_blocks','calendar_blocks_manage'),
+    ('services','services_access'), ('services','services_manage'), ('packages','packages_access'), ('packages','packages_manage')
+  ) as policies(table_name, policy_name) loop
+    execute format('drop policy if exists %I on public.%I', item.policy_name, item.table_name);
+  end loop;
+end $$;
+
 -- Team and professional data.
 drop policy if exists professionals_member_all on public.professionals;
 create policy professionals_access on public.professionals for select to authenticated
@@ -132,6 +151,7 @@ do $$
 declare t text;
 begin
   foreach t in array array['sales','sale_items','payments','accounts_receivable','accounts_payable','cash_registers','cash_transactions'] loop
+    execute format('drop policy if exists %I_access on public.%I', t, t);
     execute format('create policy %I_access on public.%I for all to authenticated using (public.has_org_permission(organization_id, ''financeiro.ver'')) with check (public.has_org_permission(organization_id, ''financeiro.editar''))', t, t);
   end loop;
 end $$;

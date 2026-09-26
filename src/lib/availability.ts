@@ -37,6 +37,7 @@ export type SlotConfig = {
   slotMinutes: number;
   slotGap: number;
   horizonDays: number;
+  professionalExtraWindows?: ExtraWindow[];
   clinicHours?: Record<string, ClinicDayConfig>;
 };
 
@@ -78,6 +79,19 @@ export function buildSlots(
     const extraStart = Math.max(professionalStart, toMinutes(extra.start));
     const extraEnd = Math.min(professionalEnd, toMinutes(extra.end));
     if (extraStart < extraEnd) windows.push({ start: extraStart, end: extraEnd });
+  }
+  for (const extra of cfg.professionalExtraWindows ?? []) {
+    if (extra.bookable === false) continue;
+    const professionalExtraStart = toMinutes(extra.start);
+    const professionalExtraEnd = toMinutes(extra.end);
+    const clinicExtraWindows = (clinicDay?.extraWindows ?? []).filter(
+      (clinicExtra) => clinicExtra.bookable !== false,
+    );
+    for (const clinicExtra of clinicExtraWindows) {
+      const extraStart = Math.max(professionalExtraStart, toMinutes(clinicExtra.start));
+      const extraEnd = Math.min(professionalExtraEnd, toMinutes(clinicExtra.end));
+      if (extraStart < extraEnd) windows.push({ start: extraStart, end: extraEnd });
+    }
   }
   if (!windows.length) return [];
   const step = Math.max(5, cfg.slotMinutes + Math.max(0, cfg.slotGap));

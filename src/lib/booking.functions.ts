@@ -52,6 +52,20 @@ function parseClinicHours(value: unknown): Record<string, ClinicDayConfig> | und
   }
   return Object.keys(result).length ? result : undefined;
 }
+function parseExtraWindows(value: unknown): ExtraWindow[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (window): window is Record<string, unknown> =>
+        !!window && typeof window === "object" && !Array.isArray(window),
+    )
+    .filter((window) => typeof window["start"] === "string" && typeof window["end"] === "string")
+    .map((window) => ({
+      start: String(window["start"]).slice(0, 5),
+      end: String(window["end"]).slice(0, 5),
+      bookable: window["bookable"] !== false,
+    }));
+}
 
 async function bookingServerClient() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -294,7 +308,7 @@ async function loadContext(
   const pro = await supabase
     .from("professionals")
     .select(
-      "id, work_days, work_start, work_end, lunch_enabled, lunch_start, lunch_end, slot_minutes, slot_gap_min, booking_horizon_days",
+      "id, work_days, work_start, work_end, lunch_enabled, lunch_start, lunch_end, slot_minutes, slot_gap_min, booking_horizon_days, extra_windows",
     )
     .eq("id", professionalId)
     .eq("organization_id", org.data.id)
@@ -360,6 +374,7 @@ async function loadContext(
       slotMinutes: pro.data.slot_minutes,
       slotGap: pro.data.slot_gap_min,
       horizonDays: pro.data.booking_horizon_days,
+      professionalExtraWindows: parseExtraWindows(pro.data.extra_windows),
       ...(clinicHours ? { clinicHours } : {}),
     },
   };

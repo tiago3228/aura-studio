@@ -3388,6 +3388,7 @@ export type Database = {
           commission_type: Database["public"]["Enums"]["commission_type"]
           created_at: string
           email: string | null
+          extra_windows: Json
           id: string
           location_id: string | null
           lunch_enabled: boolean
@@ -3416,6 +3417,7 @@ export type Database = {
           commission_type?: Database["public"]["Enums"]["commission_type"]
           created_at?: string
           email?: string | null
+          extra_windows?: Json
           id?: string
           location_id?: string | null
           lunch_enabled?: boolean
@@ -3444,6 +3446,7 @@ export type Database = {
           commission_type?: Database["public"]["Enums"]["commission_type"]
           created_at?: string
           email?: string | null
+          extra_windows?: Json
           id?: string
           location_id?: string | null
           lunch_enabled?: boolean

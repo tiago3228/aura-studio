@@ -216,6 +216,21 @@ function Equipe() {
 }
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+type ProfessionalExtraWindow = { start: string; end: string; bookable: boolean };
+function normalizeProfessionalExtraWindows(value: unknown): ProfessionalExtraWindow[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (item): item is Record<string, unknown> =>
+        !!item && typeof item === "object" && !Array.isArray(item),
+    )
+    .filter((item) => typeof item["start"] === "string" && typeof item["end"] === "string")
+    .map((item) => ({
+      start: String(item["start"]).slice(0, 5),
+      end: String(item["end"]).slice(0, 5),
+      bookable: item["bookable"] !== false,
+    }));
+}
 
 function ScheduleDialog({
   professional,
@@ -231,6 +246,7 @@ function ScheduleDialog({
     work_days: (professional.work_days as number[]) ?? [1, 2, 3, 4, 5],
     work_start: professional.work_start.slice(0, 5),
     work_end: professional.work_end.slice(0, 5),
+    extra_windows: normalizeProfessionalExtraWindows(professional.extra_windows),
     lunch_enabled: professional.lunch_enabled,
     lunch_start: (professional.lunch_start ?? "12:00").slice(0, 5),
     lunch_end: (professional.lunch_end ?? "13:00").slice(0, 5),
@@ -295,6 +311,13 @@ function ScheduleDialog({
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    const invalidExtra = form.extra_windows.some(
+      (window) => window.start.replace(":", "") >= window.end.replace(":", ""),
+    );
+    if (invalidExtra) {
+      toast.error("Confira os horários das janelas extras.");
+      return;
+    }
     setSaving(true);
     try {
       const { error } = await supabase
@@ -303,6 +326,7 @@ function ScheduleDialog({
           work_days: form.work_days,
           work_start: form.work_start,
           work_end: form.work_end,
+          extra_windows: form.extra_windows,
           lunch_enabled: form.lunch_enabled,
           lunch_start: form.lunch_start,
           lunch_end: form.lunch_end,
@@ -437,6 +461,107 @@ function ScheduleDialog({
               onChange={(e) => setForm({ ...form, work_end: e.target.value })}
             />
           </div>
+        </div>
+
+        <div className="rounded-xl border border-dashed border-primary/30 bg-primary-soft/20 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold">Janelas extras deste profissional</p>
+              <p className="text-xs text-muted-foreground">
+                A clínica também precisa liberar a mesma janela.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                setForm((current) => ({
+                  ...current,
+                  extra_windows: [
+                    ...current.extra_windows,
+                    { start: "20:00", end: "22:00", bookable: true },
+                  ],
+                }))
+              }
+            >
+              <Plus className="size-3.5" /> Adicionar janela
+            </Button>
+          </div>
+          {form.extra_windows.length ? (
+            <div className="mt-3 space-y-2">
+              {form.extra_windows.map((window, index) => (
+                <div key={`professional-extra-${index}`} className="flex flex-wrap items-end gap-2">
+                  <div className="flex-1">
+                    <Label>Início</Label>
+                    <Input
+                      type="time"
+                      value={window.start}
+                      onChange={(e) =>
+                        setForm((current) => ({
+                          ...current,
+                          extra_windows: current.extra_windows.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, start: e.target.value } : item,
+                          ),
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Label>Fim</Label>
+                    <Input
+                      type="time"
+                      value={window.end}
+                      onChange={(e) =>
+                        setForm((current) => ({
+                          ...current,
+                          extra_windows: current.extra_windows.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, end: e.target.value } : item,
+                          ),
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="min-w-44 flex-1">
+                    <Label>Tipo</Label>
+                    <select
+                      value={window.bookable ? "bookable" : "blocked"}
+                      onChange={(e) =>
+                        setForm((current) => ({
+                          ...current,
+                          extra_windows: current.extra_windows.map((item, itemIndex) =>
+                            itemIndex === index
+                              ? { ...item, bookable: e.target.value === "bookable" }
+                              : item,
+                          ),
+                        }))
+                      }
+                      className="h-10 w-full rounded-md border border-border bg-background px-2 text-xs"
+                    >
+                      <option value="bookable">Livre para agendamento</option>
+                      <option value="blocked">Bloqueada sem agendamento</option>
+                    </select>
+                  </div>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Remover janela extra"
+                    onClick={() =>
+                      setForm((current) => ({
+                        ...current,
+                        extra_windows: current.extra_windows.filter(
+                          (_, itemIndex) => itemIndex !== index,
+                        ),
+                      }))
+                    }
+                  >
+                    <span className="text-lg text-destructive">×</span>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <label className="flex items-center gap-2 text-sm">
