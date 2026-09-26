@@ -783,6 +783,7 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
     setCredentialError(null);
     setSaving(true);
     let createdProfessionalId: string | null = null;
+    let uploadedPhotoPath: string | null = null;
     try {
       const { data: professional, error } = await supabase
         .from("professionals")
@@ -802,6 +803,23 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
         .single();
       if (error) throw error;
       createdProfessionalId = professional.id;
+      if (photoFile && professional) {
+        setUploading(true);
+        const resized = await resizeImage(photoFile, 600);
+        const path = `${membership.organization.id}/professionals/${professional.id}-${Date.now()}.jpg`;
+        const upload = await supabase.storage
+          .from("clinic-files")
+          .upload(path, resized, { contentType: "image/jpeg", upsert: true });
+        if (upload.error) throw upload.error;
+        uploadedPhotoPath = path;
+        const update = await supabase
+          .from("professionals")
+          .update({ photo_url: path })
+          .eq("id", professional.id);
+        if (update.error) throw update.error;
+      }
+      // Credentials are created last so a later upload failure cannot remove a
+      // professional after their authentication account has already been linked.
       if (username && password) {
         await createCredentials({
           data: {
@@ -812,23 +830,12 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
           },
         });
       }
-      if (photoFile && professional) {
-        setUploading(true);
-        const resized = await resizeImage(photoFile, 600);
-        const path = `${membership.organization.id}/professionals/${professional.id}-${Date.now()}.jpg`;
-        const upload = await supabase.storage
-          .from("clinic-files")
-          .upload(path, resized, { contentType: "image/jpeg", upsert: true });
-        if (upload.error) throw upload.error;
-        const update = await supabase
-          .from("professionals")
-          .update({ photo_url: path })
-          .eq("id", professional.id);
-        if (update.error) throw update.error;
-      }
       toast.success("Profissional cadastrado.");
       onDone();
     } catch (err) {
+      if (uploadedPhotoPath) {
+        await supabase.storage.from("clinic-files").remove([uploadedPhotoPath]);
+      }
       if (createdProfessionalId) {
         await supabase.from("professionals").delete().eq("id", createdProfessionalId);
       }
