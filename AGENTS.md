@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Authenticated membership reads use the request-scoped user client so RLS enforces tenant isolation without an administrative key.
