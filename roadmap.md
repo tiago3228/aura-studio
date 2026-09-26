@@ -5,3 +5,4 @@
 - [ ] Validar a lista e o registro de fotos em desktop e celular
 - [x] Auditar e concluir o CRM para liberação comercial
 - [x] Renomear o menu para CRM após validação completa
+- [x] Corrigir a recriação de acesso de profissional anteriormente excluído

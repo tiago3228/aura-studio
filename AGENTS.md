@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Authenticated membership reads use the request-scoped user client so RLS enforces tenant isolation without an administrative key.
+- Professional creation links credentials only after profile media succeeds, preventing orphaned access when registration rolls back.
