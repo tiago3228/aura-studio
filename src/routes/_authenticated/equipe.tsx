@@ -9,12 +9,19 @@ import {
   ShieldCheck,
   Link2,
   MessageCircle,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { useMembership, roleLabel, PERMISSION_GROUPS, type PermissionMap } from "@/lib/session";
+import {
+  hasPermission,
+  useMembership,
+  roleLabel,
+  PERMISSION_GROUPS,
+  type PermissionMap,
+} from "@/lib/session";
 import { useServerFn } from "@tanstack/react-start";
 import { generateCollaboratorAccessLink, inviteCollaborator } from "@/lib/collaborator.functions";
 import { brl, initials } from "@/lib/format";
@@ -40,6 +47,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -63,6 +80,8 @@ function Equipe() {
   const [editing, setEditing] = useState<Tables<"professionals"> | null>(null);
   const [offeringFor, setOfferingFor] = useState<Tables<"professionals"> | null>(null);
   const [accessFor, setAccessFor] = useState<Tables<"professionals"> | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Tables<"professionals"> | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const data = useQuery({
     enabled: !!orgId,
@@ -78,6 +97,24 @@ function Equipe() {
       return { professionals: professionals.data, members: members.data ?? [] };
     },
   });
+
+  async function deleteProfessional() {
+    if (!deleteTarget || !hasPermission(membership, "equipe.editar")) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from("professionals").delete().eq("id", deleteTarget.id);
+      if (error) throw error;
+      toast.success(`${deleteTarget.name} foi excluído da equipe.`);
+      setDeleteTarget(null);
+      await queryClient.invalidateQueries({ queryKey: ["team"] });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Não foi possível excluir o profissional.",
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -164,6 +201,15 @@ function Equipe() {
                 <Button variant="outline" size="sm" onClick={() => setAccessFor(p)}>
                   <ShieldCheck className="size-4" /> Acesso e permissões
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  disabled={!hasPermission(membership, "equipe.editar")}
+                  onClick={() => setDeleteTarget(p)}
+                >
+                  <Trash2 className="size-4" /> Excluir profissional
+                </Button>
               </div>
             </li>
           ))}
@@ -219,6 +265,39 @@ function Equipe() {
           />
         ) : null}
       </Dialog>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir profissional definitivamente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.name} será removido da equipe e do banco de dados. Agendamentos e
+              vendas históricos permanecem registrados, mas deixam de apontar para este
+              profissional. Essa ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                void deleteProfessional();
+              }}
+            >
+              {deleting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
+              Excluir definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
