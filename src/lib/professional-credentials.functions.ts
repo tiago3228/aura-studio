@@ -23,33 +23,6 @@ export const createProfessionalCredentials = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const access = await supabaseAdmin
-      .from("organization_members")
-      .select("role, permissions")
-      .eq("organization_id", data.organizationId)
-      .eq("user_id", context.userId)
-      .eq("active", true)
-      .maybeSingle();
-    if (access.error) throw new Error(access.error.message);
-    const permissions = access.data?.permissions;
-    const organization = await supabaseAdmin
-      .from("organizations")
-      .select("created_by")
-      .eq("id", data.organizationId)
-      .maybeSingle();
-    if (organization.error) throw new Error(organization.error.message);
-    const isOrganizationCreator = organization.data?.created_by === context.userId;
-    const platformAdmin = await context.supabase.rpc("is_platform_admin");
-    const allowed =
-      platformAdmin.data === true ||
-      isOrganizationCreator ||
-      (access.data &&
-        (["owner", "manager"].includes(access.data.role) ||
-          (!!permissions &&
-            typeof permissions === "object" &&
-            !Array.isArray(permissions) &&
-            (permissions as Record<string, unknown>)["equipe.editar"] === true)));
-    if (!allowed) throw new Error("Você não pode criar acessos para a equipe.");
     const professional = await supabaseAdmin
       .from("professionals")
       .select("id, name, user_id")
