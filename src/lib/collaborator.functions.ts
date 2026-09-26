@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+const APP_AUTH_URL = "https://clinica-estetica-br.lovable.app/auth";
+
 export const inviteCollaborator = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
@@ -25,7 +27,7 @@ export const inviteCollaborator = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const invited = await supabaseAdmin.auth.admin.inviteUserByEmail(data.email, {
-      redirectTo: `${process.env.APP_URL ?? process.env.VITE_APP_URL ?? ""}/auth`,
+      redirectTo: APP_AUTH_URL,
       data: { invited_by_aura: true },
     });
     if (invited.error || !invited.data.user) {
@@ -81,7 +83,7 @@ export const resendCollaboratorInvite = createServerFn({ method: "POST" })
     const result = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email: data.email,
-      options: { redirectTo: `${process.env.APP_URL ?? process.env.VITE_APP_URL ?? ""}/auth` },
+      options: { redirectTo: APP_AUTH_URL },
     });
     if (result.error) throw new Error(result.error.message);
     return { actionLink: result.data.properties.action_link };
@@ -102,7 +104,7 @@ export const generateCollaboratorAccessLink = createServerFn({ method: "POST" })
     const result = await supabaseAdmin.auth.admin.generateLink({
       type: "magiclink",
       email: data.email,
-      options: { redirectTo: `${process.env.APP_URL ?? process.env.VITE_APP_URL ?? ""}/auth` },
+      options: { redirectTo: APP_AUTH_URL },
     });
     if (result.error || !result.data.properties.action_link) {
       throw new Error(result.error?.message ?? "Não foi possível gerar o link de acesso.");

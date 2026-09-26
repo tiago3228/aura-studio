@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database, Json } from "@/integrations/supabase/types";
+import { getCurrentMembership } from "@/lib/membership.functions";
 
 export type AppRole = Database["public"]["Enums"]["app_role"];
 export type Organization = Database["public"]["Tables"]["organizations"]["Row"];
@@ -97,26 +99,17 @@ function parsePermissions(value: Json | null | undefined): PermissionMap {
 
 /** Organização ativa do usuário autenticado (multi-tenant: RLS já filtra tudo). */
 export function useMembership() {
+  const resolveMembership = useServerFn(getCurrentMembership);
   return useQuery({
     queryKey: ["membership"],
     staleTime: 30_000,
     queryFn: async (): Promise<Membership | null> => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) return null;
-      const { data, error } = await supabase
-        .from("organization_members")
-        .select("role, organization_id, professional_id, permissions, organizations(*)")
-        .eq("user_id", auth.user.id)
-        .eq("active", true)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      if (!data?.organizations) return null;
+      const data = await resolveMembership({ data: {} });
+      if (!data?.organization) return null;
       return {
-        organization: data.organizations as Organization,
+        organization: data.organization as Organization,
         role: data.role,
-        userId: auth.user.id,
+        userId: data.userId,
         professionalId: data.professional_id,
         permissions: parsePermissions(data.permissions),
       };
