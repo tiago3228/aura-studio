@@ -764,6 +764,31 @@ const UI_LABELS: Record<string, Record<LanguageCode, string>> = {
     "en-US": "Quantity to reach target",
   },
   unidades: { "pt-BR": "unidades", "pt-PT": "unidades", "en-US": "units" },
+  "Clientes agendados": {
+    "pt-BR": "Clientes agendados",
+    "pt-PT": "Clientes agendados",
+    "en-US": "Scheduled clients",
+  },
+  "Novo cliente agendado": {
+    "pt-BR": "Novo cliente agendado",
+    "pt-PT": "Novo cliente agendado",
+    "en-US": "New client scheduled",
+  },
+  "Um novo agendamento foi recebido e já está disponível na Agenda.": {
+    "pt-BR": "Um novo agendamento foi recebido e já está disponível na Agenda.",
+    "pt-PT": "Foi recebido um novo agendamento, já disponível na Agenda.",
+    "en-US": "A new appointment was received and is now available in the Calendar.",
+  },
+  "Agendamento cancelado": {
+    "pt-BR": "Agendamento cancelado",
+    "pt-PT": "Agendamento cancelado",
+    "en-US": "Appointment cancelled",
+  },
+  "Um agendamento foi cancelado e a Agenda foi atualizada.": {
+    "pt-BR": "Um agendamento foi cancelado e a Agenda foi atualizada.",
+    "pt-PT": "Um agendamento foi cancelado e a Agenda foi atualizada.",
+    "en-US": "An appointment was cancelled and the Calendar was updated.",
+  },
 };
 
 function initialLanguage(): LanguageCode {

@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
   Users,
@@ -26,6 +26,7 @@ import {
   ChevronDown,
   ChevronRight,
   Calculator,
+  BellRing,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { LANGUAGE_OPTIONS, useLanguage } from "@/lib/language";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
+import { toast } from "sonner";
 
 type NavItem = {
   to: string;
@@ -128,7 +130,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { language, setLanguage, navLabel } = useLanguage();
+  const { language, setLanguage, navLabel, t } = useLanguage();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => ({
     "/assistente": pathname.startsWith("/assistente") || pathname.startsWith("/marketing"),
     "/configuracoes": ["/configuracoes", "/globalizacao", "/gateways", "/seguranca"].some((path) =>
@@ -138,6 +140,61 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const items = NAV.filter((item) => can(membership?.role, item.area));
   const isPlatformAdmin = user?.email?.toLowerCase() === "tiago3228@yahoo.com.br";
+  const orgId = membership?.organization.id;
+  const scheduledAppointments = useQuery({
+    enabled: !!orgId,
+    queryKey: ["global-scheduled-alert", orgId],
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("id, starts_at, status, clients(name)")
+        .eq("organization_id", orgId!)
+        .in("status", ["agendado", "confirmado", "aguardando"])
+        .gte("starts_at", new Date().toISOString())
+        .order("starts_at")
+        .limit(50);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  useEffect(() => {
+    if (!orgId) return;
+    const channel = supabase
+      .channel(`aura-appointments-${orgId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "appointments",
+          filter: `organization_id=eq.${orgId}`,
+        },
+        (payload) => {
+          void queryClient.invalidateQueries({ queryKey: ["global-scheduled-alert", orgId] });
+          void queryClient.invalidateQueries({ queryKey: ["appointments"] });
+          const appointment = payload.new as {
+            client_id?: string | null;
+            status?: string;
+          };
+          if (payload.eventType === "INSERT") {
+            toast.success(t("Novo cliente agendado"), {
+              description: t("Um novo agendamento foi recebido e já está disponível na Agenda."),
+            });
+          } else if (payload.eventType === "UPDATE" && appointment.status === "cancelado") {
+            toast.warning(t("Agendamento cancelado"), {
+              description: t("Um agendamento foi cancelado e a Agenda foi atualizada."),
+            });
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [orgId, queryClient, t]);
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -359,6 +416,31 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <main className="min-w-0 px-4 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] lg:ml-64 lg:px-8 lg:pb-10">
+        <div className="mb-4 flex justify-end">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className={cn(
+              "h-9 gap-2 text-xs transition-colors",
+              scheduledAppointments.data?.length
+                ? "animate-pulse border-red-400 bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"
+                : "border-emerald-400 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300",
+            )}
+            onClick={() => navigate({ to: "/agenda" })}
+            title={
+              scheduledAppointments.data?.length
+                ? `${scheduledAppointments.data.length} cliente(s) agendado(s)`
+                : "Nenhum cliente agendado"
+            }
+          >
+            <BellRing className="size-4" />
+            <span className="hidden sm:inline">{t("Clientes agendados")}</span>
+            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-current/15 px-1.5 py-0.5 font-bold">
+              {scheduledAppointments.data?.length ?? 0}
+            </span>
+          </Button>
+        </div>
         {children}
       </main>
 
