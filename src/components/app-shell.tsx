@@ -170,7 +170,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         {membership?.organization.name ?? "Clínica"}
       </p>
 
-      <nav className="flex-1 space-y-0.5">
+      <nav
+        aria-label="Navegação principal"
+        className="aura-sidebar-nav min-h-0 flex-1 space-y-0.5 overflow-y-auto overscroll-contain pr-1"
+      >
         {[
           ...items,
           ...(isPlatformAdmin

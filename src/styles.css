@@ -193,6 +193,29 @@
   }
 }
 
+/* Rolagem discreta do menu lateral sem deslocar perfil, idioma e notificações. */
+.aura-sidebar-nav {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--color-sidebar-foreground) 28%, transparent) transparent;
+}
+
+.aura-sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.aura-sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.aura-sidebar-nav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-sidebar-foreground) 28%, transparent);
+}
+
+.aura-sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--color-sidebar-foreground) 48%, transparent);
+}
+
 @utility shimmer {
   position: relative;
   overflow: hidden;
