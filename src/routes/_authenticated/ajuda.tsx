@@ -80,6 +80,24 @@ const GUIDES: Guide[] = [
     tips: ["Evite duplicar cadastros. Pesquise pelo telefone antes de criar um novo cliente."],
   },
   {
+    title: "Horários da clínica",
+    area: "Configurações",
+    summary: "Defina a janela geral em que sua clínica aceita agendamentos online.",
+    steps: [
+      "Abra Ajustes no menu lateral e selecione Horários da clínica.",
+      "Na Grade semanal, use o controle de cada dia para marcar a clínica como Aberto ou Fechado.",
+      "Quando o dia estiver aberto, informe o horário de abertura e fechamento.",
+      "Ative Intervalo para configurar o início e o fim do almoço ou de uma pausa da clínica.",
+      "Use Copiar segunda para dias úteis quando segunda-feira tiver o mesmo horário de terça a sexta. Depois, ajuste individualmente o que for diferente.",
+      "Clique em Salvar horários. A configuração passa a limitar os horários exibidos no agendamento público.",
+      "Lembre-se de que a disponibilidade final também depende dos dias, horários, intervalo e serviços oferecidos pelo profissional.",
+    ],
+    tips: [
+      "Configure primeiro o horário geral da clínica e depois ajuste a jornada individual em Equipe. O Aura só oferece um horário quando as duas agendas estão livres.",
+      "Se um dia ou horário não aparece no link público, confira se a clínica e o profissional estão marcados como abertos e disponíveis online.",
+    ],
+  },
+  {
     title: "Procedimentos e Biblioteca",
     area: "Catálogo",
     summary: "Configure serviços, valores, duração, comissão e disponibilidade online.",
