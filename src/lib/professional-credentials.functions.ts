@@ -68,7 +68,10 @@ export const createProfessionalCredentials = createServerFn({ method: "POST" })
       .update({ user_id: userId, login_username: data.username.toLowerCase() })
       .eq("id", data.professionalId);
     if (updatedProfessional.error) throw new Error(updatedProfessional.error.message);
-    const member = await supabaseAdmin.from("organization_members").upsert(
+    // Use the authenticated client for the membership mutation so RLS and
+    // audit triggers receive the owner's auth.uid(). The service-role client
+    // remains restricted to Auth administration and profile linkage above.
+    const member = await context.supabase.from("organization_members").upsert(
       {
         organization_id: data.organizationId,
         user_id: userId,
