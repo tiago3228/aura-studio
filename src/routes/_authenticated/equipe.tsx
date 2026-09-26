@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, CalendarClock, ListChecks, ShieldCheck, Link2 } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  CalendarClock,
+  ListChecks,
+  ShieldCheck,
+  Link2,
+  MessageCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -735,7 +743,7 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="pro-phone">Telefone</Label>
+            <Label htmlFor="pro-phone">WhatsApp do profissional</Label>
             <Input
               id="pro-phone"
               value={form.phone}
@@ -848,6 +856,7 @@ function AccessDialog({
   const sendInvite = useServerFn(inviteCollaborator);
   const createAccessLink = useServerFn(generateCollaboratorAccessLink);
   const [email, setEmail] = useState(professional.email ?? "");
+  const [phone, setPhone] = useState(professional.phone ?? "");
   const [role, setRole] = useState<"manager" | "reception" | "professional">(
     member?.role === "manager" || member?.role === "reception" ? member.role : "professional",
   );
@@ -889,13 +898,13 @@ function AccessDialog({
             permissions,
           },
         });
-        const { error } = await supabase
-          .from("professionals")
-          .update({ email: email.trim() })
-          .eq("id", professional.id);
-        if (error) throw error;
         toast.success("Convite enviado. O colaborador criará a própria senha pelo link recebido.");
       }
+      const { error: profileError } = await supabase
+        .from("professionals")
+        .update({ email: email.trim(), phone: phone.trim() || null })
+        .eq("id", professional.id);
+      if (profileError) throw profileError;
       onDone();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível salvar o acesso.");
@@ -914,6 +923,31 @@ function AccessDialog({
       });
       await navigator.clipboard.writeText(result.actionLink);
       toast.success("Link de acesso autenticado copiado.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível gerar o link.");
+    }
+  }
+  async function shareWhatsApp() {
+    if (!phone.trim()) {
+      toast.error("Cadastre o WhatsApp do colaborador antes de compartilhar.");
+      return;
+    }
+    if (!membership || !email.trim()) {
+      toast.error("Informe o e-mail e salve o acesso antes de compartilhar o link.");
+      return;
+    }
+    try {
+      const result = await createAccessLink({
+        data: { organizationId: membership.organization.id, email: email.trim() },
+      });
+      const digits = phone.replace(/\D/g, "");
+      const international = digits.startsWith("55") ? digits : `55${digits}`;
+      const text = `Olá, ${professional.name}! Este é o seu link de acesso ao Aura: ${result.actionLink}`;
+      window.open(
+        `https://wa.me/${international}?text=${encodeURIComponent(text)}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível gerar o link.");
     }
@@ -952,6 +986,16 @@ function AccessDialog({
               <option value="manager">Gerente</option>
             </select>
           </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="access-whatsapp">WhatsApp do colaborador</Label>
+            <Input
+              id="access-whatsapp"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(11) 99999-0000"
+            />
+          </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />{" "}
             Acesso ativo
@@ -987,6 +1031,9 @@ function AccessDialog({
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" onClick={copyLink}>
             <Link2 className="size-4" /> Copiar link de acesso
+          </Button>
+          <Button type="button" variant="outline" onClick={shareWhatsApp}>
+            <MessageCircle className="size-4" /> Compartilhar no WhatsApp
           </Button>
           <Button type="submit" disabled={saving}>
             {saving ? <Loader2 className="size-4 animate-spin" /> : null} Salvar acesso
