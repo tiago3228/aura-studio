@@ -86,3 +86,26 @@ export const resendCollaboratorInvite = createServerFn({ method: "POST" })
     if (result.error) throw new Error(result.error.message);
     return { actionLink: result.data.properties.action_link };
   });
+
+export const generateCollaboratorAccessLink = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ organizationId: z.string().uuid(), email: z.string().email() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const allowed = await context.supabase.rpc("has_org_permission", {
+      _organization_id: data.organizationId,
+      _permission: "equipe.editar",
+    });
+    if (allowed.error || !allowed.data) throw new Error("Você não pode gerar links para a equipe.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const result = await supabaseAdmin.auth.admin.generateLink({
+      type: "magiclink",
+      email: data.email,
+      options: { redirectTo: `${process.env.APP_URL ?? process.env.VITE_APP_URL ?? ""}/auth` },
+    });
+    if (result.error || !result.data.properties.action_link) {
+      throw new Error(result.error?.message ?? "Não foi possível gerar o link de acesso.");
+    }
+    return { actionLink: result.data.properties.action_link };
+  });

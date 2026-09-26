@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { slugify } from "@/lib/format";
+import { useMembership } from "@/lib/session";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   component: Onboarding,
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/_authenticated/onboarding")({
 function Onboarding() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { data: membership, isLoading: membershipLoading } = useMembership();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -25,9 +27,14 @@ function Onboarding() {
     city: "",
     description: "",
   });
+  useEffect(() => {
+    if (!membershipLoading && membership) navigate({ to: "/dashboard", replace: true });
+  }, [membership, membershipLoading, navigate]);
+  if (membershipLoading || membership) return null;
 
-  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setForm((prev) => ({ ...prev, [key]: e.target.value }));
+  const set =
+    (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -69,7 +76,9 @@ function Onboarding() {
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-5 py-16">
       <p className="text-xs font-semibold tracking-widest text-primary uppercase">Primeiro passo</p>
-      <h1 className="mt-2 font-display text-3xl font-semibold text-balance">Vamos criar sua clínica</h1>
+      <h1 className="mt-2 font-display text-3xl font-semibold text-balance">
+        Vamos criar sua clínica
+      </h1>
       <p className="mt-2 text-sm text-pretty text-muted-foreground">
         Essas informações aparecem na sua página de agendamento online e nos recibos.
       </p>
@@ -77,12 +86,23 @@ function Onboarding() {
       <form onSubmit={create} className="surface mt-8 space-y-4 p-6">
         <div className="space-y-1.5">
           <Label htmlFor="org-name">Nome da clínica</Label>
-          <Input id="org-name" value={form.name} onChange={set("name")} placeholder="Espaço Serene" required />
+          <Input
+            id="org-name"
+            value={form.name}
+            onChange={set("name")}
+            placeholder="Espaço Serene"
+            required
+          />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="org-phone">WhatsApp</Label>
-            <Input id="org-phone" value={form.phone} onChange={set("phone")} placeholder="(11) 99999-0000" />
+            <Input
+              id="org-phone"
+              value={form.phone}
+              onChange={set("phone")}
+              placeholder="(11) 99999-0000"
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="org-city">Cidade</Label>

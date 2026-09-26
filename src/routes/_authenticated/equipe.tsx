@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { useMembership, roleLabel, PERMISSION_GROUPS, type PermissionMap } from "@/lib/session";
 import { useServerFn } from "@tanstack/react-start";
-import { inviteCollaborator } from "@/lib/collaborator.functions";
+import { generateCollaboratorAccessLink, inviteCollaborator } from "@/lib/collaborator.functions";
 import { brl, initials } from "@/lib/format";
 import { resizeImage } from "@/lib/image";
 import { Textarea } from "@/components/ui/textarea";
@@ -846,6 +846,7 @@ function AccessDialog({
 }) {
   const { data: membership } = useMembership();
   const sendInvite = useServerFn(inviteCollaborator);
+  const createAccessLink = useServerFn(generateCollaboratorAccessLink);
   const [email, setEmail] = useState(professional.email ?? "");
   const [role, setRole] = useState<"manager" | "reception" | "professional">(
     member?.role === "manager" || member?.role === "reception" ? member.role : "professional",
@@ -903,8 +904,19 @@ function AccessDialog({
     }
   }
   async function copyLink() {
-    await navigator.clipboard.writeText(`${window.location.origin}/auth?collaborator=1`);
-    toast.success("Link de acesso copiado.");
+    if (!membership || !email.trim()) {
+      toast.error("Informe o e-mail e salve o acesso antes de gerar o link.");
+      return;
+    }
+    try {
+      const result = await createAccessLink({
+        data: { organizationId: membership.organization.id, email: email.trim() },
+      });
+      await navigator.clipboard.writeText(result.actionLink);
+      toast.success("Link de acesso autenticado copiado.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível gerar o link.");
+    }
   }
   return (
     <DialogContent className="max-h-[90vh] overflow-y-auto">
