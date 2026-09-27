@@ -28,6 +28,7 @@ import {
   Calculator,
   BellRing,
   Clock3,
+  Download,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -38,6 +39,7 @@ import { LANGUAGE_OPTIONS, useLanguage } from "@/lib/language";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
 import { toast } from "sonner";
+import { isAuraInstalled, requestAuraInstall } from "@/lib/pwa-install";
 
 type NavItem = {
   to: string;
@@ -133,6 +135,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { data: membership } = useMembership();
   const { user } = useSession();
   const [open, setOpen] = useState(false);
+  const [installed, setInstalled] = useState(false);
   const navigate = useNavigate();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -148,6 +151,18 @@ export function AppShell({ children }: { children: ReactNode }) {
       "/seguranca",
     ].some((path) => pathname.startsWith(path)),
   }));
+
+  useEffect(() => {
+    const media = window.matchMedia?.("(display-mode: standalone)");
+    const updateInstalled = () => setInstalled(isAuraInstalled());
+    updateInstalled();
+    window.addEventListener("appinstalled", updateInstalled);
+    media?.addEventListener?.("change", updateInstalled);
+    return () => {
+      window.removeEventListener("appinstalled", updateInstalled);
+      media?.removeEventListener?.("change", updateInstalled);
+    };
+  }, []);
 
   const items = NAV.filter((item) => can(membership?.role, item.area, membership?.permissions));
   const isPlatformAdmin = user?.email?.toLowerCase() === "tiago3228@yahoo.com.br";
@@ -337,6 +352,21 @@ export function AppShell({ children }: { children: ReactNode }) {
         })}
       </nav>
 
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="mt-3 w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
+        onClick={() => {
+          if (!installed) requestAuraInstall();
+        }}
+        disabled={installed}
+        title={installed ? "Aplicativo já instalado" : "Instalar aplicativo"}
+      >
+        <Download className="size-4 shrink-0" />
+        {installed ? "Aplicativo já instalado" : "Instalar aplicativo"}
+      </Button>
+
       <div className="surface mt-4 space-y-3 p-3">
         <div className="flex min-w-0 items-center gap-3">
           <div className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
@@ -409,6 +439,20 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Flower2 className="size-4 text-primary" /> Aura<span className="text-primary">.</span>
         </Link>
         <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => {
+              if (!installed) requestAuraInstall();
+            }}
+            disabled={installed}
+            aria-label={installed ? "Aplicativo já instalado" : "Instalar aplicativo"}
+            title={installed ? "Aplicativo já instalado" : "Instalar aplicativo"}
+          >
+            <Download className="size-4" />
+          </Button>
           <NotificationBell />
           <select
             aria-label="Idioma"
