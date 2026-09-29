@@ -2859,6 +2859,90 @@ export type Database = {
           },
         ]
       }
+      mercadopago_pix_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          expires_at: string | null
+          external_reference: string
+          id: string
+          paid_at: string | null
+          payer_email: string
+          period_end: string | null
+          period_start: string | null
+          provider: string
+          provider_payment_id: string
+          qr_code: string | null
+          qr_code_base64: string | null
+          status: string
+          status_detail: string | null
+          subscription_id: string | null
+          ticket_url: string | null
+          updated_at: string
+          organization_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          expires_at?: string | null
+          external_reference: string
+          id?: string
+          paid_at?: string | null
+          payer_email: string
+          period_end?: string | null
+          period_start?: string | null
+          provider?: string
+          provider_payment_id: string
+          qr_code?: string | null
+          qr_code_base64?: string | null
+          status?: string
+          status_detail?: string | null
+          subscription_id?: string | null
+          ticket_url?: string | null
+          updated_at?: string
+          organization_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          expires_at?: string | null
+          external_reference?: string
+          id?: string
+          paid_at?: string | null
+          payer_email?: string
+          period_end?: string | null
+          period_start?: string | null
+          provider?: string
+          provider_payment_id?: string
+          qr_code?: string | null
+          qr_code_base64?: string | null
+          status?: string
+          status_detail?: string | null
+          subscription_id?: string | null
+          ticket_url?: string | null
+          updated_at?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mercadopago_pix_payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercadopago_pix_payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_transactions: {
         Row: {
           amount: number
