@@ -2,7 +2,7 @@ create or replace function public.declare_pix_payment(
   _months integer default 1,
   _note text default null,
   _amount numeric default 49.90,
-  _pix_key text default 'tiago3228@gmail.com'
+  _pix_key text default 'b82998bd-de9b-4f09-9b81-42b7e3b6d510'
 )
 returns public.pix_payments
 language plpgsql
