@@ -408,8 +408,42 @@ const FIELDS: { key: string; label: string; long?: boolean }[] = [
 function AnamnesisDialog({ clientId, onDone }: { clientId: string; onDone: () => void }) {
   const { data: membership } = useMembership();
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [templateId, setTemplateId] = useState("");
   const [signature, setSignature] = useState("");
   const [saving, setSaving] = useState(false);
+  const templates = useQuery({
+    enabled: Boolean(membership),
+    queryKey: ["anamnesis-dialog-templates", membership?.organization.id],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("anamnesis_templates")
+        .select(
+          "id,name,anamnesis_questions(id,label,type,options,required,follow_up_label,position)",
+        )
+        .eq("organization_id", membership!.organization.id)
+        .eq("active", true)
+        .order("name");
+      if (error) throw error;
+      return (data ?? []).map((item: any) => ({
+        ...item,
+        questions: (item.anamnesis_questions ?? []).sort(
+          (a: any, b: any) => a.position - b.position,
+        ),
+      })) as Array<{
+        id: string;
+        name: string;
+        questions: Array<{
+          id: string;
+          label: string;
+          type: string;
+          options?: string[];
+          required?: boolean;
+          follow_up_label?: string;
+        }>;
+      }>;
+    },
+  });
+  const selectedTemplate = templates.data?.find((template) => template.id === templateId);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -420,6 +454,7 @@ function AnamnesisDialog({ clientId, onDone }: { clientId: string; onDone: () =>
       const { error } = await supabase.from("anamnesis_responses").insert({
         organization_id: membership.organization.id,
         client_id: clientId,
+        template_id: templateId || null,
         answers,
         signature_data: signature || null,
         signed_at: signature ? new Date().toISOString() : null,
@@ -441,25 +476,111 @@ function AnamnesisDialog({ clientId, onDone }: { clientId: string; onDone: () =>
         <DialogTitle className="font-display">Ficha de anamnese</DialogTitle>
       </DialogHeader>
       <form onSubmit={save} className="space-y-4">
-        {FIELDS.map((field) => (
-          <div key={field.key} className="space-y-1.5">
-            <Label htmlFor={field.key}>{field.label}</Label>
-            {field.long ? (
-              <Textarea
-                id={field.key}
-                rows={2}
-                value={answers[field.key] ?? ""}
-                onChange={(e) => setAnswers({ ...answers, [field.key]: e.target.value })}
-              />
-            ) : (
-              <Input
-                id={field.key}
-                value={answers[field.key] ?? ""}
-                onChange={(e) => setAnswers({ ...answers, [field.key]: e.target.value })}
-              />
-            )}
+        {templates.data?.length ? (
+          <div className="space-y-1.5">
+            <Label htmlFor="anamnesis-template">Modelo de anamnese</Label>
+            <select
+              id="anamnesis-template"
+              value={templateId}
+              onChange={(event) => {
+                setTemplateId(event.target.value);
+                setAnswers({});
+              }}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Ficha básica sem modelo</option>
+              {templates.data.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name}
+                </option>
+              ))}
+            </select>
           </div>
-        ))}
+        ) : null}
+        {selectedTemplate
+          ? selectedTemplate.questions.map((question, index) => {
+              const key = question.id || `question_${index}`;
+              const answer = answers[key] ?? "";
+              const isYes = answer.toLowerCase() === "sim";
+              return (
+                <div key={key} className="space-y-1.5">
+                  <Label htmlFor={key}>
+                    {question.label}
+                    {question.required ? " *" : ""}
+                  </Label>
+                  {question.type === "sim_nao" ? (
+                    <select
+                      id={key}
+                      value={answer}
+                      required={question.required}
+                      onChange={(event) => setAnswers({ ...answers, [key]: event.target.value })}
+                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      <option value="">Selecione</option>
+                      <option value="Sim">Sim</option>
+                      <option value="Não">Não</option>
+                    </select>
+                  ) : question.type === "texto_longo" ? (
+                    <Textarea
+                      id={key}
+                      rows={2}
+                      value={answer}
+                      required={question.required}
+                      onChange={(event) => setAnswers({ ...answers, [key]: event.target.value })}
+                    />
+                  ) : (
+                    <Input
+                      id={key}
+                      type={
+                        question.type === "data"
+                          ? "date"
+                          : question.type === "numero"
+                            ? "number"
+                            : "text"
+                      }
+                      value={answer}
+                      required={question.required}
+                      onChange={(event) => setAnswers({ ...answers, [key]: event.target.value })}
+                    />
+                  )}
+                  {question.type === "sim_nao" && isYes ? (
+                    <div className="space-y-1.5 rounded-md border border-primary/20 bg-primary-soft/20 p-2">
+                      <Label htmlFor={`${key}__follow_up`} className="text-xs">
+                        {question.follow_up_label || "Quais? / Justifique?"}
+                      </Label>
+                      <Textarea
+                        id={`${key}__follow_up`}
+                        rows={2}
+                        value={answers[`${key}__follow_up`] ?? ""}
+                        onChange={(event) =>
+                          setAnswers({ ...answers, [`${key}__follow_up`]: event.target.value })
+                        }
+                        required={question.required}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })
+          : FIELDS.map((field) => (
+              <div key={field.key} className="space-y-1.5">
+                <Label htmlFor={field.key}>{field.label}</Label>
+                {field.long ? (
+                  <Textarea
+                    id={field.key}
+                    rows={2}
+                    value={answers[field.key] ?? ""}
+                    onChange={(e) => setAnswers({ ...answers, [field.key]: e.target.value })}
+                  />
+                ) : (
+                  <Input
+                    id={field.key}
+                    value={answers[field.key] ?? ""}
+                    onChange={(e) => setAnswers({ ...answers, [field.key]: e.target.value })}
+                  />
+                )}
+              </div>
+            ))}
         <div className="space-y-1.5">
           <Label htmlFor="signature">Assinatura do cliente (nome completo)</Label>
           <Input

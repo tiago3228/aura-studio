@@ -35,7 +35,14 @@ export const Route = createFileRoute("/_authenticated/anamneses")({
   component: Anamneses,
 });
 
-type Question = { label: string; type: string; options?: string[]; required?: boolean };
+type Question = {
+  id?: string;
+  label: string;
+  type: string;
+  options?: string[];
+  required?: boolean;
+  follow_up_label?: string;
+};
 type Template = {
   id: string;
   name: string;
@@ -161,7 +168,7 @@ function Anamneses() {
       const { data, error } = await client
         .from("anamnesis_templates")
         .select(
-          "id,name,active,service_id,anamnesis_questions(label,type,options,required,position)",
+          "id,name,active,service_id,anamnesis_questions(id,label,type,options,required,follow_up_label,position)",
         )
         .eq("organization_id", orgId)
         .order("name");
@@ -200,6 +207,7 @@ function Anamneses() {
             type: question.type,
             options: question.options ?? [],
             required: question.required ?? false,
+            follow_up_label: question.follow_up_label ?? "Quais? / Justifique?",
             position,
           })),
         );
@@ -444,7 +452,7 @@ function TemplateEditor({
 }: {
   open: boolean;
   template: Template | null;
-  orgId?: string;
+  orgId: string | undefined;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -502,6 +510,10 @@ function TemplateEditor({
             type: q.type,
             options: q.options ?? [],
             required: q.required ?? false,
+            follow_up_label:
+              q.type === "sim_nao"
+                ? q.follow_up_label?.trim() || "Quais? / Justifique?"
+                : "Quais? / Justifique?",
             position,
           })),
       );
@@ -579,7 +591,15 @@ function TemplateEditor({
                   />
                   <select
                     value={question.type}
-                    onChange={(event) => updateQuestion(index, { type: event.target.value })}
+                    onChange={(event) => {
+                      const type = event.target.value;
+                      updateQuestion(index, {
+                        type,
+                        ...(type === "sim_nao"
+                          ? { follow_up_label: question.follow_up_label || "Quais? / Justifique?" }
+                          : {}),
+                      });
+                    }}
                     className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                   >
                     {questionTypes.map((type) => (
@@ -612,6 +632,21 @@ function TemplateEditor({
                     placeholder="Opções separadas por vírgula"
                   />
                 )}
+                {question.type === "sim_nao" ? (
+                  <div className="mt-2 space-y-1.5 rounded-md border border-dashed border-primary/30 bg-primary-soft/20 p-2">
+                    <Label className="text-xs">Pergunta quando a resposta for Sim</Label>
+                    <Input
+                      value={question.follow_up_label ?? "Quais? / Justifique?"}
+                      onChange={(event) =>
+                        updateQuestion(index, { follow_up_label: event.target.value })
+                      }
+                      placeholder="Quais? / Justifique?"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      O cliente verá um campo de texto com esta pergunta somente se marcar Sim.
+                    </p>
+                  </div>
+                ) : null}
                 <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                   <input
                     type="checkbox"

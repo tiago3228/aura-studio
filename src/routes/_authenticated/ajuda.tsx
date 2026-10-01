@@ -323,6 +323,8 @@ const GUIDES: Guide[] = [
       "Use Importar modelos do Estetic para adicionar, sem duplicação, os modelos de Depilação a Laser, Corporal, Preenchimento/Bioestimulador/Fios de PDO, Botox e Limpeza de pele/Microagulhamento/Peelings.",
       "Clique em Editar para alterar nome, status, perguntas, tipo de resposta e obrigatoriedade.",
       "Use Nova pergunta para personalizar a ficha da clínica; opções de múltipla escolha devem ser separadas por vírgula.",
+      "Ao escolher o tipo Sim/não, configure a pergunta complementar exibida quando a resposta for Sim. O padrão é Quais? / Justifique?, com campo de texto automático.",
+      "Na ficha do cliente, quando a pessoa marcar Sim, o campo complementar aparece imediatamente; ao marcar Não, ele permanece oculto.",
       "Na ficha do cliente, a equipe poderá registrar a resposta vinculada ao modelo selecionado.",
     ],
     tips: [
