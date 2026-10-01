@@ -109,6 +109,8 @@ const GUIDES: Guide[] = [
       "Abra Ajustes no menu lateral e selecione Horários da clínica.",
       "Na Grade semanal, use o controle de cada dia para marcar a clínica como Aberto ou Fechado.",
       "Quando o dia estiver aberto, informe o horário de abertura e fechamento.",
+      "Use Horário de atendimentos padrão para aplicar a mesma abertura e fechamento a todos os dias.",
+      "Desligue Padronizar atendimentos quando quiser ajustar a abertura ou o fechamento de cada dia individualmente.",
       "Ative Intervalo para configurar o início e o fim do almoço ou de uma pausa da clínica.",
       "Use Horário de almoço padrão quando a clínica tiver o mesmo intervalo todos os dias; alterar o padrão atualiza os horários de todos os dias.",
       "Para uma exceção, desative o almoço no próprio dia. Para horários diferentes por dia, desligue Padronizar horário e edite cada dia individualmente.",

@@ -95,6 +95,7 @@ function Horarios() {
   const org = membership?.organization;
   const canEdit = hasPermission(membership, "agenda.disponibilidade");
   const [hours, setHours] = useState<Record<string, ClinicDay>>(() => normalizeHours(null));
+  const [scheduleStandardized, setScheduleStandardized] = useState(false);
   const [lunchStandardized, setLunchStandardized] = useState(false);
   const [saving, setSaving] = useState(false);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
@@ -108,11 +109,13 @@ function Horarios() {
           ? (org.business_hours as Record<string, unknown>)
           : {};
       setHours(normalizeHours(businessHours));
+      setScheduleStandardized(businessHours["_scheduleStandardized"] === true);
       setLunchStandardized(businessHours["_lunchStandardized"] === true);
     }
   }, [org]);
 
   const openDays = useMemo(() => DAYS.filter(([id]) => !hours[id]?.closed).length, [hours]);
+  const scheduleReference = hours["1"] ?? hours["2"] ?? DEFAULT_DAY;
   const lunchReference = hours["1"] ?? hours["2"] ?? DEFAULT_DAY;
 
   if (isLoading || !org) return <SkeletonCard />;
@@ -120,14 +123,28 @@ function Horarios() {
   function updateDay(id: string, patch: Partial<ClinicDay>) {
     setHours((current) => {
       const next = { ...current };
+      const isScheduleTimeChange = "start" in patch || "end" in patch;
       const isLunchTimeChange = "lunchStart" in patch || "lunchEnd" in patch;
       const targetIds =
-        lunchStandardized && isLunchTimeChange ? DAYS.map(([dayId]) => dayId) : [id];
+        scheduleStandardized && isScheduleTimeChange
+          ? DAYS.map(([dayId]) => dayId)
+          : lunchStandardized && isLunchTimeChange
+            ? DAYS.map(([dayId]) => dayId)
+            : [id];
       targetIds.forEach((dayId) => {
         next[dayId] = { ...DEFAULT_DAY, ...current[dayId], ...patch };
       });
       return next;
     });
+  }
+
+  function toggleScheduleStandardized(enabled: boolean) {
+    setScheduleStandardized(enabled);
+    if (!enabled) return;
+    const { start, end } = scheduleReference;
+    setHours((current) =>
+      Object.fromEntries(DAYS.map(([id]) => [id, { ...DEFAULT_DAY, ...current[id], start, end }])),
+    );
   }
 
   function toggleLunchStandardized(enabled: boolean) {
@@ -177,7 +194,13 @@ function Horarios() {
     setSaving(true);
     const { error } = await supabase
       .from("organizations")
-      .update({ business_hours: { ...hours, _lunchStandardized: lunchStandardized } })
+      .update({
+        business_hours: {
+          ...hours,
+          _scheduleStandardized: scheduleStandardized,
+          _lunchStandardized: lunchStandardized,
+        },
+      })
       .eq("id", org.id);
     setSaving(false);
     if (error) toast.error(error.message);
@@ -236,6 +259,48 @@ function Horarios() {
           >
             <Copy className="size-3.5" /> Copiar segunda para dias úteis
           </Button>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-dashed border-primary/40 bg-primary-soft/20 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/15 text-primary">
+                <Clock3 className="size-4" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold">Horário de atendimentos padrão</p>
+                <p className="mt-1 max-w-xl text-xs text-muted-foreground">
+                  Ative para usar a mesma abertura e fechamento em todos os dias. Desligue a
+                  padronização para editar os horários de cada dia individualmente.
+                </p>
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-xs font-semibold">
+              <Switch
+                checked={scheduleStandardized}
+                disabled={!canEdit}
+                onCheckedChange={toggleScheduleStandardized}
+                aria-label="Usar horário de atendimentos padrão"
+              />
+              Padronizar atendimentos
+            </label>
+          </div>
+          {scheduleStandardized ? (
+            <div className="mt-3 grid max-w-md grid-cols-2 gap-3">
+              <TimeField
+                label="Atendimentos começam"
+                value={scheduleReference.start}
+                disabled={!canEdit}
+                onChange={(value) => updateDay("1", { start: value })}
+              />
+              <TimeField
+                label="Atendimentos terminam"
+                value={scheduleReference.end}
+                disabled={!canEdit}
+                onChange={(value) => updateDay("1", { end: value })}
+              />
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-4 rounded-xl border border-dashed border-secondary/40 bg-secondary/5 p-4">
