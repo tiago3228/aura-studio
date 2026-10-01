@@ -5,6 +5,7 @@ import {
   Loader2,
   Plus,
   CalendarClock,
+  ChevronDown,
   ListChecks,
   ShieldCheck,
   Link2,
@@ -762,6 +763,7 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [credentialError, setCredentialError] = useState<string | null>(null);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [accessExpanded, setAccessExpanded] = useState(false);
   const [form, setForm] = useState({
     name: "",
     specialty: "",
@@ -856,6 +858,7 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
       const message = rawMessage.toLowerCase().includes("weak")
         ? "Não foi possível criar o acesso com essa senha."
         : rawMessage;
+      setAccessExpanded(true);
       setCredentialError(message);
       toast.error(message);
     } finally {
@@ -899,55 +902,76 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
           </div>
         </div>
         <div className="rounded-xl border border-border bg-muted/30 p-3">
-          <p className="text-sm font-semibold">Acesso do profissional (opcional)</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Crie um usuário e uma senha temporária para ele entrar sem depender de e-mail.
-          </p>
-          <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="pro-login-username">Usuário</Label>
-              <Input
-                id="pro-login-username"
-                value={form.login_username}
-                onChange={(e) => {
-                  setCredentialError(null);
-                  setForm({ ...form, login_username: e.target.value });
-                }}
-                placeholder="atena"
-                minLength={3}
-                autoCapitalize="none"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="pro-login-password">Senha temporária</Label>
-              <div className="relative">
-                <Input
-                  id="pro-login-password"
-                  type={showLoginPassword ? "text" : "password"}
-                  value={form.login_password}
-                  onChange={(e) => {
-                    setCredentialError(null);
-                    setForm({ ...form, login_password: e.target.value });
-                  }}
-                  placeholder="Senha temporária"
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  aria-label={showLoginPassword ? "Ocultar senha" : "Mostrar senha"}
-                  onClick={() => setShowLoginPassword((visible) => !visible)}
-                  className="absolute inset-y-0 right-0 grid w-10 place-items-center text-muted-foreground hover:text-foreground"
-                >
-                  {showLoginPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-3 text-left"
+            onClick={() => setAccessExpanded((expanded) => !expanded)}
+            aria-expanded={accessExpanded}
+            aria-controls="professional-access-fields"
+          >
+            <span>
+              <span className="block text-sm font-semibold">Acesso do profissional (opcional)</span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Crie usuário e senha temporária para o profissional entrar no Aura.
+              </span>
+            </span>
+            <ChevronDown
+              className={`size-4 shrink-0 text-muted-foreground transition-transform ${accessExpanded ? "rotate-180" : ""}`}
+            />
+          </button>
+          {accessExpanded ? (
+            <div id="professional-access-fields">
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="pro-login-username">Usuário</Label>
+                  <Input
+                    id="pro-login-username"
+                    value={form.login_username}
+                    onChange={(e) => {
+                      setCredentialError(null);
+                      setForm({ ...form, login_username: e.target.value });
+                    }}
+                    placeholder="atena"
+                    minLength={3}
+                    autoCapitalize="none"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="pro-login-password">Senha temporária</Label>
+                  <div className="relative">
+                    <Input
+                      id="pro-login-password"
+                      type={showLoginPassword ? "text" : "password"}
+                      value={form.login_password}
+                      onChange={(e) => {
+                        setCredentialError(null);
+                        setForm({ ...form, login_password: e.target.value });
+                      }}
+                      placeholder="Senha temporária"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      aria-label={showLoginPassword ? "Ocultar senha" : "Mostrar senha"}
+                      onClick={() => setShowLoginPassword((visible) => !visible)}
+                      className="absolute inset-y-0 right-0 grid w-10 place-items-center text-muted-foreground hover:text-foreground"
+                    >
+                      {showLoginPassword ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                A senha não fica salva no cadastro; o Supabase armazena somente o hash seguro.
+              </p>
+              {credentialError ? (
+                <p className="mt-2 text-sm font-medium text-destructive">{credentialError}</p>
+              ) : null}
             </div>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            A senha não fica salva no cadastro; o Supabase armazena somente o hash seguro.
-          </p>
-          {credentialError ? (
-            <p className="mt-2 text-sm font-medium text-destructive">{credentialError}</p>
           ) : null}
         </div>
         <div className="space-y-1.5">
