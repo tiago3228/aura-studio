@@ -81,12 +81,42 @@ const NAV: NavItem[] = [
   },
   { to: "/crm", label: "CRM", area: "crm", icon: BarChart3, mobile: true },
   { to: "/equipe", label: "Equipe", area: "equipe", icon: UserCog },
-  { to: "/financeiro", label: "Financeiro", area: "financeiro", icon: Wallet, mobile: true },
-  { to: "/pagamentos", label: "Pagamentos", area: "financeiro", icon: CreditCard, mobile: true },
-  { to: "/stone", label: "Stone sandbox", area: "financeiro", icon: CreditCard, mobile: true },
-  { to: "/relatorios", label: "Relatórios avançados", area: "financeiro", icon: BarChart3 },
-  { to: "/calculadora", label: "Calculadora", area: "financeiro", icon: Calculator, mobile: true },
-  { to: "/comissoes", label: "Comissões", area: "comissoes", icon: Percent },
+  {
+    to: "/pagamentos",
+    label: "Pagamentos",
+    area: "financeiro",
+    icon: CreditCard,
+    mobile: true,
+    children: [
+      {
+        to: "/pagamentos",
+        label: "Central de pagamentos",
+        area: "financeiro",
+        icon: CreditCard,
+        mobile: true,
+      },
+      {
+        to: "/financeiro",
+        label: "Fluxo financeiro",
+        area: "financeiro",
+        icon: Wallet,
+        mobile: true,
+      },
+      {
+        to: "/calculadora",
+        label: "Calculadora",
+        area: "financeiro",
+        icon: Calculator,
+        mobile: true,
+      },
+      { to: "/gateways", label: "Integrações de pagamento", area: "financeiro", icon: CreditCard },
+      { to: "/stone", label: "Stone sandbox", area: "financeiro", icon: CreditCard },
+      { to: "/pix-admin", label: "PIX", area: "financeiro", icon: CreditCard },
+      { to: "/comissoes", label: "Comissões", area: "financeiro", icon: Percent },
+      { to: "/relatorios", label: "Relatórios financeiros", area: "financeiro", icon: BarChart3 },
+      { to: "/assinatura", label: "Assinatura do Aura", area: "financeiro", icon: CreditCard },
+    ],
+  },
   { to: "/contratos", label: "Contratos", area: "contratos", icon: FileSignature, mobile: true },
   {
     to: "/assistente",
@@ -111,7 +141,6 @@ const NAV: NavItem[] = [
       },
     ],
   },
-  { to: "/assinatura", label: "Assinatura", area: "assinatura", icon: CreditCard },
   {
     to: "/configuracoes",
     label: "Ajustes",
@@ -126,12 +155,6 @@ const NAV: NavItem[] = [
         icon: Clock3,
       },
       { to: "/globalizacao", label: "Idioma e moeda", area: "configuracoes", icon: Globe2 },
-      {
-        to: "/gateways",
-        label: "Integrações de pagamento",
-        area: "financeiro",
-        icon: CreditCard,
-      },
       {
         to: "/seguranca",
         label: "Segurança e auditoria",
@@ -162,6 +185,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { language, setLanguage, navLabel, t } = useLanguage();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => ({
     "/assistente": pathname.startsWith("/assistente") || pathname.startsWith("/marketing"),
+    "/pagamentos": [
+      "/pagamentos",
+      "/financeiro",
+      "/calculadora",
+      "/gateways",
+      "/stone",
+      "/comissoes",
+      "/relatorios",
+      "/pix-admin",
+      "/assinatura",
+    ].some((path) => pathname.startsWith(path)),
     "/configuracoes": [
       "/configuracoes",
       "/horarios",
