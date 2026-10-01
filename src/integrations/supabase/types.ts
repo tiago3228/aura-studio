@@ -1792,6 +1792,7 @@ export type Database = {
       contract_templates: {
         Row: {
           active: boolean
+          code: number | null
           content: string
           created_at: string
           created_by: string | null
@@ -1805,6 +1806,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          code?: number | null
           content: string
           created_at?: string
           created_by?: string | null
@@ -1818,6 +1820,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          code?: number | null
           content?: string
           created_at?: string
           created_by?: string | null
@@ -3848,6 +3851,7 @@ export type Database = {
           display_name: string
           environment: string
           id: string
+          metadata: Json
           organization_id: string
           provider: string
           public_key: string | null
@@ -3860,6 +3864,7 @@ export type Database = {
           display_name: string
           environment?: string
           id?: string
+          metadata?: Json
           organization_id: string
           provider: string
           public_key?: string | null
@@ -3872,6 +3877,7 @@ export type Database = {
           display_name?: string
           environment?: string
           id?: string
+          metadata?: Json
           organization_id?: string
           provider?: string
           public_key?: string | null
