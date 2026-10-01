@@ -312,6 +312,23 @@ const GUIDES: Guide[] = [
     ],
   },
   {
+    title: "Modelos de anamnese",
+    area: "Cadastros",
+    summary:
+      "Crie fichas clínicas reutilizáveis e importe cinco modelos iniciais inspirados na estrutura do Estetic.",
+    steps: [
+      "Abra Cadastros e clique em Modelos de anamnese.",
+      "Use Importar modelos do Estetic para adicionar, sem duplicação, os modelos de Depilação a Laser, Corporal, Preenchimento/Bioestimulador/Fios de PDO, Botox e Limpeza de pele/Microagulhamento/Peelings.",
+      "Clique em Editar para alterar nome, status, perguntas, tipo de resposta e obrigatoriedade.",
+      "Use Nova pergunta para personalizar a ficha da clínica; opções de múltipla escolha devem ser separadas por vírgula.",
+      "Na ficha do cliente, a equipe poderá registrar a resposta vinculada ao modelo selecionado.",
+    ],
+    tips: [
+      "Excluir modelos é permitido somente ao Administrador Master/owner e não apaga respostas já registradas.",
+      "Revise perguntas sobre alergias, medicamentos, gestação e contraindicações com o responsável clínico da clínica.",
+    ],
+  },
+  {
     title: "Assistente IA",
     area: "Inteligência",
     summary: "Faça perguntas sobre os dados da clínica e receba respostas para apoiar decisões.",

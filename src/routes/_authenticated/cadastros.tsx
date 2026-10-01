@@ -60,10 +60,10 @@ const cards = [
   {
     title: "Modelos de anamnese",
     description: "Estrutura para organizar perguntas e respostas clínicas.",
-    to: "/clientes",
+    to: "/anamneses",
     icon: ClipboardList,
     tone: "text-gold bg-gold-soft",
-    available: false,
+    available: true,
   },
   {
     title: "Modelos de mensagens",
