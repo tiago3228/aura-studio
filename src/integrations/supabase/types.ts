@@ -14,6 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      acceptance_terms: {
+        Row: {
+          active: boolean
+          content: string
+          content_hash: string
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          published_at: string | null
+          slug: string
+          summary: string | null
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          active?: boolean
+          content: string
+          content_hash: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          published_at?: string | null
+          slug: string
+          summary?: string | null
+          title: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          active?: boolean
+          content?: string
+          content_hash?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          published_at?: string | null
+          slug?: string
+          summary?: string | null
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acceptance_terms_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounts_payable: {
         Row: {
           amount: number
@@ -1058,6 +1114,112 @@ export type Database = {
           },
         ]
       }
+      client_contracts: {
+        Row: {
+          cancelled_at: string | null
+          client_id: string
+          content: string
+          created_at: string
+          created_by: string | null
+          document_hash: string | null
+          document_url: string | null
+          expires_at: string | null
+          id: string
+          organization_id: string
+          rejected_at: string | null
+          rejection_reason: string | null
+          sent_at: string | null
+          signature_data: string | null
+          signature_hash: string | null
+          signature_method: string | null
+          signed_at: string | null
+          signed_by_document: string | null
+          signed_by_name: string | null
+          status: string
+          template_id: string | null
+          template_version: number | null
+          title: string
+          updated_at: string
+          viewed_at: string | null
+        }
+        Insert: {
+          cancelled_at?: string | null
+          client_id: string
+          content: string
+          created_at?: string
+          created_by?: string | null
+          document_hash?: string | null
+          document_url?: string | null
+          expires_at?: string | null
+          id?: string
+          organization_id: string
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          sent_at?: string | null
+          signature_data?: string | null
+          signature_hash?: string | null
+          signature_method?: string | null
+          signed_at?: string | null
+          signed_by_document?: string | null
+          signed_by_name?: string | null
+          status?: string
+          template_id?: string | null
+          template_version?: number | null
+          title: string
+          updated_at?: string
+          viewed_at?: string | null
+        }
+        Update: {
+          cancelled_at?: string | null
+          client_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          document_hash?: string | null
+          document_url?: string | null
+          expires_at?: string | null
+          id?: string
+          organization_id?: string
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          sent_at?: string | null
+          signature_data?: string | null
+          signature_hash?: string | null
+          signature_method?: string | null
+          signed_at?: string | null
+          signed_by_document?: string | null
+          signed_by_name?: string | null
+          status?: string
+          template_id?: string | null
+          template_version?: number | null
+          title?: string
+          updated_at?: string
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contracts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_files: {
         Row: {
           appointment_id: string | null
@@ -1337,6 +1499,430 @@ export type Database = {
             columns: ["sale_id"]
             isOneToOne: false
             referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_rules: {
+        Row: {
+          active: boolean
+          commission_type: string
+          commission_value: number
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          effective_until: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          package_id: string | null
+          priority: number
+          professional_id: string | null
+          service_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          commission_type: string
+          commission_value: number
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          package_id?: string | null
+          priority?: number
+          professional_id?: string | null
+          service_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          commission_type?: string
+          commission_value?: number
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          package_id?: string | null
+          priority?: number
+          professional_id?: string | null
+          service_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_rules_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_rules_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_rules_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_settlement_items: {
+        Row: {
+          commission_entry_id: string
+          created_at: string
+          deductions: number
+          gross_amount: number
+          id: string
+          net_amount: number
+          notes: string | null
+          organization_id: string
+          settlement_id: string
+        }
+        Insert: {
+          commission_entry_id: string
+          created_at?: string
+          deductions?: number
+          gross_amount?: number
+          id?: string
+          net_amount?: number
+          notes?: string | null
+          organization_id: string
+          settlement_id: string
+        }
+        Update: {
+          commission_entry_id?: string
+          created_at?: string
+          deductions?: number
+          gross_amount?: number
+          id?: string
+          net_amount?: number
+          notes?: string | null
+          organization_id?: string
+          settlement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_settlement_items_commission_entry_id_fkey"
+            columns: ["commission_entry_id"]
+            isOneToOne: true
+            referencedRelation: "commission_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_settlement_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_settlement_items_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "commission_settlements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_settlements: {
+        Row: {
+          adjustments: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          deductions: number
+          gross_amount: number
+          id: string
+          location_id: string | null
+          net_amount: number
+          notes: string | null
+          organization_id: string
+          paid_at: string | null
+          payout_method: string | null
+          payout_reference: string | null
+          period_end: string
+          period_start: string
+          professional_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          adjustments?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          deductions?: number
+          gross_amount?: number
+          id?: string
+          location_id?: string | null
+          net_amount?: number
+          notes?: string | null
+          organization_id: string
+          paid_at?: string | null
+          payout_method?: string | null
+          payout_reference?: string | null
+          period_end: string
+          period_start: string
+          professional_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          adjustments?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          deductions?: number
+          gross_amount?: number
+          id?: string
+          location_id?: string | null
+          net_amount?: number
+          notes?: string | null
+          organization_id?: string
+          paid_at?: string | null
+          payout_method?: string | null
+          payout_reference?: string | null
+          period_end?: string
+          period_start?: string
+          professional_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_settlements_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "organization_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_settlements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_settlements_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_events: {
+        Row: {
+          actor_name: string | null
+          actor_user_id: string | null
+          contract_id: string
+          created_at: string
+          event_type: string
+          from_status: string | null
+          id: string
+          metadata: Json
+          organization_id: string
+          to_status: string | null
+        }
+        Insert: {
+          actor_name?: string | null
+          actor_user_id?: string | null
+          contract_id: string
+          created_at?: string
+          event_type: string
+          from_status?: string | null
+          id?: string
+          metadata?: Json
+          organization_id: string
+          to_status?: string | null
+        }
+        Update: {
+          actor_name?: string | null
+          actor_user_id?: string | null
+          contract_id?: string
+          created_at?: string
+          event_type?: string
+          from_status?: string | null
+          id?: string
+          metadata?: Json
+          organization_id?: string
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_events_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "client_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_templates: {
+        Row: {
+          active: boolean
+          content: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+          updated_at: string
+          variables: Json
+          version: number
+        }
+        Insert: {
+          active?: boolean
+          content: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          updated_at?: string
+          variables?: Json
+          version?: number
+        }
+        Update: {
+          active?: boolean
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          updated_at?: string
+          variables?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_term_acceptances: {
+        Row: {
+          acceptance_token_hash: string | null
+          accepted: boolean
+          accepted_at: string | null
+          contract_id: string
+          created_at: string
+          evidence_storage_path: string | null
+          id: string
+          ip_hash: string | null
+          organization_id: string
+          revoked_at: string | null
+          signer_document: string | null
+          signer_email: string | null
+          signer_name: string | null
+          signer_phone: string | null
+          term_content_hash: string
+          term_id: string
+          term_version: number
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          acceptance_token_hash?: string | null
+          accepted?: boolean
+          accepted_at?: string | null
+          contract_id: string
+          created_at?: string
+          evidence_storage_path?: string | null
+          id?: string
+          ip_hash?: string | null
+          organization_id: string
+          revoked_at?: string | null
+          signer_document?: string | null
+          signer_email?: string | null
+          signer_name?: string | null
+          signer_phone?: string | null
+          term_content_hash: string
+          term_id: string
+          term_version: number
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          acceptance_token_hash?: string | null
+          accepted?: boolean
+          accepted_at?: string | null
+          contract_id?: string
+          created_at?: string
+          evidence_storage_path?: string | null
+          id?: string
+          ip_hash?: string | null
+          organization_id?: string
+          revoked_at?: string | null
+          signer_document?: string | null
+          signer_email?: string | null
+          signer_name?: string | null
+          signer_phone?: string | null
+          term_content_hash?: string
+          term_id?: string
+          term_version?: number
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_term_acceptances_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "client_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_term_acceptances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_term_acceptances_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "acceptance_terms"
             referencedColumns: ["id"]
           },
         ]
@@ -1926,36 +2512,246 @@ export type Database = {
           },
         ]
       }
+      inventory_lot_movements: {
+        Row: {
+          appointment_id: string | null
+          id: string
+          inventory_movement_id: string | null
+          lot_id: string
+          metadata: Json
+          movement_type: string
+          occurred_at: string
+          organization_id: string
+          performed_by: string | null
+          product_id: string
+          quantity: number
+          quantity_after: number
+          quantity_before: number
+          reason: string | null
+          sale_id: string | null
+          total_cost: number
+          treatment_record_id: string | null
+          unit_cost: number
+        }
+        Insert: {
+          appointment_id?: string | null
+          id?: string
+          inventory_movement_id?: string | null
+          lot_id: string
+          metadata?: Json
+          movement_type: string
+          occurred_at?: string
+          organization_id: string
+          performed_by?: string | null
+          product_id: string
+          quantity: number
+          quantity_after: number
+          quantity_before: number
+          reason?: string | null
+          sale_id?: string | null
+          total_cost?: number
+          treatment_record_id?: string | null
+          unit_cost?: number
+        }
+        Update: {
+          appointment_id?: string | null
+          id?: string
+          inventory_movement_id?: string | null
+          lot_id?: string
+          metadata?: Json
+          movement_type?: string
+          occurred_at?: string
+          organization_id?: string
+          performed_by?: string | null
+          product_id?: string
+          quantity?: number
+          quantity_after?: number
+          quantity_before?: number
+          reason?: string | null
+          sale_id?: string | null
+          total_cost?: number
+          treatment_record_id?: string | null
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_lot_movements_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_lot_movements_inventory_movement_id_fkey"
+            columns: ["inventory_movement_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_lot_movements_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_lot_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_lot_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_lot_movements_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_lot_movements_treatment_record_id_fkey"
+            columns: ["treatment_record_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_lots: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          location_id: string | null
+          lot_number: string
+          manufactured_at: string | null
+          manufacturer: string | null
+          metadata: Json
+          notes: string | null
+          organization_id: string
+          product_id: string
+          quantity_available: number
+          quantity_received: number
+          received_at: string
+          status: string
+          supplier_document: string | null
+          supplier_name: string | null
+          unit_cost: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          location_id?: string | null
+          lot_number: string
+          manufactured_at?: string | null
+          manufacturer?: string | null
+          metadata?: Json
+          notes?: string | null
+          organization_id: string
+          product_id: string
+          quantity_available?: number
+          quantity_received?: number
+          received_at?: string
+          status?: string
+          supplier_document?: string | null
+          supplier_name?: string | null
+          unit_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          location_id?: string | null
+          lot_number?: string
+          manufactured_at?: string | null
+          manufacturer?: string | null
+          metadata?: Json
+          notes?: string | null
+          organization_id?: string
+          product_id?: string
+          quantity_available?: number
+          quantity_received?: number
+          received_at?: string
+          status?: string
+          supplier_document?: string | null
+          supplier_name?: string | null
+          unit_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_lots_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "organization_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_lots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_lots_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_movements: {
         Row: {
           appointment_id: string | null
           created_at: string
           id: string
+          lot_id: string | null
           note: string | null
           organization_id: string
           product_id: string
           quantity: number
           type: Database["public"]["Enums"]["movement_type"]
+          unit_cost: number | null
         }
         Insert: {
           appointment_id?: string | null
           created_at?: string
           id?: string
+          lot_id?: string | null
           note?: string | null
           organization_id: string
           product_id: string
           quantity?: number
           type?: Database["public"]["Enums"]["movement_type"]
+          unit_cost?: number | null
         }
         Update: {
           appointment_id?: string | null
           created_at?: string
           id?: string
+          lot_id?: string | null
           note?: string | null
           organization_id?: string
           product_id?: string
           quantity?: number
           type?: Database["public"]["Enums"]["movement_type"]
+          unit_cost?: number | null
         }
         Relationships: [
           {
@@ -1963,6 +2759,13 @@ export type Database = {
             columns: ["appointment_id"]
             isOneToOne: false
             referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_lot_fk"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_lots"
             referencedColumns: ["id"]
           },
           {
@@ -1977,6 +2780,90 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mercadopago_pix_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          expires_at: string | null
+          external_reference: string
+          id: string
+          organization_id: string
+          paid_at: string | null
+          payer_email: string
+          period_end: string | null
+          period_start: string | null
+          provider: string
+          provider_payment_id: string
+          qr_code: string | null
+          qr_code_base64: string | null
+          status: string
+          status_detail: string | null
+          subscription_id: string | null
+          ticket_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          expires_at?: string | null
+          external_reference: string
+          id?: string
+          organization_id: string
+          paid_at?: string | null
+          payer_email: string
+          period_end?: string | null
+          period_start?: string | null
+          provider?: string
+          provider_payment_id: string
+          qr_code?: string | null
+          qr_code_base64?: string | null
+          status?: string
+          status_detail?: string | null
+          subscription_id?: string | null
+          ticket_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          expires_at?: string | null
+          external_reference?: string
+          id?: string
+          organization_id?: string
+          paid_at?: string | null
+          payer_email?: string
+          period_end?: string | null
+          period_start?: string | null
+          provider?: string
+          provider_payment_id?: string
+          qr_code?: string | null
+          qr_code_base64?: string | null
+          status?: string
+          status_detail?: string | null
+          subscription_id?: string | null
+          ticket_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mercadopago_pix_payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercadopago_pix_payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
             referencedColumns: ["id"]
           },
         ]
@@ -2120,6 +3007,127 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      online_booking_requests: {
+        Row: {
+          appointment_id: string | null
+          client_id: string | null
+          consent_at: string | null
+          consent_data_processing: boolean
+          created_at: string
+          guest_email: string | null
+          guest_name: string
+          guest_phone: string | null
+          id: string
+          idempotency_key: string
+          notes: string | null
+          organization_id: string
+          package_id: string | null
+          professional_id: string | null
+          rejection_reason: string | null
+          requested_ends_at: string
+          requested_starts_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          service_id: string | null
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          client_id?: string | null
+          consent_at?: string | null
+          consent_data_processing?: boolean
+          created_at?: string
+          guest_email?: string | null
+          guest_name: string
+          guest_phone?: string | null
+          id?: string
+          idempotency_key: string
+          notes?: string | null
+          organization_id: string
+          package_id?: string | null
+          professional_id?: string | null
+          rejection_reason?: string | null
+          requested_ends_at: string
+          requested_starts_at: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          service_id?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          client_id?: string | null
+          consent_at?: string | null
+          consent_data_processing?: boolean
+          created_at?: string
+          guest_email?: string | null
+          guest_name?: string
+          guest_phone?: string | null
+          id?: string
+          idempotency_key?: string
+          notes?: string | null
+          organization_id?: string
+          package_id?: string | null
+          professional_id?: string | null
+          rejection_reason?: string | null
+          requested_ends_at?: string
+          requested_starts_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          service_id?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "online_booking_requests_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_booking_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_booking_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_booking_requests_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_booking_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_booking_requests_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
             referencedColumns: ["id"]
           },
         ]
@@ -2583,6 +3591,128 @@ export type Database = {
           },
         ]
       }
+      patient_portal_access: {
+        Row: {
+          active: boolean
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          last_accessed_at: string | null
+          organization_id: string
+          revoked_at: string | null
+          token_expires_at: string
+          token_hash: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_accessed_at?: string | null
+          organization_id: string
+          revoked_at?: string | null
+          token_expires_at: string
+          token_hash: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_accessed_at?: string | null
+          organization_id?: string
+          revoked_at?: string | null
+          token_expires_at?: string
+          token_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_portal_access_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_portal_access_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_portal_access_log: {
+        Row: {
+          action: string
+          appointment_id: string | null
+          client_id: string
+          created_at: string
+          id: string
+          ip_hash: string | null
+          organization_id: string
+          portal_access_id: string | null
+          user_agent_hash: string | null
+        }
+        Insert: {
+          action: string
+          appointment_id?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          organization_id: string
+          portal_access_id?: string | null
+          user_agent_hash?: string | null
+        }
+        Update: {
+          action?: string
+          appointment_id?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          organization_id?: string
+          portal_access_id?: string | null
+          user_agent_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_portal_access_log_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_portal_access_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_portal_access_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_portal_access_log_portal_access_id_fkey"
+            columns: ["portal_access_id"]
+            isOneToOne: false
+            referencedRelation: "patient_portal_access"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_charges: {
         Row: {
           amount: number
@@ -2855,6 +3985,164 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_split_batches: {
+        Row: {
+          charge_id: string
+          created_at: string
+          created_by: string | null
+          external_transfer_id: string | null
+          failure_reason: string | null
+          gateway_fee: number
+          gross_amount: number
+          id: string
+          metadata: Json
+          net_amount: number
+          organization_id: string
+          payment_transaction_id: string | null
+          processed_at: string | null
+          provider: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          charge_id: string
+          created_at?: string
+          created_by?: string | null
+          external_transfer_id?: string | null
+          failure_reason?: string | null
+          gateway_fee?: number
+          gross_amount: number
+          id?: string
+          metadata?: Json
+          net_amount?: number
+          organization_id: string
+          payment_transaction_id?: string | null
+          processed_at?: string | null
+          provider?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          charge_id?: string
+          created_at?: string
+          created_by?: string | null
+          external_transfer_id?: string | null
+          failure_reason?: string | null
+          gateway_fee?: number
+          gross_amount?: number
+          id?: string
+          metadata?: Json
+          net_amount?: number
+          organization_id?: string
+          payment_transaction_id?: string | null
+          processed_at?: string | null
+          provider?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_split_batches_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: true
+            referencedRelation: "payment_charges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_split_batches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_split_batches_payment_transaction_id_fkey"
+            columns: ["payment_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "payment_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_split_items: {
+        Row: {
+          amount: number
+          batch_id: string
+          created_at: string
+          destination_reference: string | null
+          external_transfer_id: string | null
+          failure_reason: string | null
+          id: string
+          metadata: Json
+          organization_id: string
+          paid_at: string | null
+          percentage: number
+          professional_id: string | null
+          recipient_name: string | null
+          recipient_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          batch_id: string
+          created_at?: string
+          destination_reference?: string | null
+          external_transfer_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          metadata?: Json
+          organization_id: string
+          paid_at?: string | null
+          percentage?: number
+          professional_id?: string | null
+          recipient_name?: string | null
+          recipient_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          batch_id?: string
+          created_at?: string
+          destination_reference?: string | null
+          external_transfer_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          metadata?: Json
+          organization_id?: string
+          paid_at?: string | null
+          percentage?: number
+          professional_id?: string | null
+          recipient_name?: string | null
+          recipient_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_split_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "payment_split_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_split_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_split_items_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -3875,6 +5163,130 @@ export type Database = {
           },
         ]
       }
+      signature_verifications: {
+        Row: {
+          acceptance_id: string | null
+          biometric_template_hash: string | null
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          document_hash: string | null
+          evidence_storage_path: string | null
+          expires_at: string | null
+          failure_code: string | null
+          failure_reason: string | null
+          id: string
+          ip_hash: string | null
+          liveness_score: number | null
+          match_score: number | null
+          metadata: Json
+          method: string
+          organization_id: string
+          processed_at: string | null
+          provider: string | null
+          provider_reference: string | null
+          request_id: string | null
+          requested_at: string
+          signature_hash: string | null
+          signer_document: string | null
+          signer_email: string | null
+          signer_name: string | null
+          status: string
+          updated_at: string
+          user_agent: string | null
+          verification_type: string
+          verified_at: string | null
+        }
+        Insert: {
+          acceptance_id?: string | null
+          biometric_template_hash?: string | null
+          contract_id: string
+          created_at?: string
+          created_by?: string | null
+          document_hash?: string | null
+          evidence_storage_path?: string | null
+          expires_at?: string | null
+          failure_code?: string | null
+          failure_reason?: string | null
+          id?: string
+          ip_hash?: string | null
+          liveness_score?: number | null
+          match_score?: number | null
+          metadata?: Json
+          method: string
+          organization_id: string
+          processed_at?: string | null
+          provider?: string | null
+          provider_reference?: string | null
+          request_id?: string | null
+          requested_at?: string
+          signature_hash?: string | null
+          signer_document?: string | null
+          signer_email?: string | null
+          signer_name?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+          verification_type: string
+          verified_at?: string | null
+        }
+        Update: {
+          acceptance_id?: string | null
+          biometric_template_hash?: string | null
+          contract_id?: string
+          created_at?: string
+          created_by?: string | null
+          document_hash?: string | null
+          evidence_storage_path?: string | null
+          expires_at?: string | null
+          failure_code?: string | null
+          failure_reason?: string | null
+          id?: string
+          ip_hash?: string | null
+          liveness_score?: number | null
+          match_score?: number | null
+          metadata?: Json
+          method?: string
+          organization_id?: string
+          processed_at?: string | null
+          provider?: string | null
+          provider_reference?: string | null
+          request_id?: string | null
+          requested_at?: string
+          signature_hash?: string | null
+          signer_document?: string | null
+          signer_email?: string | null
+          signer_name?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+          verification_type?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signature_verifications_acceptance_id_fkey"
+            columns: ["acceptance_id"]
+            isOneToOne: false
+            referencedRelation: "contract_term_acceptances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signature_verifications_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "client_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signature_verifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_events: {
         Row: {
           amount: number | null
@@ -4081,6 +5493,401 @@ export type Database = {
           },
         ]
       }
+      whatsapp_contacts: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          last_seen_at: string | null
+          metadata: Json
+          opted_in: boolean
+          opted_in_at: string | null
+          opted_out_at: string | null
+          organization_id: string
+          phone: string
+          profile_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_seen_at?: string | null
+          metadata?: Json
+          opted_in?: boolean
+          opted_in_at?: string | null
+          opted_out_at?: string | null
+          organization_id: string
+          phone: string
+          profile_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_seen_at?: string | null
+          metadata?: Json
+          opted_in?: boolean
+          opted_in_at?: string | null
+          opted_out_at?: string | null
+          organization_id?: string
+          phone?: string
+          profile_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_contacts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_conversations: {
+        Row: {
+          assigned_to: string | null
+          client_id: string | null
+          closed_at: string | null
+          contact_id: string
+          created_at: string
+          id: string
+          integration_id: string | null
+          last_message_at: string | null
+          last_message_preview: string | null
+          metadata: Json
+          organization_id: string
+          status: string
+          unread_count: number
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          client_id?: string | null
+          closed_at?: string | null
+          contact_id: string
+          created_at?: string
+          id?: string
+          integration_id?: string | null
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          metadata?: Json
+          organization_id: string
+          status?: string
+          unread_count?: number
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          client_id?: string | null
+          closed_at?: string | null
+          contact_id?: string
+          created_at?: string
+          id?: string
+          integration_id?: string | null
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          metadata?: Json
+          organization_id?: string
+          status?: string
+          unread_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_conversations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_conversations_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_integrations: {
+        Row: {
+          active: boolean
+          business_account_id: string | null
+          created_at: string
+          created_by: string | null
+          display_name: string
+          id: string
+          last_error: string | null
+          last_error_at: string | null
+          last_webhook_at: string | null
+          metadata: Json
+          organization_id: string
+          phone_number: string | null
+          phone_number_id: string | null
+          provider: string
+          provider_account_id: string | null
+          updated_at: string
+          verified: boolean
+        }
+        Insert: {
+          active?: boolean
+          business_account_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_name?: string
+          id?: string
+          last_error?: string | null
+          last_error_at?: string | null
+          last_webhook_at?: string | null
+          metadata?: Json
+          organization_id: string
+          phone_number?: string | null
+          phone_number_id?: string | null
+          provider?: string
+          provider_account_id?: string | null
+          updated_at?: string
+          verified?: boolean
+        }
+        Update: {
+          active?: boolean
+          business_account_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_name?: string
+          id?: string
+          last_error?: string | null
+          last_error_at?: string | null
+          last_webhook_at?: string | null
+          metadata?: Json
+          organization_id?: string
+          phone_number?: string | null
+          phone_number_id?: string | null
+          provider?: string
+          provider_account_id?: string | null
+          updated_at?: string
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_integrations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_messages: {
+        Row: {
+          body: string | null
+          client_id: string | null
+          contact_id: string
+          conversation_id: string
+          created_at: string
+          delivered_at: string | null
+          delivery_status: string
+          direction: string
+          error_code: string | null
+          error_message: string | null
+          failed_at: string | null
+          id: string
+          integration_id: string | null
+          media_mime_type: string | null
+          media_storage_path: string | null
+          media_url: string | null
+          message_type: string
+          metadata: Json
+          organization_id: string
+          provider_message_id: string | null
+          read_at: string | null
+          reply_to_message_id: string | null
+          sender_user_id: string | null
+          sent_at: string | null
+        }
+        Insert: {
+          body?: string | null
+          client_id?: string | null
+          contact_id: string
+          conversation_id: string
+          created_at?: string
+          delivered_at?: string | null
+          delivery_status?: string
+          direction: string
+          error_code?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          integration_id?: string | null
+          media_mime_type?: string | null
+          media_storage_path?: string | null
+          media_url?: string | null
+          message_type?: string
+          metadata?: Json
+          organization_id: string
+          provider_message_id?: string | null
+          read_at?: string | null
+          reply_to_message_id?: string | null
+          sender_user_id?: string | null
+          sent_at?: string | null
+        }
+        Update: {
+          body?: string | null
+          client_id?: string | null
+          contact_id?: string
+          conversation_id?: string
+          created_at?: string
+          delivered_at?: string | null
+          delivery_status?: string
+          direction?: string
+          error_code?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          integration_id?: string | null
+          media_mime_type?: string | null
+          media_storage_path?: string | null
+          media_url?: string | null
+          message_type?: string
+          metadata?: Json
+          organization_id?: string
+          provider_message_id?: string | null
+          read_at?: string | null
+          reply_to_message_id?: string | null
+          sender_user_id?: string | null
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_webhook_events: {
+        Row: {
+          error_message: string | null
+          event_type: string
+          id: string
+          integration_id: string | null
+          organization_id: string | null
+          payload: Json
+          payload_hash: string
+          processed_at: string | null
+          provider: string
+          provider_event_id: string
+          received_at: string
+          status: string
+        }
+        Insert: {
+          error_message?: string | null
+          event_type: string
+          id?: string
+          integration_id?: string | null
+          organization_id?: string | null
+          payload?: Json
+          payload_hash: string
+          processed_at?: string | null
+          provider: string
+          provider_event_id: string
+          received_at?: string
+          status?: string
+        }
+        Update: {
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          integration_id?: string | null
+          organization_id?: string | null
+          payload?: Json
+          payload_hash?: string
+          processed_at?: string | null
+          provider?: string
+          provider_event_id?: string
+          received_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_webhook_events_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_webhook_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -4206,12 +6013,90 @@ export type Database = {
         }
         Returns: boolean
       }
+      inventory_consume_fefo: {
+        Args: {
+          _appointment_id?: string
+          _organization_id: string
+          _product_id: string
+          _quantity: number
+          _reason?: string
+          _sale_id?: string
+          _treatment_record_id?: string
+        }
+        Returns: {
+          lot_id: string
+          movement_id: string
+          quantity: number
+        }[]
+      }
+      inventory_receive_lot: {
+        Args: {
+          _expires_at?: string
+          _location_id?: string
+          _lot_number: string
+          _organization_id: string
+          _product_id: string
+          _quantity: number
+          _reason?: string
+          _supplier_name?: string
+          _unit_cost?: number
+        }
+        Returns: string
+      }
       is_org_admin: { Args: { _org: string }; Returns: boolean }
       is_org_member: { Args: { _org: string }; Returns: boolean }
       is_platform_admin: { Args: never; Returns: boolean }
       member_has_permission: {
         Args: { _organization_id: string; _permission: string }
         Returns: boolean
+      }
+      patient_portal_cancel_appointment: {
+        Args: { _appointment_id: string; _token_hash: string }
+        Returns: boolean
+      }
+      patient_portal_get_appointments: {
+        Args: { _token_hash: string }
+        Returns: {
+          appointment_id: string
+          ends_at: string
+          notes: string
+          professional_name: string
+          service_name: string
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+        }[]
+      }
+      patient_portal_get_history: {
+        Args: { _token_hash: string }
+        Returns: {
+          appointment_id: string
+          evolution: string
+          next_steps: string
+          performed_at: string
+          procedure: string
+          professional_name: string
+          service_name: string
+          treatment_record_id: string
+        }[]
+      }
+      patient_portal_get_profile: {
+        Args: { _token_hash: string }
+        Returns: {
+          client_id: string
+          email: string
+          name: string
+          organization_id: string
+          phone: string
+        }[]
+      }
+      patient_portal_issue_access: {
+        Args: {
+          _client_id: string
+          _organization_id: string
+          _token_expires_at: string
+          _token_hash: string
+        }
+        Returns: string
       }
       payment_apply_webhook: {
         Args: {
