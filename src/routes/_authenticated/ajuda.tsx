@@ -112,6 +112,7 @@ const GUIDES: Guide[] = [
       "Use Horário de atendimentos padrão para aplicar a mesma abertura e fechamento a todos os dias.",
       "Desligue Padronizar atendimentos quando quiser ajustar a abertura ou o fechamento de cada dia individualmente.",
       "Ative Intervalo para configurar o início e o fim do almoço ou de uma pausa da clínica.",
+      "Use Habilitar horário de almoço em todos os dias para ligar ou desligar o intervalo de uma vez na semana inteira.",
       "Use Horário de almoço padrão quando a clínica tiver o mesmo intervalo todos os dias; alterar o padrão atualiza os horários de todos os dias.",
       "Para uma exceção, desative o almoço no próprio dia. Para horários diferentes por dia, desligue Padronizar horário e edite cada dia individualmente.",
       "Use Copiar segunda para dias úteis quando segunda-feira tiver o mesmo horário de terça a sexta. Depois, ajuste individualmente o que for diferente.",

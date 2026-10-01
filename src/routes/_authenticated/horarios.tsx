@@ -115,6 +115,10 @@ function Horarios() {
   }, [org]);
 
   const openDays = useMemo(() => DAYS.filter(([id]) => !hours[id]?.closed).length, [hours]);
+  const allLunchEnabled = useMemo(
+    () => DAYS.every(([id]) => (hours[id] ?? DEFAULT_DAY).lunchEnabled),
+    [hours],
+  );
   const scheduleReference = hours["1"] ?? hours["2"] ?? DEFAULT_DAY;
   const lunchReference = hours["1"] ?? hours["2"] ?? DEFAULT_DAY;
 
@@ -154,6 +158,14 @@ function Horarios() {
     setHours((current) =>
       Object.fromEntries(
         DAYS.map(([id]) => [id, { ...DEFAULT_DAY, ...current[id], lunchStart, lunchEnd }]),
+      ),
+    );
+  }
+
+  function toggleLunchForAllDays(enabled: boolean) {
+    setHours((current) =>
+      Object.fromEntries(
+        DAYS.map(([id]) => [id, { ...DEFAULT_DAY, ...current[id], lunchEnabled: enabled }]),
       ),
     );
   }
@@ -344,6 +356,15 @@ function Horarios() {
               />
             </div>
           ) : null}
+          <label className="mt-3 flex items-center gap-2 text-xs font-semibold">
+            <Switch
+              checked={allLunchEnabled}
+              disabled={!canEdit}
+              onCheckedChange={toggleLunchForAllDays}
+              aria-label="Habilitar horário de almoço em todos os dias"
+            />
+            Habilitar horário de almoço em todos os dias
+          </label>
         </div>
 
         <div className="mt-5 space-y-3">
