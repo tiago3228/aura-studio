@@ -32,7 +32,6 @@ export type Database = {
         }
         Insert: {
           active?: boolean
-          code?: number | null
           content: string
           content_hash: string
           created_at?: string
@@ -48,7 +47,6 @@ export type Database = {
         }
         Update: {
           active?: boolean
-          code?: number | null
           content?: string
           content_hash?: string
           created_at?: string
@@ -1808,6 +1806,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          code?: number | null
           content: string
           created_at?: string
           created_by?: string | null
@@ -1821,6 +1820,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          code?: number | null
           content?: string
           created_at?: string
           created_by?: string | null
