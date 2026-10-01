@@ -136,6 +136,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { data: membership } = useMembership();
   const { user } = useSession();
   const [open, setOpen] = useState(false);
+  const [desktopExpanded, setDesktopExpanded] = useState(false);
   const navigate = useNavigate();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -227,19 +228,25 @@ export function AppShell({ children }: { children: ReactNode }) {
           aria-label="Ir para a página inicial pública"
           className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight"
         >
-          <span className="grid size-8 place-items-center rounded-full bg-primary-soft text-primary">
+          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary-soft text-primary">
             <Flower2 className="size-4" />
           </span>
-          Aura<span className="text-primary">.</span>
+          {desktopExpanded || open ? (
+            <span>
+              Aura<span className="text-primary">.</span>
+            </span>
+          ) : null}
         </Link>
         <button className="lg:hidden" onClick={() => setOpen(false)} aria-label="Fechar menu">
           <X className="size-5" />
         </button>
       </div>
 
-      <p className="px-3 pb-2 text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
-        {membership?.organization.name ?? "Clínica"}
-      </p>
+      {desktopExpanded || open ? (
+        <p className="px-3 pb-2 text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
+          {membership?.organization.name ?? "Clínica"}
+        </p>
+      ) : null}
 
       <nav
         aria-label="Navegação principal"
@@ -275,7 +282,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                   }
                   aria-expanded={expanded}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors",
+                    "flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-colors",
+                    desktopExpanded || open ? "gap-3 px-3" : "justify-center px-2",
                     active
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -283,21 +291,29 @@ export function AppShell({ children }: { children: ReactNode }) {
                 >
                   <Icon className="size-4 shrink-0" />
                   <span className="min-w-0 flex-1">
-                    {navLabel(item.label.replace(" · em construção", ""))}
-                    {item.label.includes("em construção") ? " · em construção" : ""}
+                    {desktopExpanded || open ? (
+                      <>
+                        {navLabel(item.label.replace(" · em construção", ""))}
+                        {item.label.includes("em construção") ? " · em construção" : ""}
+                      </>
+                    ) : null}
                   </span>
-                  {expanded ? (
-                    <ChevronDown className="size-4 shrink-0" />
-                  ) : (
-                    <ChevronRight className="size-4 shrink-0" />
-                  )}
+                  {desktopExpanded || open ? (
+                    expanded ? (
+                      <ChevronDown className="size-4 shrink-0" />
+                    ) : (
+                      <ChevronRight className="size-4 shrink-0" />
+                    )
+                  ) : null}
                 </button>
               ) : (
                 <Link
                   to={item.to}
                   onClick={() => setOpen(false)}
+                  title={!desktopExpanded && !open ? navLabel(item.label) : undefined}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    "flex items-center rounded-lg py-2.5 text-sm font-medium transition-colors",
+                    desktopExpanded || open ? "gap-3 px-3" : "justify-center px-2",
                     active
                       ? item.to === "/calculadora"
                         ? "bg-gold-soft text-gold"
@@ -306,11 +322,15 @@ export function AppShell({ children }: { children: ReactNode }) {
                   )}
                 >
                   <Icon className="size-4 shrink-0" />
-                  {navLabel(item.label.replace(" · em construção", ""))}
-                  {item.label.includes("em construção") ? " · em construção" : ""}
+                  {desktopExpanded || open ? (
+                    <>
+                      {navLabel(item.label.replace(" · em construção", ""))}
+                      {item.label.includes("em construção") ? " · em construção" : ""}
+                    </>
+                  ) : null}
                 </Link>
               )}
-              {children.length && expanded ? (
+              {children.length && expanded && (desktopExpanded || open) ? (
                 <div className="ml-5 border-l border-sidebar-border pl-3">
                   {children.map((child) => {
                     const ChildIcon = child.icon;
@@ -345,26 +365,30 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
             {initials(membership?.organization.name)}
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold">{membership?.organization.name}</p>
-            <p className="text-[11px] text-muted-foreground">
-              {membership ? roleLabel[membership.role] : "—"}
-            </p>
-          </div>
+          {desktopExpanded || open ? (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold">{membership?.organization.name}</p>
+              <p className="text-[11px] text-muted-foreground">
+                {membership ? roleLabel[membership.role] : "—"}
+              </p>
+            </div>
+          ) : null}
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-border pt-2">
-          <select
-            aria-label="Idioma"
-            className="h-8 min-w-0 flex-1 rounded-md border border-border bg-transparent px-1.5 text-[11px]"
-            value={language}
-            onChange={(event) => setLanguage(event.target.value as typeof language)}
-          >
-            {LANGUAGE_OPTIONS.map((option) => (
-              <option value={option.value} key={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          {desktopExpanded || open ? (
+            <select
+              aria-label="Idioma"
+              className="h-8 min-w-0 flex-1 rounded-md border border-border bg-transparent px-1.5 text-[11px]"
+              value={language}
+              onChange={(event) => setLanguage(event.target.value as typeof language)}
+            >
+              {LANGUAGE_OPTIONS.map((option) => (
+                <option value={option.value} key={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
           <NotificationBell />
           <button
             onClick={signOut}
@@ -380,7 +404,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-sidebar-border bg-sidebar lg:block">
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 hidden border-r border-sidebar-border bg-sidebar transition-[width] duration-200 lg:block",
+          desktopExpanded ? "w-64 shadow-lg" : "w-20",
+        )}
+        onMouseEnter={() => setDesktopExpanded(true)}
+        onMouseLeave={() => setDesktopExpanded(false)}
+      >
         {sidebar}
       </aside>
 
@@ -431,7 +462,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="min-w-0 px-4 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] lg:ml-64 lg:px-8 lg:pb-10">
+      <main
+        className={cn(
+          "min-w-0 px-4 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] transition-[margin] duration-200 lg:px-8 lg:pb-10",
+          desktopExpanded ? "lg:ml-64" : "lg:ml-20",
+        )}
+      >
         <div className="mb-4 flex justify-end">
           <Button
             type="button"
