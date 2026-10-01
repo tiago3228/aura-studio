@@ -31,6 +31,7 @@ export const Route = createFileRoute("/_authenticated/contratos")({
 
 type Template = {
   id: string;
+  code: number | null;
   name: string;
   description: string | null;
   content: string;
@@ -57,7 +58,7 @@ function Contratos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contract_templates")
-        .select("id, name, description, content, version, active, created_at, updated_at")
+        .select("id, code, name, description, content, version, active, created_at, updated_at")
         .eq("organization_id", organizationId!)
         .order(sortBy, { ascending: true });
       if (error) throw error;
@@ -188,6 +189,7 @@ function Contratos() {
             <table className="w-full min-w-[680px] text-left text-sm">
               <thead className="border-b border-border bg-muted/30 text-xs text-muted-foreground">
                 <tr>
+                  <th className="px-5 py-3 font-medium">Código</th>
                   <th className="px-5 py-3 font-medium">Nome</th>
                   <th className="px-5 py-3 font-medium">Descrição</th>
                   <th className="px-5 py-3 font-medium">Versão</th>
@@ -198,6 +200,9 @@ function Contratos() {
               <tbody className="divide-y divide-border">
                 {filteredTemplates.map((template) => (
                   <tr key={template.id} className="transition-colors hover:bg-muted/20">
+                    <td className="px-5 py-4 font-medium tabular-nums text-muted-foreground">
+                      {template.code ?? "—"}
+                    </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary">
