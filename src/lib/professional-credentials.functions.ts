@@ -4,6 +4,28 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const loginEmail = (username: string) => `${username.toLowerCase()}@login.aura.local`;
 
+async function requireTeamAccess(userId: string, organizationId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const access = await supabaseAdmin
+    .from("organization_members")
+    .select("role, permissions")
+    .eq("organization_id", organizationId)
+    .eq("user_id", userId)
+    .eq("active", true)
+    .maybeSingle();
+  if (access.error) throw new Error(access.error.message);
+  const permissions = access.data?.permissions;
+  const allowed =
+    access.data &&
+    (["owner", "manager"].includes(access.data.role) ||
+      (!!permissions &&
+        typeof permissions === "object" &&
+        !Array.isArray(permissions) &&
+        (permissions as Record<string, unknown>)["equipe.editar"] === true));
+  if (!allowed) throw new Error("Você não pode gerenciar acessos da equipe.");
+  return supabaseAdmin;
+}
+
 export const createProfessionalCredentials = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
@@ -22,24 +44,7 @@ export const createProfessionalCredentials = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const access = await supabaseAdmin
-      .from("organization_members")
-      .select("role, permissions")
-      .eq("organization_id", data.organizationId)
-      .eq("user_id", context.userId)
-      .eq("active", true)
-      .maybeSingle();
-    if (access.error) throw new Error(access.error.message);
-    const permissions = access.data?.permissions;
-    const allowed =
-      access.data &&
-      (["owner", "manager"].includes(access.data.role) ||
-        (!!permissions &&
-          typeof permissions === "object" &&
-          !Array.isArray(permissions) &&
-          (permissions as Record<string, unknown>)["equipe.editar"] === true));
-    if (!allowed) throw new Error("Você não pode criar acessos para a equipe.");
+    const supabaseAdmin = await requireTeamAccess(context.userId, data.organizationId);
     const professional = await supabaseAdmin
       .from("professionals")
       .select("id, name, user_id")
@@ -103,6 +108,45 @@ export const createProfessionalCredentials = createServerFn({ method: "POST" })
     );
     if (member.error) throw new Error(member.error.message);
     return { username: data.username.toLowerCase(), loginEmail: email };
+  });
+
+export const deleteProfessionalAccess = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        organizationId: z.string().uuid(),
+        professionalId: z.string().uuid(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const supabaseAdmin = await requireTeamAccess(context.userId, data.organizationId);
+    const professional = await supabaseAdmin
+      .from("professionals")
+      .select("id, user_id")
+      .eq("organization_id", data.organizationId)
+      .eq("id", data.professionalId)
+      .single();
+    if (professional.error) throw new Error(professional.error.message);
+
+    if (professional.data.user_id) {
+      const membership = await supabaseAdmin
+        .from("organization_members")
+        .delete()
+        .eq("organization_id", data.organizationId)
+        .eq("user_id", professional.data.user_id)
+        .eq("professional_id", data.professionalId);
+      if (membership.error) throw new Error(membership.error.message);
+    }
+
+    const deleted = await supabaseAdmin
+      .from("professionals")
+      .delete()
+      .eq("organization_id", data.organizationId)
+      .eq("id", data.professionalId);
+    if (deleted.error) throw new Error(deleted.error.message);
+    return { deleted: true };
   });
 
 export const resolveProfessionalLogin = createServerFn({ method: "GET" })

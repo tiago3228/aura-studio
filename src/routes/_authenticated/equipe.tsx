@@ -26,7 +26,10 @@ import {
 } from "@/lib/session";
 import { useServerFn } from "@tanstack/react-start";
 import { generateCollaboratorAccessLink, inviteCollaborator } from "@/lib/collaborator.functions";
-import { createProfessionalCredentials } from "@/lib/professional-credentials.functions";
+import {
+  createProfessionalCredentials,
+  deleteProfessionalAccess,
+} from "@/lib/professional-credentials.functions";
 import { brl, initials } from "@/lib/format";
 import { resizeImage } from "@/lib/image";
 import { Textarea } from "@/components/ui/textarea";
@@ -77,6 +80,7 @@ export const Route = createFileRoute("/_authenticated/equipe")({
 
 function Equipe() {
   const { data: membership } = useMembership();
+  const removeProfessional = useServerFn(deleteProfessionalAccess);
   const orgId = membership?.organization.id;
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -105,8 +109,13 @@ function Equipe() {
     if (!deleteTarget || !hasPermission(membership, "equipe.editar")) return;
     setDeleting(true);
     try {
-      const { error } = await supabase.from("professionals").delete().eq("id", deleteTarget.id);
-      if (error) throw error;
+      if (!membership) return;
+      await removeProfessional({
+        data: {
+          organizationId: membership.organization.id,
+          professionalId: deleteTarget.id,
+        },
+      });
       toast.success(`${deleteTarget.name} foi excluído da equipe.`);
       setDeleteTarget(null);
       await queryClient.invalidateQueries({ queryKey: ["team"] });
