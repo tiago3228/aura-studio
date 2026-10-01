@@ -35,7 +35,7 @@ begin
     (new.id, 3, 'Termo de Comparecimento', 'Modelo padrão de comparecimento.', '[PENDENTE DE IMPORTAÇÃO] Revise e personalize este modelo antes de usar.', '[]'::jsonb, 1, true),
     (new.id, 2, 'Contrato de Prestação de Serviços da Clínica', 'Modelo padrão de prestação de serviços.', '[PENDENTE DE IMPORTAÇÃO] Revise e personalize este modelo antes de usar.', '[]'::jsonb, 1, true),
     (new.id, 1, 'Contrato de Avaliações', 'Modelo padrão de avaliação.', '[PENDENTE DE IMPORTAÇÃO] Revise e personalize este modelo antes de usar.', '[]'::jsonb, 1, true)
-  on conflict (organization_id, code) do nothing;
+  on conflict (organization_id, code) where code is not null do nothing;
 
   return new;
 end;
@@ -72,7 +72,7 @@ begin
       (organization_row.id, 3, 'Termo de Comparecimento', 'Modelo padrão de comparecimento.', '[PENDENTE DE IMPORTAÇÃO] Revise e personalize este modelo antes de usar.', '[]'::jsonb, 1, true),
       (organization_row.id, 2, 'Contrato de Prestação de Serviços da Clínica', 'Modelo padrão de prestação de serviços.', '[PENDENTE DE IMPORTAÇÃO] Revise e personalize este modelo antes de usar.', '[]'::jsonb, 1, true),
       (organization_row.id, 1, 'Contrato de Avaliações', 'Modelo padrão de avaliação.', '[PENDENTE DE IMPORTAÇÃO] Revise e personalize este modelo antes de usar.', '[]'::jsonb, 1, true)
-    on conflict (organization_id, code) do nothing;
+    on conflict (organization_id, code) where code is not null do nothing;
   end loop;
 end;
 $$;
