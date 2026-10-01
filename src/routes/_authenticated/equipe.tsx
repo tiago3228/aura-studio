@@ -781,6 +781,10 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
     if (!membership) return;
     const username = form.login_username.trim();
     const password = form.login_password;
+    if (username !== "" && username.length < 3) {
+      setCredentialError("O usuário deve ter pelo menos 3 caracteres.");
+      return;
+    }
     if (username !== "" && password === "") {
       setCredentialError("Informe uma senha para este usuário.");
       return;
@@ -910,6 +914,7 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
                   setForm({ ...form, login_username: e.target.value });
                 }}
                 placeholder="atena"
+                minLength={3}
                 autoCapitalize="none"
               />
             </div>

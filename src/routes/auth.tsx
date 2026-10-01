@@ -85,9 +85,13 @@ function AuthPage() {
         if (error) throw error;
         toast.success("Conta criada! Vamos configurar sua clínica.");
       } else {
-        const login = email.includes("@")
-          ? email
-          : (await resolveLogin({ data: { username: email } })).email;
+        const identifier = email.trim();
+        if (!identifier.includes("@") && identifier.length < 3) {
+          throw new Error("O usuário deve ter pelo menos 3 caracteres.");
+        }
+        const login = identifier.includes("@")
+          ? identifier
+          : (await resolveLogin({ data: { username: identifier } })).email;
         const { error } = await supabase.auth.signInWithPassword({ email: login, password });
         if (error) throw error;
       }
@@ -99,7 +103,9 @@ function AuthPage() {
           ? "E-mail ou senha incorretos."
           : message.includes("already registered")
             ? "Este e-mail já possui conta. Faça login."
-            : message,
+            : message.includes('"path":["username"]') || message.includes('"path": ["username"]')
+              ? "O usuário deve ter pelo menos 3 caracteres."
+              : message,
       );
     } finally {
       setLoading(false);
@@ -202,6 +208,7 @@ function AuthPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="voce@clinica.com.br"
+                minLength={mode === "login" ? 3 : undefined}
                 required
               />
             </div>
