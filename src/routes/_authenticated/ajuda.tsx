@@ -110,6 +110,8 @@ const GUIDES: Guide[] = [
       "Na Grade semanal, use o controle de cada dia para marcar a clínica como Aberto ou Fechado.",
       "Quando o dia estiver aberto, informe o horário de abertura e fechamento.",
       "Ative Intervalo para configurar o início e o fim do almoço ou de uma pausa da clínica.",
+      "Use Horário de almoço padrão quando a clínica tiver o mesmo intervalo todos os dias; alterar o padrão atualiza os horários de todos os dias.",
+      "Para uma exceção, desative o almoço no próprio dia. Para horários diferentes por dia, desligue Padronizar horário e edite cada dia individualmente.",
       "Use Copiar segunda para dias úteis quando segunda-feira tiver o mesmo horário de terça a sexta. Depois, ajuste individualmente o que for diferente.",
       "Em Janelas extras, adicione um período como 20:00–22:00 e escolha se ele fica Livre para agendamento ou Bloqueado sem agendamento. Janelas bloqueadas servem para registrar um período indisponível sem oferecer horários ao cliente.",
       "Clique em Salvar horários. A configuração passa a limitar os horários exibidos no agendamento público.",

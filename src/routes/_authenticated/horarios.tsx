@@ -95,19 +95,50 @@ function Horarios() {
   const org = membership?.organization;
   const canEdit = hasPermission(membership, "agenda.disponibilidade");
   const [hours, setHours] = useState<Record<string, ClinicDay>>(() => normalizeHours(null));
+  const [lunchStandardized, setLunchStandardized] = useState(false);
   const [saving, setSaving] = useState(false);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   useEffect(() => {
-    if (org) setHours(normalizeHours(org.business_hours));
+    if (org) {
+      const businessHours =
+        org.business_hours &&
+        typeof org.business_hours === "object" &&
+        !Array.isArray(org.business_hours)
+          ? (org.business_hours as Record<string, unknown>)
+          : {};
+      setHours(normalizeHours(businessHours));
+      setLunchStandardized(businessHours["_lunchStandardized"] === true);
+    }
   }, [org]);
 
   const openDays = useMemo(() => DAYS.filter(([id]) => !hours[id]?.closed).length, [hours]);
+  const lunchReference = hours["1"] ?? hours["2"] ?? DEFAULT_DAY;
 
   if (isLoading || !org) return <SkeletonCard />;
 
   function updateDay(id: string, patch: Partial<ClinicDay>) {
-    setHours((current) => ({ ...current, [id]: { ...DEFAULT_DAY, ...current[id], ...patch } }));
+    setHours((current) => {
+      const next = { ...current };
+      const isLunchTimeChange = "lunchStart" in patch || "lunchEnd" in patch;
+      const targetIds =
+        lunchStandardized && isLunchTimeChange ? DAYS.map(([dayId]) => dayId) : [id];
+      targetIds.forEach((dayId) => {
+        next[dayId] = { ...DEFAULT_DAY, ...current[dayId], ...patch };
+      });
+      return next;
+    });
+  }
+
+  function toggleLunchStandardized(enabled: boolean) {
+    setLunchStandardized(enabled);
+    if (!enabled) return;
+    const { lunchStart, lunchEnd } = lunchReference;
+    setHours((current) =>
+      Object.fromEntries(
+        DAYS.map(([id]) => [id, { ...DEFAULT_DAY, ...current[id], lunchStart, lunchEnd }]),
+      ),
+    );
   }
 
   function applyToWeekdays() {
@@ -146,7 +177,7 @@ function Horarios() {
     setSaving(true);
     const { error } = await supabase
       .from("organizations")
-      .update({ business_hours: hours })
+      .update({ business_hours: { ...hours, _lunchStandardized: lunchStandardized } })
       .eq("id", org.id);
     setSaving(false);
     if (error) toast.error(error.message);
@@ -205,6 +236,49 @@ function Horarios() {
           >
             <Copy className="size-3.5" /> Copiar segunda para dias úteis
           </Button>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-dashed border-secondary/40 bg-secondary/5 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary/15 text-secondary">
+                <Coffee className="size-4" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold">Horário de almoço padrão</p>
+                <p className="mt-1 max-w-xl text-xs text-muted-foreground">
+                  Ative para usar o mesmo intervalo em todos os dias. Você ainda pode desativar o
+                  almoço em dias específicos; desligue o padrão para editar cada horário de forma
+                  independente.
+                </p>
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-xs font-semibold">
+              <Switch
+                checked={lunchStandardized}
+                disabled={!canEdit}
+                onCheckedChange={toggleLunchStandardized}
+                aria-label="Usar horário de almoço padrão"
+              />
+              Padronizar horário
+            </label>
+          </div>
+          {lunchStandardized ? (
+            <div className="mt-3 grid max-w-md grid-cols-2 gap-3">
+              <TimeField
+                label="Almoço começa"
+                value={lunchReference.lunchStart}
+                disabled={!canEdit}
+                onChange={(value) => updateDay("1", { lunchStart: value })}
+              />
+              <TimeField
+                label="Almoço termina"
+                value={lunchReference.lunchEnd}
+                disabled={!canEdit}
+                onChange={(value) => updateDay("1", { lunchEnd: value })}
+              />
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-5 space-y-3">
