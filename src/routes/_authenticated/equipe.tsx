@@ -865,7 +865,7 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <DialogContent>
+    <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-h-[90vh]">
       <DialogHeader>
         <DialogTitle className="font-display">Novo profissional</DialogTitle>
       </DialogHeader>
