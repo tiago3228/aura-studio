@@ -82,6 +82,26 @@ const GUIDES: Guide[] = [
     tips: ["Evite duplicar cadastros. Pesquise pelo telefone antes de criar um novo cliente."],
   },
   {
+    title: "Atendimentos completos",
+    area: "Operação clínica",
+    summary:
+      "Registre a evolução do atendimento, conduta clínica, produtos utilizados, orientações e vínculo com a Agenda.",
+    steps: [
+      "Abra Atendimentos no menu lateral e use a busca ou o filtro de status para localizar a operação do dia.",
+      "Clique em Novo atendimento e selecione um agendamento existente ou faça um registro avulso.",
+      "Informe cliente, profissional, procedimento, data e status do atendimento.",
+      "Preencha queixa principal, plano de tratamento, produtos utilizados, parâmetros e evolução clínica.",
+      "Registre orientações pós-procedimento, próximos passos e observações internas.",
+      "Ao concluir um atendimento ligado à Agenda, o agendamento passa automaticamente para Atendido.",
+      "Use Ficha do cliente para consultar histórico, anamnese e fotos de antes, depois e evolução.",
+      "Use Venda para acessar o fluxo financeiro e registrar a cobrança relacionada ao procedimento.",
+    ],
+    tips: [
+      "Registre os produtos e insumos utilizados com detalhes para facilitar a rastreabilidade e o controle de estoque.",
+      "Dados clínicos são sensíveis. Compartilhe o prontuário somente com profissionais autorizados.",
+    ],
+  },
+  {
     title: "Horários da clínica",
     area: "Configurações",
     summary: "Defina a janela geral em que sua clínica aceita agendamentos online.",
