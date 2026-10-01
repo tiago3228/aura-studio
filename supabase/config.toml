@@ -1,1 +1,10 @@
 project_id = "qpedjuvpnumyahcrojsm"
+
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+[functions.contract-signing-session]
+verify_jwt = false
+
+[functions.contract-acceptance]
+verify_jwt = false
