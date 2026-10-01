@@ -37,6 +37,7 @@ import { Route as AuthenticatedPlatformAdminRouteImport } from './routes/_authen
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedSegurancaRouteImport } from './routes/_authenticated/seguranca'
 import { Route as AuthenticatedServicosRouteImport } from './routes/_authenticated/servicos'
+import { Route as AuthenticatedStoneRouteImport } from './routes/_authenticated/stone'
 import { Route as AgendarSlugRouteImport } from './routes/agendar.$slug'
 import { Route as AssinarTokenRouteImport } from './routes/assinar.$token'
 import { Route as AuthenticatedClientesIndexRouteImport } from './routes/_authenticated/clientes/index'
@@ -186,6 +187,11 @@ const AuthenticatedServicosRoute = AuthenticatedServicosRouteImport.update({
   path: '/servicos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedStoneRoute = AuthenticatedStoneRouteImport.update({
+  id: '/stone',
+  path: '/stone',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AgendarSlugRoute = AgendarSlugRouteImport.update({
   id: '/agendar/$slug',
   path: '/agendar/$slug',
@@ -242,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/seguranca': typeof AuthenticatedSegurancaRoute
   '/servicos': typeof AuthenticatedServicosRoute
+  '/stone': typeof AuthenticatedStoneRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/assinar/$token': typeof AssinarTokenRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -276,6 +283,7 @@ export interface FileRoutesByTo {
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/seguranca': typeof AuthenticatedSegurancaRoute
   '/servicos': typeof AuthenticatedServicosRoute
+  '/stone': typeof AuthenticatedStoneRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/assinar/$token': typeof AssinarTokenRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -312,6 +320,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/_authenticated/seguranca': typeof AuthenticatedSegurancaRoute
   '/_authenticated/servicos': typeof AuthenticatedServicosRoute
+  '/_authenticated/stone': typeof AuthenticatedStoneRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/assinar/$token': typeof AssinarTokenRoute
   '/_authenticated/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -348,6 +357,7 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/seguranca'
     | '/servicos'
+    | '/stone'
     | '/agendar/$slug'
     | '/assinar/$token'
     | '/clientes/$id'
@@ -382,6 +392,7 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/seguranca'
     | '/servicos'
+    | '/stone'
     | '/agendar/$slug'
     | '/assinar/$token'
     | '/clientes/$id'
@@ -417,6 +428,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios'
     | '/_authenticated/seguranca'
     | '/_authenticated/servicos'
+    | '/_authenticated/stone'
     | '/agendar/$slug'
     | '/assinar/$token'
     | '/_authenticated/clientes/$id'
@@ -631,6 +643,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedServicosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/stone': {
+      id: '/_authenticated/stone'
+      path: '/stone'
+      fullPath: '/stone'
+      preLoaderRoute: typeof AuthenticatedStoneRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/agendar/$slug': {
       id: '/agendar/$slug'
       path: '/agendar/$slug'
@@ -695,6 +714,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
   AuthenticatedSegurancaRoute: typeof AuthenticatedSegurancaRoute
   AuthenticatedServicosRoute: typeof AuthenticatedServicosRoute
+  AuthenticatedStoneRoute: typeof AuthenticatedStoneRoute
   AuthenticatedClientesIdRoute: typeof AuthenticatedClientesIdRoute
   AuthenticatedClientesIndexRoute: typeof AuthenticatedClientesIndexRoute
 }
@@ -725,6 +745,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
   AuthenticatedSegurancaRoute: AuthenticatedSegurancaRoute,
   AuthenticatedServicosRoute: AuthenticatedServicosRoute,
+  AuthenticatedStoneRoute: AuthenticatedStoneRoute,
   AuthenticatedClientesIdRoute: AuthenticatedClientesIdRoute,
   AuthenticatedClientesIndexRoute: AuthenticatedClientesIndexRoute,
 }
