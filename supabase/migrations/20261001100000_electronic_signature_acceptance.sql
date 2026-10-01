@@ -120,7 +120,6 @@ as $$
 declare
   contract_organization_id uuid;
   term_organization_id uuid;
-  acceptance_organization_id uuid;
 begin
   select c.organization_id
     into contract_organization_id
@@ -138,17 +137,6 @@ begin
 
   if term_organization_id is null or term_organization_id <> new.organization_id then
     raise exception 'O termo não pertence à organização do aceite.';
-  end if;
-
-  if new.acceptance_id is not null then
-    select a.organization_id
-      into acceptance_organization_id
-      from public.contract_term_acceptances a
-     where a.id = new.acceptance_id;
-
-    if acceptance_organization_id is null or acceptance_organization_id <> new.organization_id then
-      raise exception 'O aceite não pertence à organização da validação.';
-    end if;
   end if;
 
   return new;
@@ -264,8 +252,8 @@ begin
     event_name := case
       when tg_op = 'INSERT' and new.accepted then 'termo_aceito'
       when tg_op = 'INSERT' then 'termo_registrado'
-      when old.accepted is distinct from new.accepted and new.accepted then 'termo_aceito'
-      when old.revoked_at is distinct from new.revoked_at and new.revoked_at is not null then 'termo_revogado'
+      when tg_op <> 'INSERT' and old.accepted is distinct from new.accepted and new.accepted then 'termo_aceito'
+      when tg_op <> 'INSERT' and old.revoked_at is distinct from new.revoked_at and new.revoked_at is not null then 'termo_revogado'
       else 'termo_atualizado'
     end;
     event_metadata := jsonb_build_object(
