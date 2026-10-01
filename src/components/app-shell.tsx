@@ -30,6 +30,7 @@ import {
   FileSignature,
   ClipboardCheck,
   FolderKanban,
+  ShoppingBag,
   Home,
 } from "lucide-react";
 
@@ -100,6 +101,14 @@ const NAV: NavItem[] = [
         label: "Fluxo financeiro",
         area: "financeiro",
         icon: Wallet,
+        mobile: true,
+      },
+      { to: "/vendas", label: "Vendas", area: "financeiro", icon: ShoppingBag, mobile: true },
+      {
+        to: "/orcamentos",
+        label: "Orçamentos",
+        area: "financeiro",
+        icon: FileSignature,
         mobile: true,
       },
       {
@@ -188,6 +197,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     "/pagamentos": [
       "/pagamentos",
       "/financeiro",
+      "/vendas",
+      "/orcamentos",
       "/calculadora",
       "/gateways",
       "/stone",

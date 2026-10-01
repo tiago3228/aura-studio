@@ -33,6 +33,7 @@ import { Route as AuthenticatedGlobalizacaoRouteImport } from './routes/_authent
 import { Route as AuthenticatedHorariosRouteImport } from './routes/_authenticated/horarios'
 import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedOrcamentosRouteImport } from './routes/_authenticated/orcamentos'
 import { Route as AuthenticatedPagamentosRouteImport } from './routes/_authenticated/pagamentos'
 import { Route as AuthenticatedPixAdminRouteImport } from './routes/_authenticated/pix-admin'
 import { Route as AuthenticatedPlatformAdminRouteImport } from './routes/_authenticated/platform-admin'
@@ -40,6 +41,7 @@ import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authentic
 import { Route as AuthenticatedSegurancaRouteImport } from './routes/_authenticated/seguranca'
 import { Route as AuthenticatedServicosRouteImport } from './routes/_authenticated/servicos'
 import { Route as AuthenticatedStoneRouteImport } from './routes/_authenticated/stone'
+import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
 import { Route as AgendarSlugRouteImport } from './routes/agendar.$slug'
 import { Route as AssinarTokenRouteImport } from './routes/assinar.$token'
 import { Route as AuthenticatedClientesIndexRouteImport } from './routes/_authenticated/clientes/index'
@@ -169,6 +171,11 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedOrcamentosRoute = AuthenticatedOrcamentosRouteImport.update({
+  id: '/orcamentos',
+  path: '/orcamentos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPagamentosRoute = AuthenticatedPagamentosRouteImport.update({
   id: '/pagamentos',
   path: '/pagamentos',
@@ -203,6 +210,11 @@ const AuthenticatedServicosRoute = AuthenticatedServicosRouteImport.update({
 const AuthenticatedStoneRoute = AuthenticatedStoneRouteImport.update({
   id: '/stone',
   path: '/stone',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedVendasRoute = AuthenticatedVendasRouteImport.update({
+  id: '/vendas',
+  path: '/vendas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AgendarSlugRoute = AgendarSlugRouteImport.update({
@@ -257,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/horarios': typeof AuthenticatedHorariosRoute
   '/marketing': typeof AuthenticatedMarketingRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/pix-admin': typeof AuthenticatedPixAdminRoute
   '/platform-admin': typeof AuthenticatedPlatformAdminRoute
@@ -264,6 +277,7 @@ export interface FileRoutesByFullPath {
   '/seguranca': typeof AuthenticatedSegurancaRoute
   '/servicos': typeof AuthenticatedServicosRoute
   '/stone': typeof AuthenticatedStoneRoute
+  '/vendas': typeof AuthenticatedVendasRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/assinar/$token': typeof AssinarTokenRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -294,6 +308,7 @@ export interface FileRoutesByTo {
   '/horarios': typeof AuthenticatedHorariosRoute
   '/marketing': typeof AuthenticatedMarketingRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/pix-admin': typeof AuthenticatedPixAdminRoute
   '/platform-admin': typeof AuthenticatedPlatformAdminRoute
@@ -301,6 +316,7 @@ export interface FileRoutesByTo {
   '/seguranca': typeof AuthenticatedSegurancaRoute
   '/servicos': typeof AuthenticatedServicosRoute
   '/stone': typeof AuthenticatedStoneRoute
+  '/vendas': typeof AuthenticatedVendasRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/assinar/$token': typeof AssinarTokenRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -333,6 +349,7 @@ export interface FileRoutesById {
   '/_authenticated/horarios': typeof AuthenticatedHorariosRoute
   '/_authenticated/marketing': typeof AuthenticatedMarketingRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_authenticated/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/_authenticated/pagamentos': typeof AuthenticatedPagamentosRoute
   '/_authenticated/pix-admin': typeof AuthenticatedPixAdminRoute
   '/_authenticated/platform-admin': typeof AuthenticatedPlatformAdminRoute
@@ -340,6 +357,7 @@ export interface FileRoutesById {
   '/_authenticated/seguranca': typeof AuthenticatedSegurancaRoute
   '/_authenticated/servicos': typeof AuthenticatedServicosRoute
   '/_authenticated/stone': typeof AuthenticatedStoneRoute
+  '/_authenticated/vendas': typeof AuthenticatedVendasRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/assinar/$token': typeof AssinarTokenRoute
   '/_authenticated/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -372,6 +390,7 @@ export interface FileRouteTypes {
     | '/horarios'
     | '/marketing'
     | '/onboarding'
+    | '/orcamentos'
     | '/pagamentos'
     | '/pix-admin'
     | '/platform-admin'
@@ -379,6 +398,7 @@ export interface FileRouteTypes {
     | '/seguranca'
     | '/servicos'
     | '/stone'
+    | '/vendas'
     | '/agendar/$slug'
     | '/assinar/$token'
     | '/clientes/$id'
@@ -409,6 +429,7 @@ export interface FileRouteTypes {
     | '/horarios'
     | '/marketing'
     | '/onboarding'
+    | '/orcamentos'
     | '/pagamentos'
     | '/pix-admin'
     | '/platform-admin'
@@ -416,6 +437,7 @@ export interface FileRouteTypes {
     | '/seguranca'
     | '/servicos'
     | '/stone'
+    | '/vendas'
     | '/agendar/$slug'
     | '/assinar/$token'
     | '/clientes/$id'
@@ -447,6 +469,7 @@ export interface FileRouteTypes {
     | '/_authenticated/horarios'
     | '/_authenticated/marketing'
     | '/_authenticated/onboarding'
+    | '/_authenticated/orcamentos'
     | '/_authenticated/pagamentos'
     | '/_authenticated/pix-admin'
     | '/_authenticated/platform-admin'
@@ -454,6 +477,7 @@ export interface FileRouteTypes {
     | '/_authenticated/seguranca'
     | '/_authenticated/servicos'
     | '/_authenticated/stone'
+    | '/_authenticated/vendas'
     | '/agendar/$slug'
     | '/assinar/$token'
     | '/_authenticated/clientes/$id'
@@ -640,6 +664,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/orcamentos': {
+      id: '/_authenticated/orcamentos'
+      path: '/orcamentos'
+      fullPath: '/orcamentos'
+      preLoaderRoute: typeof AuthenticatedOrcamentosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/pagamentos': {
       id: '/_authenticated/pagamentos'
       path: '/pagamentos'
@@ -687,6 +718,13 @@ declare module '@tanstack/react-router' {
       path: '/stone'
       fullPath: '/stone'
       preLoaderRoute: typeof AuthenticatedStoneRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/vendas': {
+      id: '/_authenticated/vendas'
+      path: '/vendas'
+      fullPath: '/vendas'
+      preLoaderRoute: typeof AuthenticatedVendasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/agendar/$slug': {
@@ -749,6 +787,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedHorariosRoute: typeof AuthenticatedHorariosRoute
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+  AuthenticatedOrcamentosRoute: typeof AuthenticatedOrcamentosRoute
   AuthenticatedPagamentosRoute: typeof AuthenticatedPagamentosRoute
   AuthenticatedPixAdminRoute: typeof AuthenticatedPixAdminRoute
   AuthenticatedPlatformAdminRoute: typeof AuthenticatedPlatformAdminRoute
@@ -756,6 +795,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSegurancaRoute: typeof AuthenticatedSegurancaRoute
   AuthenticatedServicosRoute: typeof AuthenticatedServicosRoute
   AuthenticatedStoneRoute: typeof AuthenticatedStoneRoute
+  AuthenticatedVendasRoute: typeof AuthenticatedVendasRoute
   AuthenticatedClientesIdRoute: typeof AuthenticatedClientesIdRoute
   AuthenticatedClientesIndexRoute: typeof AuthenticatedClientesIndexRoute
 }
@@ -782,6 +822,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHorariosRoute: AuthenticatedHorariosRoute,
   AuthenticatedMarketingRoute: AuthenticatedMarketingRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+  AuthenticatedOrcamentosRoute: AuthenticatedOrcamentosRoute,
   AuthenticatedPagamentosRoute: AuthenticatedPagamentosRoute,
   AuthenticatedPixAdminRoute: AuthenticatedPixAdminRoute,
   AuthenticatedPlatformAdminRoute: AuthenticatedPlatformAdminRoute,
@@ -789,6 +830,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSegurancaRoute: AuthenticatedSegurancaRoute,
   AuthenticatedServicosRoute: AuthenticatedServicosRoute,
   AuthenticatedStoneRoute: AuthenticatedStoneRoute,
+  AuthenticatedVendasRoute: AuthenticatedVendasRoute,
   AuthenticatedClientesIdRoute: AuthenticatedClientesIdRoute,
   AuthenticatedClientesIndexRoute: AuthenticatedClientesIndexRoute,
 }

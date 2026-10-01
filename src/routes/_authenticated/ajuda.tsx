@@ -198,6 +198,40 @@ const GUIDES: Guide[] = [
     tips: ["O gateway não é obrigatório para registrar pagamentos manuais no Financeiro."],
   },
   {
+    title: "Orçamentos e conversão em venda",
+    area: "Financeiro",
+    summary:
+      "Monte propostas com validade, itens, descontos e plano de tratamento, e converta uma proposta aprovada em venda.",
+    steps: [
+      "Abra Pagamentos no menu lateral e selecione Orçamentos.",
+      "Clique em Novo orçamento e informe cliente, profissional, emissão e validade.",
+      "Selecione um procedimento do catálogo ou informe o item manualmente, quantidade, preço e desconto.",
+      "Preencha plano de tratamento, prescrição e observações internas quando necessário.",
+      "Acompanhe os status Rascunho, Enviado, Aprovado, Recusado, Expirado e Convertido.",
+      "Quando o cliente aprovar, use Converter para gerar a venda e seus itens no Financeiro.",
+    ],
+    tips: [
+      "Confira a data de validade antes de enviar a proposta. A observação interna não é destinada ao cliente.",
+      "A conversão evita redigitação dos itens e mantém o vínculo entre o orçamento e a venda.",
+    ],
+  },
+  {
+    title: "Vendas",
+    area: "Financeiro",
+    summary:
+      "Consulte vendas registradas, valores líquidos, clientes e profissionais em uma visão operacional.",
+    steps: [
+      "Abra Pagamentos e selecione Vendas.",
+      "Use a busca para localizar uma venda por cliente ou profissional.",
+      "Confira código, data de emissão, cliente, profissional e valor líquido.",
+      "Para registrar uma nova venda, use Registrar venda e complete os itens na tela de Fluxo financeiro.",
+      "Use o Financeiro para consultar recebimentos, contas a receber e formas de pagamento relacionados.",
+    ],
+    tips: [
+      "Registre a venda no mesmo dia do atendimento para manter dashboard, caixa e relatórios consistentes.",
+    ],
+  },
+  {
     title: "Relatórios avançados",
     area: "Gestão",
     summary: "Analise faturamento, margem, procedimentos, profissionais, clientes e filiais.",
