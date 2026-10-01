@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { PRO_PRICE } from "@/lib/billing.functions";
 
 /** Chave Pix que recebe as assinaturas e e-mail do administrador da plataforma. */
-export const PIX_KEY = "b82998bd-de9b-4f09-9b81-42b7e3b6d510";
+export const PIX_KEY = "tiago3228@gmail.com";
 export const PIX_KEY_TYPE = "E-mail";
 export const PLATFORM_ADMIN_EMAILS = ["tiago3228@yahoo.com.br", "tiago3228@gmail.com"];
 

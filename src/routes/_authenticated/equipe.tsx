@@ -26,8 +26,10 @@ import {
 } from "@/lib/session";
 import { useServerFn } from "@tanstack/react-start";
 import { generateCollaboratorAccessLink, inviteCollaborator } from "@/lib/collaborator.functions";
-import { createProfessionalCredentials } from "@/lib/professional-credentials.functions";
-import { createProfessional } from "@/lib/professional.functions";
+import {
+  createProfessionalCredentials,
+  deleteProfessionalAccess,
+} from "@/lib/professional-credentials.functions";
 import { brl, initials } from "@/lib/format";
 import { resizeImage } from "@/lib/image";
 import { Textarea } from "@/components/ui/textarea";
@@ -78,6 +80,7 @@ export const Route = createFileRoute("/_authenticated/equipe")({
 
 function Equipe() {
   const { data: membership } = useMembership();
+  const removeProfessional = useServerFn(deleteProfessionalAccess);
   const orgId = membership?.organization.id;
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -106,8 +109,13 @@ function Equipe() {
     if (!deleteTarget || !hasPermission(membership, "equipe.editar")) return;
     setDeleting(true);
     try {
-      const { error } = await supabase.from("professionals").delete().eq("id", deleteTarget.id);
-      if (error) throw error;
+      if (!membership) return;
+      await removeProfessional({
+        data: {
+          organizationId: membership.organization.id,
+          professionalId: deleteTarget.id,
+        },
+      });
       toast.success(`${deleteTarget.name} foi excluído da equipe.`);
       setDeleteTarget(null);
       await queryClient.invalidateQueries({ queryKey: ["team"] });
@@ -749,7 +757,6 @@ function ScheduleDialog({
 function ProfessionalDialog({ onDone }: { onDone: () => void }) {
   const { data: membership } = useMembership();
   const createCredentials = useServerFn(createProfessionalCredentials);
-  const createProfessionalOnServer = useServerFn(createProfessional);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -787,20 +794,23 @@ function ProfessionalDialog({ onDone }: { onDone: () => void }) {
     let createdProfessionalId: string | null = null;
     let uploadedPhotoPath: string | null = null;
     try {
-      const professional = await createProfessionalOnServer({
-        data: {
-          organizationId: membership.organization.id,
+      const { data: professional, error } = await supabase
+        .from("professionals")
+        .insert({
+          organization_id: membership.organization.id,
           name: form.name,
           specialty: form.specialty || null,
           bio: form.bio || null,
           certifications: form.certifications || null,
           phone: form.phone || null,
-          commissionDefault: Number(form.commission_default || 0),
-          commissionType: form.commission_type,
-          workStart: form.work_start,
-          workEnd: form.work_end,
-        },
-      });
+          commission_default: Number(form.commission_default || 0),
+          commission_type: form.commission_type,
+          work_start: form.work_start,
+          work_end: form.work_end,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
       createdProfessionalId = professional.id;
       if (photoFile && professional) {
         setUploading(true);

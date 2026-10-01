@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { RefreshCw, Smartphone, WifiOff, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { isAuraInstalled, OPEN_AURA_INSTALL_EVENT } from "@/lib/pwa-install";
 
 type InstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -13,6 +12,14 @@ const INSTALL_ACCEPTED_KEY = "aura-install-accepted";
 const INSTALL_DISMISSED_KEY = "aura-install-dismissed";
 const IOS_INSTALL_DISMISSED_KEY = "aura-ios-install-dismissed";
 
+function isStandalone() {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    ("standalone" in navigator &&
+      Boolean((navigator as Navigator & { standalone?: boolean }).standalone))
+  );
+}
+
 export function PwaManager() {
   const [installEvent, setInstallEvent] = useState<InstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
@@ -22,45 +29,31 @@ export function PwaManager() {
   const [installDismissed, setInstallDismissed] = useState(false);
   const [iosInstallDismissed, setIosInstallDismissed] = useState(false);
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
-  const installEventRef = useRef<InstallPromptEvent | null>(null);
   const updatingRef = useRef(false);
-  const browserAvailable = typeof window !== "undefined";
-  const isIos = browserAvailable && /iphone|ipad|ipod/i.test(navigator.userAgent);
 
   useEffect(() => {
     const installWasAccepted = window.localStorage.getItem(INSTALL_ACCEPTED_KEY) === "1";
-    setInstalled(isAuraInstalled() || installWasAccepted);
+    setInstalled(isStandalone() || installWasAccepted);
     setOffline(!navigator.onLine);
     setInstallDismissed(window.localStorage.getItem(INSTALL_DISMISSED_KEY) === "1");
     setIosInstallDismissed(window.localStorage.getItem(IOS_INSTALL_DISMISSED_KEY) === "1");
 
     const onBeforeInstall = (event: Event) => {
       event.preventDefault();
-      const prompt = event as InstallPromptEvent;
-      installEventRef.current = prompt;
-      setInstallEvent(prompt);
+      setInstallEvent(event as InstallPromptEvent);
     };
     const onInstalled = () => {
       setInstalled(true);
-      installEventRef.current = null;
       setInstallEvent(null);
       window.localStorage.setItem(INSTALL_ACCEPTED_KEY, "1");
     };
     const onOnline = () => setOffline(false);
     const onOffline = () => setOffline(true);
-    const onOpenInstall = () => {
-      if (installEventRef.current) {
-        void install();
-      } else if (isIos) {
-        setIosHelp(true);
-      }
-    };
 
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
     window.addEventListener("appinstalled", onInstalled);
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
-    window.addEventListener(OPEN_AURA_INSTALL_EVENT, onOpenInstall);
 
     const onControllerChange = () => {
       if (!updatingRef.current) return;
@@ -89,17 +82,14 @@ export function PwaManager() {
       window.removeEventListener("appinstalled", onInstalled);
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
-      window.removeEventListener(OPEN_AURA_INSTALL_EVENT, onOpenInstall);
       navigator.serviceWorker?.removeEventListener("controllerchange", onControllerChange);
     };
-  }, [isIos]);
+  }, []);
 
   async function install() {
-    const prompt = installEventRef.current;
-    if (!prompt) return;
-    await prompt.prompt();
-    const choice = await prompt.userChoice;
-    installEventRef.current = null;
+    if (!installEvent) return;
+    await installEvent.prompt();
+    const choice = await installEvent.userChoice;
     setInstallEvent(null);
     if (choice.outcome === "accepted") {
       setInstalled(true);
@@ -119,6 +109,8 @@ export function PwaManager() {
     waiting.postMessage({ type: "SKIP_WAITING" });
   }
 
+  const browserAvailable = typeof window !== "undefined";
+  const isIos = browserAvailable && /iphone|ipad|ipod/i.test(navigator.userAgent);
   const showIos = isIos && !installed && !iosInstallDismissed;
 
   return (
