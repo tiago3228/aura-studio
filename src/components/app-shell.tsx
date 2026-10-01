@@ -28,6 +28,7 @@ import {
   Calculator,
   BellRing,
   Clock3,
+  FileSignature,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -67,6 +68,7 @@ const NAV: NavItem[] = [
   { to: "/calculadora", label: "Calculadora", area: "financeiro", icon: Calculator, mobile: true },
   { to: "/estoque", label: "Estoque", area: "estoque", icon: Package },
   { to: "/comissoes", label: "Comissões", area: "comissoes", icon: Percent },
+  { to: "/contratos", label: "Contratos", area: "contratos", icon: FileSignature, mobile: true },
   {
     to: "/assistente",
     label: "Assistente IA",

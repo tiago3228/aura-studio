@@ -50,6 +50,15 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    area: "Contratos",
+    permissions: [
+      { key: "contratos.ver", label: "Visualizar" },
+      { key: "contratos.criar", label: "Criar" },
+      { key: "contratos.editar", label: "Editar" },
+      { key: "contratos.excluir", label: "Excluir" },
+    ],
+  },
+  {
     area: "Financeiro",
     permissions: [
       { key: "financeiro.ver", label: "Visualizar" },
