@@ -59,7 +59,7 @@ export async function loadContractByToken(token: string) {
   const { data: contract, error: contractError } = await admin
     .from("client_contracts")
     .select(
-      "id, organization_id, client_id, title, content, template_version, status, sent_at, viewed_at, signed_at, expires_at, signed_by_name, signed_by_document, signature_method, signature_hash, document_hash, document_url",
+      "id, organization_id, client_id, title, content, template_version, status, sent_at, viewed_at, signed_at, expires_at, signed_by_name, signed_by_document, signature_method, signature_hash, document_hash",
     )
     .eq("id", acceptance.contract_id)
     .eq("organization_id", acceptance.organization_id)

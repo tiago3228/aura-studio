@@ -78,7 +78,6 @@ Deno.serve(async (request) => {
         signedAt: session.contract.signed_at,
         expiresAt: session.contract.expires_at,
         documentHash,
-        documentUrl: session.contract.document_url,
       },
       client: {
         id: session.client.id,
