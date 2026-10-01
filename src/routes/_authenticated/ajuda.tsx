@@ -329,6 +329,23 @@ const GUIDES: Guide[] = [
     ],
   },
   {
+    title: "Gerar modelo de anamnese por IA",
+    area: "Cadastros",
+    summary:
+      "Crie um rascunho de perguntas a partir do nome de um procedimento e revise tudo antes de salvar.",
+    steps: [
+      "Abra Cadastros → Modelos de anamnese e clique em Gerar modelo por IA.",
+      "Digite o procedimento completo, por exemplo: Limpeza de pele com peeling de diamante.",
+      "Clique em Criar rascunho e aguarde a geração das perguntas clínicas relacionadas.",
+      "Revise o nome, remova perguntas inadequadas, ajuste os tipos de resposta e marque apenas o que deve ser obrigatório.",
+      "Salve o modelo somente depois da revisão da profissional responsável.",
+    ],
+    tips: [
+      "A IA cria um ponto de partida e não substitui avaliação clínica, protocolos internos ou orientação do responsável técnico.",
+      "Não inclua dados identificáveis de clientes no campo do procedimento.",
+    ],
+  },
+  {
     title: "Assistente IA",
     area: "Inteligência",
     summary: "Faça perguntas sobre os dados da clínica e receba respostas para apoiar decisões.",

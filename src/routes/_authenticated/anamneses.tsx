@@ -1,8 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ClipboardList, Copy, Edit3, Loader2, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import {
+  ClipboardList,
+  Copy,
+  Edit3,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Search,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +28,7 @@ import {
 import { EmptyState, ErrorState, PageHeader, Pill, SkeletonCard } from "@/components/ui-kit";
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/lib/session";
+import { generateAnamnesisModel } from "@/lib/anamnesis-ai.functions";
 
 export const Route = createFileRoute("/_authenticated/anamneses")({
   head: () => ({ meta: [{ title: "Modelos de anamnese — Aura Clínicas" }] }),
@@ -140,6 +152,7 @@ function Anamneses() {
   const qc = useQueryClient();
   const [term, setTerm] = useState("");
   const [editor, setEditor] = useState<Template | null>(null);
+  const [aiOpen, setAiOpen] = useState(false);
   const client = supabase as any;
   const query = useQuery({
     enabled: Boolean(orgId),
@@ -240,6 +253,9 @@ function Anamneses() {
               )}{" "}
               Importar modelos do Estetic
             </Button>
+            <Button variant="outline" onClick={() => setAiOpen(true)}>
+              <Sparkles className="size-4" /> Gerar modelo por IA
+            </Button>
             <Button
               onClick={() =>
                 setEditor({ id: "new", name: "", active: true, service_id: null, questions: [] })
@@ -326,9 +342,99 @@ function Anamneses() {
           void qc.invalidateQueries({ queryKey: ["anamnesis-templates", orgId] });
         }}
       />
+      <AiAnamnesisDialog
+        open={aiOpen}
+        onOpenChange={setAiOpen}
+        onGenerated={(generated) => {
+          setAiOpen(false);
+          setEditor({
+            id: "new",
+            name: generated.name,
+            active: true,
+            service_id: null,
+            questions: generated.questions,
+          });
+        }}
+      />
     </div>
   );
 }
+
+function AiAnamnesisDialog({
+  open,
+  onOpenChange,
+  onGenerated,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onGenerated: (model: { name: string; questions: Question[] }) => void;
+}) {
+  const generate = useServerFn(generateAnamnesisModel);
+  const [procedure, setProcedure] = useState("");
+  const [loading, setLoading] = useState(false);
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (procedure.trim().length < 3 || loading) return;
+    setLoading(true);
+    try {
+      const generated = await generate({ data: { procedure: procedure.trim() } });
+      toast.success("Rascunho criado. Revise as perguntas antes de salvar.");
+      onGenerated(generated);
+      setProcedure("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível gerar o modelo.");
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 font-display">
+            <Sparkles className="size-5 text-gold" /> Gerar modelo por IA
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="rounded-lg bg-gold-soft p-3 text-sm text-muted-foreground">
+            Informe o procedimento e a IA criará um rascunho com perguntas clínicas relacionadas.
+            Você poderá editar, remover e adicionar perguntas antes de salvar.
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="ai-procedure">Procedimento</Label>
+            <Input
+              id="ai-procedure"
+              value={procedure}
+              onChange={(event) => setProcedure(event.target.value)}
+              placeholder="Ex.: Limpeza de pele com peeling de diamante"
+              minLength={3}
+              maxLength={160}
+              autoFocus
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              A IA não substitui a avaliação ou revisão da profissional responsável.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading || procedure.trim().length < 3}>
+              {loading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Sparkles className="size-4" />
+              )}
+              {loading ? "Gerando…" : "Criar rascunho"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function TemplateEditor({
   open,
   template,
