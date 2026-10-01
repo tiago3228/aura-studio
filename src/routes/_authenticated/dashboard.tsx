@@ -1,31 +1,32 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarPlus, TrendingUp, AlertTriangle, Cake } from "lucide-react";
+import {
+  CalendarDays,
+  CalendarPlus,
+  Cake,
+  FileText,
+  NotebookPen,
+  PackagePlus,
+  ReceiptText,
+  ShoppingCart,
+  UserPlus,
+} from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
-import { useMembership } from "@/lib/session";
-import { useLanguage } from "@/lib/language";
+import { useMembership, useSession } from "@/lib/session";
 import { brl, timeFmt, longDate, isoDay, addDays, initials } from "@/lib/format";
-import {
-  PageHeader,
-  StatCard,
-  SkeletonCard,
-  EmptyState,
-  Pill,
-  ErrorState,
-} from "@/components/ui-kit";
-import { Button } from "@/components/ui/button";
+import { EmptyState, ErrorState, Pill, SkeletonCard } from "@/components/ui-kit";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Visão geral — Aura Clínicas" },
+      { title: "Início — Aura Clínicas" },
       {
         name: "description",
-        content: "Resumo do dia: agendamentos, faturamento, alertas e aniversários.",
+        content: "Acesso rápido, próximos agendamentos e aniversariantes da clínica.",
       },
-      { property: "og:title", content: "Visão geral — Aura Clínicas" },
-      { property: "og:description", content: "Resumo do dia da sua clínica de estética." },
+      { property: "og:title", content: "Início — Aura Clínicas" },
+      { property: "og:description", content: "Resumo operacional da sua clínica de estética." },
     ],
   }),
   component: Dashboard,
@@ -41,52 +42,96 @@ const statusTone = {
   reagendado: "gold",
 } as const;
 
+const quickActions = [
+  {
+    label: "Novo agendamento",
+    description: "Reserve um horário",
+    to: "/agenda",
+    icon: CalendarPlus,
+    tone: "text-primary bg-primary-soft",
+  },
+  {
+    label: "Novo pacote",
+    description: "Cadastre no módulo de procedimentos",
+    to: "/servicos",
+    icon: PackagePlus,
+    tone: "text-gold bg-gold-soft",
+  },
+  {
+    label: "Novo cliente",
+    description: "Adicione um cadastro",
+    to: "/clientes",
+    icon: UserPlus,
+    tone: "text-success bg-success-soft",
+  },
+  {
+    label: "Nova venda",
+    description: "Registre no financeiro",
+    to: "/financeiro",
+    icon: ShoppingCart,
+    tone: "text-primary bg-primary-soft",
+  },
+  {
+    label: "Nova despesa",
+    description: "Registre no financeiro",
+    to: "/financeiro",
+    icon: ReceiptText,
+    tone: "text-destructive bg-destructive-soft",
+  },
+] as const;
+
 function Dashboard() {
   const { data: membership } = useMembership();
-  const { language, t } = useLanguage();
+  const { user } = useSession();
   const orgId = membership?.organization.id;
-  const today = isoDay(new Date());
+  const now = new Date();
+  const today = isoDay(now);
   const tomorrow = addDays(today, 1);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
   const query = useQuery({
     enabled: !!orgId,
-    queryKey: ["dashboard", orgId],
+    queryKey: ["dashboard", orgId, today],
     queryFn: async () => {
-      const [appointments, sales, products, clients] = await Promise.all([
+      const [appointments, sales, clients] = await Promise.all([
         supabase
           .from("appointments")
           .select(
-            "id, starts_at, status, price, clients(name), services(name), professionals(name)",
+            "id, starts_at, ends_at, status, price, clients(name), services(name), professionals(name)",
           )
-          .gte("starts_at", today.toISOString())
+          .gte("starts_at", now.toISOString())
           .lt("starts_at", tomorrow.toISOString())
+          .in("status", ["agendado", "confirmado", "aguardando", "reagendado"])
           .order("starts_at"),
         supabase
           .from("sales")
           .select("total, cost, created_at")
           .gte("created_at", addDays(today, -30).toISOString()),
-        supabase.from("products").select("id, name, stock, min_stock").eq("active", true),
-        supabase.from("clients").select("id, name, birth_date").is("deleted_at", null),
+        supabase
+          .from("clients")
+          .select("id, name, birth_date")
+          .is("deleted_at", null)
+          .not("birth_date", "is", null),
       ]);
       if (appointments.error) throw appointments.error;
       if (sales.error) throw sales.error;
-      if (products.error) throw products.error;
       if (clients.error) throw clients.error;
 
-      const todaySales = sales.data.filter((s) => new Date(s.created_at) >= today);
-      const month = new Date().getMonth();
-      const day = new Date().getDate();
       return {
         appointments: appointments.data,
-        revenueToday: todaySales.reduce((acc, s) => acc + Number(s.total), 0),
-        revenue30: sales.data.reduce((acc, s) => acc + Number(s.total), 0),
-        margin30: sales.data.reduce((acc, s) => acc + Number(s.total) - Number(s.cost), 0),
-        lowStock: products.data.filter((p) => Number(p.stock) <= Number(p.min_stock)),
-        birthdays: clients.data.filter((c) => {
-          if (!c.birth_date) return false;
-          const d = new Date(`${c.birth_date}T12:00:00`);
-          return d.getMonth() === month && Math.abs(d.getDate() - day) <= 3;
-        }),
+        revenueToday: sales.data
+          .filter((sale) => new Date(sale.created_at) >= new Date(today))
+          .reduce((total, sale) => total + Number(sale.total), 0),
+        revenue30: sales.data.reduce((total, sale) => total + Number(sale.total), 0),
+        birthdays: clients.data
+          .filter((client) => {
+            const birthDate = new Date(`${client.birth_date}T12:00:00`);
+            return birthDate.getMonth() === now.getMonth();
+          })
+          .sort((a, b) => Number(a.birth_date?.slice(8, 10)) - Number(b.birth_date?.slice(8, 10))),
+        monthStart,
+        monthEnd,
       };
     },
   });
@@ -95,159 +140,180 @@ function Dashboard() {
   if (!query.data) {
     return (
       <div className="space-y-4">
-        <SkeletonCard lines={1} />
+        <SkeletonCard lines={2} />
         <SkeletonCard />
       </div>
     );
   }
 
+  const firstName =
+    user?.user_metadata?.full_name?.toString().split(" ")[0] ??
+    user?.email?.split("@")[0] ??
+    membership?.organization.name ??
+    "bem-vindo";
   const data = query.data;
-  const attended = data.appointments.filter((a) => a.status === "atendido").length;
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <PageHeader
-        back={false}
-        title={`${t("Olá")}, ${membership?.organization.name ?? ""}`}
-        subtitle={longDate(new Date())}
-        actions={
-          <Button asChild>
-            <Link to="/agenda">
-              <CalendarPlus className="size-4" /> {t("Novo agendamento")}
-            </Link>
-          </Button>
-        }
-      />
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label={t("Atendimentos hoje")}
-          value={String(data.appointments.length)}
-          hint={`${attended} ${t("concluídos")}`}
-          tone="primary"
-        />
-        <StatCard label={t("Faturamento hoje")} value={brl(data.revenueToday)} tone="success" />
-        <StatCard
-          label={t("Receita 30 dias")}
-          value={brl(data.revenue30)}
-          hint={t("vendas registradas")}
-        />
-        <StatCard
-          label={t("Margem 30 dias")}
-          value={brl(data.margin30)}
-          hint={t("receita menos custos")}
-          tone="gold"
-        />
+    <div className="mx-auto max-w-6xl space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-sm text-muted-foreground">{longDate(now)}</p>
+          <h1 className="mt-1 font-display text-2xl font-semibold sm:text-3xl">
+            Bem-vindo, {firstName}!
+          </h1>
+        </div>
+        <Link
+          to="/agenda"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
+        >
+          <CalendarDays className="size-4 text-primary" /> Ver agenda
+        </Link>
       </div>
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-[1.6fr_1fr]">
+      <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
         <section className="surface p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-display text-base font-semibold">{t("Agenda de hoje")}</h2>
+          <div className="mb-4 flex items-center gap-2">
+            <CalendarPlus className="size-4 text-primary" />
+            <h2 className="font-display text-base font-semibold">Acesso rápido</h2>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {quickActions.map((action) => {
+              const Icon = action.icon;
+              return (
+                <Link
+                  key={action.label}
+                  to={action.to}
+                  className="group flex min-h-20 items-center gap-3 rounded-xl border border-border bg-background/60 p-3 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm"
+                >
+                  <span
+                    className={`grid size-10 shrink-0 place-items-center rounded-lg ${action.tone}`}
+                  >
+                    <Icon className="size-5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold group-hover:text-primary">
+                      {action.label}
+                    </span>
+                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                      {action.description}
+                    </span>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="surface min-h-40 p-5">
+          <div className="mb-3 flex items-center gap-2">
+            <NotebookPen className="size-4 text-gold" />
+            <h2 className="font-display text-base font-semibold">Anotações</h2>
+          </div>
+          <div className="grid min-h-20 place-items-center rounded-lg border border-dashed border-border px-4 text-center">
+            <p className="text-xs text-muted-foreground">Nenhuma anotação para hoje.</p>
+          </div>
+        </section>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-[1.6fr_0.8fr]">
+        <section className="surface p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-base font-semibold">Próximos agendamentos</h2>
+              <p className="mt-1 text-xs text-muted-foreground">Próximas 24 horas</p>
+            </div>
             <Link to="/agenda" className="text-xs font-semibold text-primary hover:underline">
-              {t("Ver agenda")}
+              Ver todos
             </Link>
           </div>
           {data.appointments.length === 0 ? (
             <EmptyState
-              title={t("Nenhum atendimento hoje")}
-              description={
-                language === "en-US"
-                  ? "Use this time to add treatments or send reminders to inactive clients."
-                  : language === "pt-PT"
-                    ? "Aproveite para registar procedimentos ou enviar lembretes aos clientes inativos."
-                    : "Aproveite para cadastrar procedimentos ou enviar lembretes para clientes inativos."
+              title="Nenhum próximo agendamento"
+              description="Os próximos atendimentos aparecerão aqui."
+              action={
+                <Link to="/agenda" className="text-xs font-semibold text-primary hover:underline">
+                  Criar agendamento
+                </Link>
               }
             />
           ) : (
             <ul className="divide-y divide-border">
-              {data.appointments.map((a) => (
-                <li key={a.id} className="flex items-center gap-3 py-3">
-                  <span className="w-12 font-display text-sm font-semibold tabular-nums">
-                    {timeFmt(a.starts_at)}
+              {data.appointments.slice(0, 8).map((appointment) => (
+                <li
+                  key={appointment.id}
+                  className="flex flex-wrap items-center gap-3 py-3 first:pt-0"
+                >
+                  <span className="w-14 shrink-0 font-display text-sm font-semibold tabular-nums text-primary">
+                    {timeFmt(appointment.starts_at)}
                   </span>
                   <div className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-soft text-[11px] font-semibold text-primary">
-                    {initials(a.clients?.name)}
+                    {initials(appointment.clients?.name)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
-                      {a.clients?.name ?? t("Cliente avulso")}
+                      {appointment.clients?.name ?? "Cliente avulso"}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {a.services?.name ?? t("Serviço")} ·{" "}
-                      {a.professionals?.name ?? t("Sem profissional")}
+                      Profissional: {appointment.professionals?.name ?? "Não informado"}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      Itens: {appointment.services?.name ?? "Serviço"}
                     </p>
                   </div>
-                  <span className="hidden text-sm font-semibold tabular-nums sm:block">
-                    {brl(Number(a.price))}
-                  </span>
-                  <Pill tone={statusTone[a.status]}>{t(a.status)}</Pill>
+                  <Pill tone={statusTone[appointment.status]}>{appointment.status}</Pill>
                 </li>
               ))}
             </ul>
           )}
         </section>
 
-        <div className="space-y-5">
-          <section className="surface p-5">
-            <h2 className="mb-3 flex items-center gap-2 font-display text-base font-semibold">
-              <AlertTriangle className="size-4 text-gold" /> {t("Estoque crítico")}
-            </h2>
-            {data.lowStock.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                {t("Todos os produtos acima do mínimo.")}
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {data.lowStock.slice(0, 5).map((p) => (
-                  <li key={p.id} className="flex items-center justify-between text-sm">
-                    <span className="truncate">{p.name}</span>
-                    <Pill tone="danger">
-                      {Number(p.stock)} / min {Number(p.min_stock)}
-                    </Pill>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className="surface p-5">
-            <h2 className="mb-3 flex items-center gap-2 font-display text-base font-semibold">
-              <Cake className="size-4 text-primary" /> {t("Aniversariantes")}
-            </h2>
-            {data.birthdays.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                {t("Nenhum aniversário nos próximos dias.")}
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {data.birthdays.slice(0, 5).map((c) => (
-                  <li key={c.id} className="flex items-center justify-between text-sm">
-                    <span className="truncate">{c.name}</span>
-                    <Pill tone="gold">
-                      {c.birth_date?.slice(8, 10)}/{c.birth_date?.slice(5, 7)}
-                    </Pill>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className="surface p-5">
-            <h2 className="mb-2 flex items-center gap-2 font-display text-base font-semibold">
-              <TrendingUp className="size-4 text-success" /> {t("Dica do dia")}
-            </h2>
-            <p className="text-xs leading-relaxed text-pretty text-muted-foreground">
-              {t(
-                "Pergunte ao assistente de IA quais clientes não retornam há 60 dias e dispare uma campanha de reativação pelo WhatsApp.",
-              )}
-            </p>
-            <Button asChild variant="outline" size="sm" className="mt-3">
-              <Link to="/assistente">{t("Abrir assistente")}</Link>
-            </Button>
-          </section>
-        </div>
+        <section className="surface p-5">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Cake className="size-4 text-primary" />
+              <h2 className="font-display text-base font-semibold">Aniversariantes</h2>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {now.toLocaleDateString("pt-BR", { month: "long" })}
+            </span>
+          </div>
+          {data.birthdays.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum aniversariante neste mês.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {data.birthdays.slice(0, 8).map((client) => (
+                <li key={client.id} className="flex items-center gap-3 py-3 first:pt-0">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-full border border-border text-xs font-semibold tabular-nums">
+                    {client.birth_date?.slice(8, 10)}
+                  </span>
+                  <span className="min-w-0 truncate text-sm font-medium">{client.name}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {client.birth_date?.slice(8, 10)} de{" "}
+                    {now.toLocaleDateString("pt-BR", { month: "long" })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
+
+      <section className="grid gap-3 sm:grid-cols-2">
+        <div className="surface flex items-center gap-3 p-4">
+          <FileText className="size-5 text-primary" />
+          <div>
+            <p className="text-xs text-muted-foreground">Faturamento hoje</p>
+            <p className="font-display text-xl font-semibold">{brl(data.revenueToday)}</p>
+          </div>
+        </div>
+        <div className="surface flex items-center gap-3 p-4">
+          <ShoppingCart className="size-5 text-success" />
+          <div>
+            <p className="text-xs text-muted-foreground">Receita nos últimos 30 dias</p>
+            <p className="font-display text-xl font-semibold">{brl(data.revenue30)}</p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

@@ -10,7 +10,6 @@ import {
   Percent,
   Bot,
   Settings,
-  LayoutDashboard,
   UserCog,
   BarChart3,
   CreditCard,
@@ -29,6 +28,7 @@ import {
   BellRing,
   Clock3,
   FileSignature,
+  Home,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -52,9 +52,9 @@ type NavItem = {
 const NAV: NavItem[] = [
   {
     to: "/dashboard",
-    label: "Visão geral",
+    label: "Início",
     area: "dashboard",
-    icon: LayoutDashboard,
+    icon: Home,
     mobile: true,
   },
   { to: "/agenda", label: "Agenda", area: "agenda", icon: CalendarDays, mobile: true },
