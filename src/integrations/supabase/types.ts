@@ -3851,6 +3851,7 @@ export type Database = {
           display_name: string
           environment: string
           id: string
+          metadata: Json
           organization_id: string
           provider: string
           public_key: string | null
@@ -3863,6 +3864,7 @@ export type Database = {
           display_name: string
           environment?: string
           id?: string
+          metadata?: Json
           organization_id: string
           provider: string
           public_key?: string | null
@@ -3875,6 +3877,7 @@ export type Database = {
           display_name?: string
           environment?: string
           id?: string
+          metadata?: Json
           organization_id?: string
           provider?: string
           public_key?: string | null
