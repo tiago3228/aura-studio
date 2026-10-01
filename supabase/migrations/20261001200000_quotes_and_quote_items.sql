@@ -64,10 +64,10 @@ alter table public.quote_items enable row level security;
 
 drop policy if exists quotes_org_access on public.quotes;
 create policy quotes_org_access on public.quotes for all to authenticated
-using (organization_id = public.current_user_organization_id())
-with check (organization_id = public.current_user_organization_id());
+using (public.is_org_member(organization_id))
+with check (public.is_org_member(organization_id));
 
 drop policy if exists quote_items_org_access on public.quote_items;
 create policy quote_items_org_access on public.quote_items for all to authenticated
-using (organization_id = public.current_user_organization_id())
-with check (organization_id = public.current_user_organization_id());
+using (public.is_org_member(organization_id))
+with check (public.is_org_member(organization_id));
