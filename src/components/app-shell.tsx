@@ -34,6 +34,7 @@ import {
   FolderKanban,
   ShoppingBag,
   Home,
+  FolderOpen,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -130,6 +131,13 @@ const NAV: NavItem[] = [
     ],
   },
   { to: "/contratos", label: "Contratos", area: "contratos", icon: FileSignature, mobile: true },
+  {
+    to: "/documentos",
+    label: "Guarda Documentação",
+    area: "documentos",
+    icon: FolderOpen,
+    mobile: true,
+  },
   {
     to: "/assistente",
     label: "Assistente IA",

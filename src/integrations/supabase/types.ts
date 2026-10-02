@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      organization_documents: {
+        Row: {
+          category: string
+          created_at: string
+          file_name: string
+          file_size: number
+          id: string
+          mime_type: string
+          organization_id: string
+          storage_path: string
+          uploaded_by: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          file_name: string
+          file_size: number
+          id?: string
+          mime_type: string
+          organization_id: string
+          storage_path: string
+          uploaded_by: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          file_name?: string
+          file_size?: number
+          id?: string
+          mime_type?: string
+          organization_id?: string
+          storage_path?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
       acceptance_terms: {
         Row: {
           active: boolean

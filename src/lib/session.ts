@@ -59,6 +59,13 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    area: "Documentos",
+    permissions: [
+      { key: "documentos.ver", label: "Visualizar" },
+      { key: "documentos.editar", label: "Enviar e excluir" },
+    ],
+  },
+  {
     area: "Financeiro",
     permissions: [
       { key: "financeiro.ver", label: "Visualizar" },
