@@ -35,3 +35,11 @@ Leia esta nota antes de continuar o deploy de assinatura ou modificar o branch c
 3. Usar apenas os secrets já existentes (`CONTRACT_SIGNING_SECRET`, `PORTAL_AUDIT_SECRET`, `PUBLIC_APP_ORIGIN`) sem ler/exibir valores; usar as variáveis automáticas Supabase apenas no backend; manter `verify_jwt=false`.
 4. Só após o deploy confirmado, fazer uma única chamada de teste com token inválido fictício, sem gravar o token em logs.
 5. A validação E2E restante ainda inclui sessão válida, expiração/cancelamento, aceite, idempotência/replay, hashes, eventos, RLS, CORS/OPTIONS e limpeza. Use exclusivamente dados com prefixo `[E2E TESTE AURA]`; nunca altere dados reais.
+
+## Atualização de validação E2E — 2026-10-02 15:44 -03
+
+- No momento desta verificação, o checkout local estava limpo em `9acac71`, igual a `origin/main`. Não foram alterados arquivos de aplicação nesta sessão.
+- No Lovable Cloud, `contract-acceptance` e `contract-signing-session` aparecem como **Active**, última atualização há um dia. Isso não comprova qual commit está implantado. A tentativa anterior parou porque o checkout Cloud era `79cdfa4`, diferente do commit autorizado `cbebdbb`; nesta sessão não houve deploy nem chamada HTTP.
+- O teste da RPC `public.get_patient_portal(text)` com tokens aleatórios sintéticos falhou antes de testar invalidez/expiração/revogação: SQLSTATE `42883`, `function digest(text, unknown) does not exist`. Diagnóstico read-only: `pgcrypto` e os overloads de `digest` estão em `extensions`, mas a RPC define `search_path=public, storage`; a chamada não qualificada `digest(_token, 'sha256')` não resolve. `anon` tem permissão EXECUTE, mas a função não está operacional com essa configuração.
+- O bloco de teste era uma única instrução transacional; após a falha, a contagem do cliente e dos tokens sintéticos restantes foi zero. Nenhum dado real foi consultado, nenhum segredo foi lido e não houve alteração persistente nem registro de auditoria de fixture.
+- Não declarar os testes da RPC como aprovados. A correção ainda precisa ser revisada/coordenada e feita como alteração de código/migration separada (por exemplo, qualificar `extensions.digest`), depois validada no Cloud. Não aplicar essa correção dentro do deploy isolado das Edge Functions.
