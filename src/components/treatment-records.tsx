@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, Loader2, Plus, Trash2 } from "lucide-react";
+import { Camera, ImagePlus, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -188,6 +188,7 @@ function PhotoGrid({ photos }: { photos: Photo[] }) {
 function RecordDialog({ clientId, onDone }: { clientId: string; onDone: () => void }) {
   const { data: membership } = useMembership();
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const [photosToUpload, setPhotosToUpload] = useState<SelectedPhoto[]>([]);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -235,15 +236,15 @@ function RecordDialog({ clientId, onDone }: { clientId: string; onDone: () => vo
     try {
       const orgId = membership.organization.id;
       const photos: Photo[] = [];
-       for (const { file, stage } of photosToUpload) {
+      for (const { file, stage } of photosToUpload) {
         const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
         const path = `${orgId}/prontuario/${clientId}/${crypto.randomUUID()}.${ext}`;
-         const optimized = await resizeImage(file, 1400, 0.84);
-         const { error } = await supabase.storage.from("clinic-files").upload(path, optimized, {
-           contentType: optimized.type || "image/jpeg",
+        const optimized = await resizeImage(file, 1400, 0.84);
+        const { error } = await supabase.storage.from("clinic-files").upload(path, optimized, {
+          contentType: optimized.type || "image/jpeg",
         });
         if (error) throw error;
-         photos.push({ path, label: file.name, stage });
+        photos.push({ path, label: file.name, stage });
       }
 
       const { error } = await supabase.from("treatment_records").insert({
@@ -268,6 +269,14 @@ function RecordDialog({ clientId, onDone }: { clientId: string; onDone: () => vo
     } finally {
       setSaving(false);
     }
+  }
+
+  function addPhotos(files: FileList | null) {
+    const selected = Array.from(files ?? []).map((file) => ({
+      file,
+      stage: "evolucao" as const,
+    }));
+    setPhotosToUpload((current) => [...current, ...selected]);
   }
 
   return (
@@ -315,7 +324,10 @@ function RecordDialog({ clientId, onDone }: { clientId: string; onDone: () => vo
           </div>
           <div className="space-y-1.5">
             <Label>Procedimento do catálogo</Label>
-            <Select value={form.service_id} onValueChange={(v) => setForm({ ...form, service_id: v })}>
+            <Select
+              value={form.service_id}
+              onValueChange={(v) => setForm({ ...form, service_id: v })}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Opcional" />
               </SelectTrigger>
@@ -378,37 +390,61 @@ function RecordDialog({ clientId, onDone }: { clientId: string; onDone: () => vo
             multiple
             className="hidden"
             onChange={(e) => {
-              const selected = Array.from(e.target.files ?? []).map((file) => ({
-                file,
-                stage: "evolucao" as const,
-              }));
-              setPhotosToUpload((current) => [...current, ...selected]);
+              addPhotos(e.target.files);
               e.target.value = "";
             }}
           />
-          <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
-            <Camera className="size-4" /> Adicionar fotos
-          </Button>
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              addPhotos(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileRef.current?.click()}
+            >
+              <ImagePlus className="size-4" /> Escolher da galeria
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => cameraRef.current?.click()}
+            >
+              <Camera className="size-4" /> Tirar foto
+            </Button>
+          </div>
           {photosToUpload.length > 0 ? (
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {photosToUpload.map(({ file, stage }, i) => (
                 <div key={`${file.name}-${i}`} className="space-y-1.5">
                   <div className="relative">
-                  <img
-                     src={previews[i]}
-                     alt={file.name}
-                    className="aspect-square w-full rounded-lg object-cover"
-                  />
-                   <Button
-                    type="button"
-                     variant="secondary"
-                     size="icon"
-                    aria-label="Remover foto"
-                     onClick={() => setPhotosToUpload((current) => current.filter((_, idx) => idx !== i))}
-                     className="absolute right-1 top-1 size-7 rounded-full"
-                  >
-                    <Trash2 className="size-3" />
-                   </Button>
+                    <img
+                      src={previews[i]}
+                      alt={file.name}
+                      className="aspect-square w-full rounded-lg object-cover"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      aria-label="Remover foto"
+                      onClick={() =>
+                        setPhotosToUpload((current) => current.filter((_, idx) => idx !== i))
+                      }
+                      className="absolute right-1 top-1 size-7 rounded-full"
+                    >
+                      <Trash2 className="size-3" />
+                    </Button>
                   </div>
                   <Select
                     value={stage}

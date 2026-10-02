@@ -14,6 +14,7 @@ import {
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import mammoth from "mammoth";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -113,6 +114,7 @@ function Documentos() {
     document: DocumentRow;
     url?: string;
     rows?: unknown[][];
+    html?: string;
   } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const currentCategory = CATEGORIES.find((item) => item.id === category)!;
@@ -244,8 +246,18 @@ function Documentos() {
       toast.error("Não foi possível abrir a visualização.");
       return;
     }
-    if (document.category === "pdf") {
+    if (document.category === "pdf" || document.file_name.toLowerCase().endsWith(".doc")) {
       setPreview({ document, url: data.signedUrl });
+      return;
+    }
+    if (document.file_name.toLowerCase().endsWith(".docx")) {
+      try {
+        const response = await fetch(data.signedUrl);
+        const result = await mammoth.convertToHtml({ arrayBuffer: await response.arrayBuffer() });
+        setPreview({ document, html: result.value });
+      } catch {
+        toast.error("Não foi possível interpretar este documento Word para preview.");
+      }
       return;
     }
     try {
@@ -376,7 +388,8 @@ function Documentos() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Pill tone="neutral">{currentCategory.label}</Pill>
-                  {document.category === "pdf" || document.category === "planilhas" ? (
+                  {document.category !== "documentos" ||
+                  /\.(doc|docx)$/i.test(document.file_name) ? (
                     <Button variant="outline" size="sm" onClick={() => void openPreview(document)}>
                       <Eye className="size-4" /> Preview
                     </Button>
@@ -412,6 +425,17 @@ function Documentos() {
               src={preview.url}
               title={`Preview de ${preview.document.file_name}`}
               className="h-[70vh] w-full rounded-lg border"
+            />
+          ) : preview?.document.file_name.toLowerCase().endsWith(".doc") && preview.url ? (
+            <iframe
+              src={preview.url}
+              title={`Preview de ${preview.document.file_name}`}
+              className="h-[70vh] w-full rounded-lg border"
+            />
+          ) : preview?.html ? (
+            <article
+              className="prose prose-sm dark:prose-invert max-h-[70vh] max-w-none overflow-auto rounded-lg border p-6"
+              dangerouslySetInnerHTML={{ __html: preview.html }}
             />
           ) : preview?.rows ? (
             <div className="max-h-[70vh] overflow-auto rounded-lg border">

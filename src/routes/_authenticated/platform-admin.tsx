@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Circle,
   Gem,
+  HardDrive,
   Loader2,
   RefreshCw,
   ShieldCheck,
@@ -61,6 +62,17 @@ type Subscription = {
   status: string;
   current_period_end: string | null;
 };
+type StorageUsage = {
+  organization_id: string;
+  organization_name: string;
+  used_bytes: number;
+  limit_bytes: number;
+  usage_percent: number;
+};
+
+function formatStorageBytes(bytes: number) {
+  return `${(Number(bytes) / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 const MASTER_EMAIL = "tiago3228@yahoo.com.br";
 const ONLINE_WINDOW_MS = 90_000;
@@ -112,6 +124,15 @@ function PlatformAdmin() {
         .select("organization_id,plan,status,current_period_end");
       if (error) throw error;
       return (data ?? []) as Subscription[];
+    },
+  });
+  const storageUsage = useQuery({
+    queryKey: ["platform-document-storage"],
+    enabled: isMaster,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc("get_platform_document_storage_usage");
+      if (error) throw error;
+      return (data ?? []) as StorageUsage[];
     },
   });
 
@@ -201,6 +222,7 @@ function PlatformAdmin() {
               sessions.refetch();
               organizations.refetch();
               subscriptions.refetch();
+              storageUsage.refetch();
             }}
           >
             <RefreshCw className="size-4" /> Atualizar
@@ -238,6 +260,53 @@ function PlatformAdmin() {
           </p>
         </div>
       </div>
+      <section className="surface mb-5 overflow-hidden">
+        <div className="flex items-center justify-between border-b border-border p-4">
+          <div>
+            <h2 className="flex items-center gap-2 font-semibold">
+              <HardDrive className="size-4 text-primary" /> Uso da Guarda Documentação
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Acompanhamento do limite de 80 MB por organização.
+            </p>
+          </div>
+          <Pill tone="neutral">Alertas a partir de 80%</Pill>
+        </div>
+        {storageUsage.isLoading ? (
+          <div className="p-4">
+            <SkeletonCard lines={3} />
+          </div>
+        ) : storageUsage.error ? (
+          <p className="p-4 text-sm text-destructive">
+            Não foi possível carregar o uso de armazenamento.
+          </p>
+        ) : (
+          <div className="divide-y divide-border">
+            {(storageUsage.data ?? []).map((item) => {
+              const percent = Math.min(100, Number(item.usage_percent ?? 0));
+              return (
+                <div key={item.organization_id} className="flex flex-wrap items-center gap-4 p-4">
+                  <div className="min-w-44 flex-1">
+                    <p className="font-medium">{item.organization_name}</p>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={`h-full rounded-full ${percent >= 80 ? "bg-destructive" : "bg-primary"}`}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                  <span
+                    className={`text-sm font-semibold ${percent >= 80 ? "text-destructive" : "text-muted-foreground"}`}
+                  >
+                    {percent.toFixed(1)}% · {formatStorageBytes(item.used_bytes)} /{" "}
+                    {formatStorageBytes(item.limit_bytes)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
       <div className="mb-3 flex items-center gap-2">
         <Input
           className="max-w-xs"

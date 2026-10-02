@@ -67,3 +67,73 @@ drop trigger if exists organization_documents_storage_limit on public.organizati
 create trigger organization_documents_storage_limit
   before insert on public.organization_documents
   for each row execute function public.enforce_document_storage_limit();
+
+create or replace function public.notify_document_storage_threshold()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  used_bytes bigint;
+  limit_bytes bigint;
+begin
+  select coalesce(sum(file_size), 0) into used_bytes
+    from public.organization_documents
+    where organization_id = new.organization_id;
+  select document_storage_limit_bytes into limit_bytes
+    from public.organizations where id = new.organization_id;
+  if limit_bytes is null then limit_bytes := 83886080; end if;
+  if used_bytes >= (limit_bytes * 0.8)
+     and not exists (
+       select 1 from public.notifications
+       where organization_id = new.organization_id
+         and entity_type = 'document_storage'
+         and read = false
+     ) then
+    insert into public.notifications (organization_id, title, body, kind, entity_type)
+    values (
+      new.organization_id,
+      'Armazenamento quase cheio',
+      'A Guarda Documentação atingiu 80% do limite de armazenamento da organização.',
+      'warning',
+      'document_storage'
+    );
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists organization_documents_storage_threshold on public.organization_documents;
+create trigger organization_documents_storage_threshold
+  after insert on public.organization_documents
+  for each row execute function public.notify_document_storage_threshold();
+
+create or replace function public.get_platform_document_storage_usage()
+returns table (
+  organization_id uuid,
+  organization_name text,
+  used_bytes bigint,
+  limit_bytes bigint,
+  usage_percent numeric
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_platform_admin() then
+    raise exception 'Acesso restrito ao administrador master.' using errcode = '42501';
+  end if;
+  return query
+  select o.id, o.name,
+    coalesce(sum(d.file_size), 0)::bigint,
+    o.document_storage_limit_bytes,
+    round((coalesce(sum(d.file_size), 0)::numeric / nullif(o.document_storage_limit_bytes, 0)) * 100, 1)
+  from public.organizations o
+  left join public.organization_documents d on d.organization_id = o.id
+  group by o.id, o.name, o.document_storage_limit_bytes
+  order by usage_percent desc, o.name;
+end;
+$$;
+grant execute on function public.get_platform_document_storage_usage() to authenticated;

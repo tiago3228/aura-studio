@@ -6056,6 +6056,16 @@ export type Database = {
         Args: { _from: string; _location_id?: string; _to: string }
         Returns: Json
       }
+      get_platform_document_storage_usage: {
+        Args: Record<string, never>
+        Returns: {
+          limit_bytes: number
+          organization_id: string
+          organization_name: string
+          usage_percent: number
+          used_bytes: number
+        }[]
+      }
       has_org_permission: {
         Args: { _organization_id: string; _permission: string }
         Returns: boolean
