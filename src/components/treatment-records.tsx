@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, FileDown, ImagePlus, Loader2, Plus, Printer, Trash2 } from "lucide-react";
+import { Camera, ImagePlus, Loader2, MessageCircle, Plus, Printer, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -86,6 +86,19 @@ export function TreatmentRecords({ clientId }: { clientId: string }) {
       return data;
     },
   });
+  const clientQuery = useQuery({
+    enabled: !!membership,
+    queryKey: ["client-contact", clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("name, phone, whatsapp")
+        .eq("id", clientId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
@@ -131,6 +144,12 @@ export function TreatmentRecords({ clientId }: { clientId: string }) {
         <MeasurementHistory
           records={measurementRecords}
           onPrint={() => printMeasurementsReport(measurementRecords)}
+          onWhatsApp={() =>
+            sendMeasurementsWhatsApp(
+              measurementRecords,
+              clientQuery.data?.whatsapp ?? clientQuery.data?.phone,
+            )
+          }
         />
       ) : null}
 
@@ -178,9 +197,11 @@ export function TreatmentRecords({ clientId }: { clientId: string }) {
 function MeasurementHistory({
   records,
   onPrint,
+  onWhatsApp,
 }: {
   records: MeasurementRecord[];
   onPrint: () => void;
+  onWhatsApp: () => void;
 }) {
   const [metric, setMetric] = useState<"weight_kg" | "bmi" | "waist_cm" | "hip_cm" | "bust_cm">(
     "weight_kg",
@@ -220,6 +241,9 @@ function MeasurementHistory({
           </select>
           <Button type="button" variant="outline" size="sm" onClick={onPrint}>
             <Printer className="size-4" /> Imprimir / PDF
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={onWhatsApp}>
+            <MessageCircle className="size-4" /> WhatsApp
           </Button>
         </div>
       </div>
@@ -268,6 +292,31 @@ function printMeasurementsReport(records: MeasurementRecord[]) {
   reportWindow.document.close();
   reportWindow.focus();
   window.setTimeout(() => reportWindow.print(), 300);
+}
+
+function sendMeasurementsWhatsApp(records: MeasurementRecord[], contact?: string | null) {
+  const phone = (contact ?? "").replace(/\D/g, "");
+  if (!phone) {
+    toast.error("A paciente não possui telefone ou WhatsApp cadastrado.");
+    return;
+  }
+  const latest = records[0];
+  const bmi = latest ? calculateBmi(latest.weight_kg, latest.height_cm) : null;
+  const message = [
+    "Olá! Segue o acompanhamento da sua evolução corporal:",
+    latest?.weight_kg ? `Peso: ${latest.weight_kg} kg` : null,
+    bmi ? `IMC: ${bmi.toFixed(2)} (${bmiLabel(bmi)})` : null,
+    latest?.waist_cm ? `Cintura: ${latest.waist_cm} cm` : null,
+    latest?.hip_cm ? `Quadril: ${latest.hip_cm} cm` : null,
+    "O relatório completo pode ser impresso ou salvo em PDF pela clínica.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  window.open(
+    `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+    "_blank",
+    "noopener,noreferrer",
+  );
 }
 
 function Field({ label, value }: { label: string; value?: string | null }) {
