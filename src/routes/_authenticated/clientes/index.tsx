@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Loader2 } from "lucide-react";
+import { Plus, Search, Loader2, Scale } from "lucide-react";
+import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +45,7 @@ function Clientes() {
   const queryClient = useQueryClient();
   const [term, setTerm] = useState("");
   const [open, setOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
 
   const clients = useQuery({
     enabled: !!orgId,
@@ -101,6 +103,16 @@ function Clientes() {
         />
       </div>
 
+      {clients.data && clients.data.length > 1 ? (
+        <div className="mb-5">
+          <Button type="button" variant="outline" onClick={() => setCompareOpen((value) => !value)}>
+            <Scale className="size-4" />{" "}
+            {compareOpen ? "Ocultar comparação" : "Comparar evolução de duas pacientes"}
+          </Button>
+          {compareOpen ? <PatientComparison clients={clients.data} /> : null}
+        </div>
+      ) : null}
+
       {clients.isLoading ? (
         <SkeletonCard />
       ) : filtered.length === 0 ? (
@@ -139,6 +151,131 @@ function Clientes() {
         </ul>
       )}
     </div>
+  );
+}
+
+type ComparisonClient = { id: string; name: string };
+type ComparisonRecord = {
+  client_id: string;
+  performed_at: string;
+  weight_kg: number | null;
+  waist_cm: number | null;
+  hip_cm: number | null;
+};
+
+function PatientComparison({ clients }: { clients: ComparisonClient[] }) {
+  const [firstId, setFirstId] = useState(clients[0]?.id ?? "");
+  const [secondId, setSecondId] = useState(clients[1]?.id ?? "");
+  const [metric, setMetric] = useState<"weight_kg" | "waist_cm" | "hip_cm">("weight_kg");
+  const records = useQuery({
+    enabled: Boolean(firstId && secondId && firstId !== secondId),
+    queryKey: ["patient-comparison", firstId, secondId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("treatment_records")
+        .select("client_id, performed_at, weight_kg, waist_cm, hip_cm")
+        .in("client_id", [firstId, secondId])
+        .order("performed_at", { ascending: true });
+      if (error) throw error;
+      return data as ComparisonRecord[];
+    },
+  });
+  const first = clients.find((client) => client.id === firstId);
+  const second = clients.find((client) => client.id === secondId);
+  const byDate = new Map<string, { date: string; first?: number; second?: number }>();
+  (records.data ?? []).forEach((record) => {
+    const date = dateFmt(record.performed_at);
+    const value = record[metric];
+    if (value === null || value === undefined) return;
+    const item = byDate.get(date) ?? { date };
+    item[record.client_id === firstId ? "first" : "second"] = value;
+    byDate.set(date, item);
+  });
+  const labels = { weight_kg: "Peso (kg)", waist_cm: "Cintura (cm)", hip_cm: "Quadril (cm)" };
+  return (
+    <section className="surface mt-3 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="font-semibold">Comparativo de evolução</h3>
+          <p className="text-xs text-muted-foreground">
+            Compare uma medida de duas pacientes ao longo dos atendimentos.
+          </p>
+        </div>
+        <select
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          value={metric}
+          onChange={(event) => setMetric(event.target.value as typeof metric)}
+          aria-label="Métrica comparativa"
+        >
+          {Object.entries(labels).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <select
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          value={firstId}
+          onChange={(event) => setFirstId(event.target.value)}
+          aria-label="Primeira paciente"
+        >
+          {clients.map((client) => (
+            <option key={client.id} value={client.id}>
+              {client.name}
+            </option>
+          ))}
+        </select>
+        <select
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          value={secondId}
+          onChange={(event) => setSecondId(event.target.value)}
+          aria-label="Segunda paciente"
+        >
+          {clients.map((client) => (
+            <option key={client.id} value={client.id}>
+              {client.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      {firstId === secondId ? (
+        <p className="mt-3 text-sm text-destructive">Selecione duas pacientes diferentes.</p>
+      ) : null}
+      <div className="mt-4 h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={[...byDate.values()]} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+            <XAxis dataKey="date" fontSize={11} />
+            <YAxis fontSize={11} width={42} />
+            <Tooltip />
+            <Line
+              type="monotone"
+              dataKey="first"
+              name={first?.name ?? "Paciente 1"}
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              dot={{ r: 3 }}
+              connectNulls
+            />
+            <Line
+              type="monotone"
+              dataKey="second"
+              name={second?.name ?? "Paciente 2"}
+              stroke="#c084fc"
+              strokeWidth={2}
+              dot={{ r: 3 }}
+              connectNulls
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      {!records.isLoading && byDate.size === 0 ? (
+        <p className="text-center text-sm text-muted-foreground">
+          Ainda não há registros para essa métrica nas pacientes selecionadas.
+        </p>
+      ) : null}
+    </section>
   );
 }
 

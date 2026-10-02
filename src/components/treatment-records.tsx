@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, ImagePlus, Loader2, MessageCircle, Plus, Printer, Trash2 } from "lucide-react";
+import {
+  Camera,
+  FileDown,
+  ImagePlus,
+  Loader2,
+  MessageCircle,
+  Plus,
+  Printer,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import jsPDF from "jspdf";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/lib/session";
@@ -46,6 +56,7 @@ const localInput = (d: Date) => {
 
 type MeasurementRecord = {
   performed_at: string;
+  photos?: Photo[];
   weight_kg: number | null;
   height_cm: number | null;
   bust_cm: number | null;
@@ -111,7 +122,7 @@ export function TreatmentRecords({ clientId }: { clientId: string }) {
     },
     onError: (e: Error) => toast.error(e.message),
   });
-  const measurementRecords = ((query.data ?? []) as MeasurementRecord[]).filter(
+  const measurementRecords = ((query.data ?? []) as unknown as MeasurementRecord[]).filter(
     (record) =>
       record.weight_kg ||
       record.bust_cm ||
@@ -143,11 +154,19 @@ export function TreatmentRecords({ clientId }: { clientId: string }) {
       {measurementRecords.length > 0 ? (
         <MeasurementHistory
           records={measurementRecords}
+          organizationId={membership?.organization.id ?? ""}
           onPrint={() => printMeasurementsReport(measurementRecords)}
           onWhatsApp={() =>
             sendMeasurementsWhatsApp(
               measurementRecords,
               clientQuery.data?.whatsapp ?? clientQuery.data?.phone,
+            )
+          }
+          onWhatsAppPdf={() =>
+            shareMeasurementsPdf(
+              measurementRecords,
+              clientQuery.data?.whatsapp ?? clientQuery.data?.phone,
+              membership?.organization.id ?? "",
             )
           }
         />
@@ -196,12 +215,16 @@ export function TreatmentRecords({ clientId }: { clientId: string }) {
 
 function MeasurementHistory({
   records,
+  organizationId,
   onPrint,
   onWhatsApp,
+  onWhatsAppPdf,
 }: {
   records: MeasurementRecord[];
+  organizationId: string;
   onPrint: () => void;
   onWhatsApp: () => void;
+  onWhatsAppPdf: () => void;
 }) {
   const [metric, setMetric] = useState<"weight_kg" | "bmi" | "waist_cm" | "hip_cm" | "bust_cm">(
     "weight_kg",
@@ -245,6 +268,15 @@ function MeasurementHistory({
           <Button type="button" variant="outline" size="sm" onClick={onWhatsApp}>
             <MessageCircle className="size-4" /> WhatsApp
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!organizationId}
+            onClick={onWhatsAppPdf}
+          >
+            <FileDown className="size-4" /> Enviar PDF
+          </Button>
         </div>
       </div>
       <div className="mt-4 h-64 w-full">
@@ -269,7 +301,56 @@ function MeasurementHistory({
           </LineChart>
         </ResponsiveContainer>
       </div>
+      <PhotoHistory records={records} />
     </section>
+  );
+}
+
+function PhotoHistory({ records }: { records: MeasurementRecord[] }) {
+  const photos = records.flatMap((record) =>
+    (record.photos ?? []).map((photo) => ({ ...photo, date: record.performed_at })),
+  );
+  const paths = photos.map((photo) => photo.path);
+  const query = useQuery({
+    enabled: paths.length > 0,
+    queryKey: ["measurement-photo-history", paths],
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from("clinic-files")
+        .createSignedUrls(paths, 3600);
+      if (error) throw error;
+      return data;
+    },
+  });
+  if (!photos.length) return null;
+  return (
+    <div className="mt-4 border-t border-border pt-4">
+      <h4 className="mb-3 text-sm font-semibold">Histórico fotográfico</h4>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {(query.data ?? []).map((item, index) =>
+          item.signedUrl ? (
+            <a
+              key={item.path ?? index}
+              href={item.signedUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="group relative overflow-hidden rounded-lg border border-border"
+            >
+              <img
+                src={item.signedUrl}
+                alt={`${photos[index]?.stage ?? "evolução"} de ${dateFmt(photos[index]?.date ?? "")}`}
+                className="aspect-square w-full object-cover transition group-hover:scale-105"
+                loading="lazy"
+              />
+              <span className="absolute inset-x-1 bottom-1 rounded bg-background/90 px-1 py-1 text-center text-[10px] font-semibold">
+                {photos[index]?.stage ? PHOTO_STAGE_LABEL[photos[index].stage!] : "Evolução"} ·{" "}
+                {dateFmt(photos[index]?.date ?? "")}
+              </span>
+            </a>
+          ) : null,
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -317,6 +398,82 @@ function sendMeasurementsWhatsApp(records: MeasurementRecord[], contact?: string
     "_blank",
     "noopener,noreferrer",
   );
+}
+
+async function shareMeasurementsPdf(
+  records: MeasurementRecord[],
+  contact: string | null | undefined,
+  organizationId: string,
+) {
+  const phone = (contact ?? "").replace(/\D/g, "");
+  if (!phone) {
+    toast.error("A paciente não possui telefone ou WhatsApp cadastrado.");
+    return;
+  }
+  try {
+    const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    pdf.setFontSize(18);
+    pdf.text("Relatório de evolução de peso e medidas", 14, 16);
+    pdf.setFontSize(9);
+    pdf.setTextColor(90, 100, 110);
+    pdf.text(`Gerado em ${new Date().toLocaleString("pt-BR")}`, 14, 22);
+    pdf.setTextColor(20, 30, 40);
+    const headers = [
+      "Data",
+      "Peso kg",
+      "Altura cm",
+      "IMC",
+      "Busto cm",
+      "Cintura cm",
+      "Quadril cm",
+      "Braço cm",
+      "Coxa cm",
+    ];
+    const columnX = [14, 43, 66, 91, 123, 148, 177, 208, 238];
+    pdf.setFillColor(241, 244, 246);
+    pdf.rect(12, 28, 270, 8, "F");
+    pdf.setFontSize(8);
+    headers.forEach((header, index) => pdf.text(header, columnX[index]!, 33));
+    [...records].reverse().forEach((record, index) => {
+      const y = 43 + index * 8;
+      const bmi = calculateBmi(record.weight_kg, record.height_cm);
+      const values = [
+        dateFmt(record.performed_at),
+        record.weight_kg,
+        record.height_cm,
+        bmi?.toFixed(2),
+        record.bust_cm,
+        record.waist_cm,
+        record.hip_cm,
+        record.arm_cm,
+        record.thigh_cm,
+      ];
+      values.forEach((value, valueIndex) =>
+        pdf.text(String(value ?? "—"), columnX[valueIndex]!, y),
+      );
+      if (y > 185) return;
+    });
+    const blob = pdf.output("blob");
+    const path = `${organizationId}/relatorios/${crypto.randomUUID()}-evolucao.pdf`;
+    const upload = await supabase.storage
+      .from("clinic-files")
+      .upload(path, blob, { contentType: "application/pdf", upsert: false });
+    if (upload.error) throw upload.error;
+    const signed = await supabase.storage
+      .from("clinic-files")
+      .createSignedUrl(path, 60 * 60 * 24 * 7);
+    if (signed.error || !signed.data?.signedUrl)
+      throw signed.error ?? new Error("Não foi possível gerar o link do PDF.");
+    const message = `Olá! Segue seu relatório de evolução corporal em PDF:\n${signed.data.signedUrl}`;
+    window.open(
+      `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+    toast.success("PDF gerado. O WhatsApp foi aberto com o link seguro do relatório.");
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : "Não foi possível gerar o PDF.");
+  }
 }
 
 function Field({ label, value }: { label: string; value?: string | null }) {
