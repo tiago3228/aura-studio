@@ -19,7 +19,7 @@ import {
 import { EmptyState, ErrorState, PageHeader, Pill, SkeletonCard } from "@/components/ui-kit";
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/lib/session";
-import { brl, dateFmt } from "@/lib/format";
+import { brl } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/orcamentos")({
   head: () => ({ meta: [{ title: "Orçamentos — Aura Clínicas" }] }),
@@ -43,6 +43,40 @@ const statusLabels: Record<string, string> = {
   convertido: "Convertido",
 };
 
+const localDate = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+function initialQuoteForm() {
+  const issueDate = new Date();
+  const validUntil = new Date(issueDate);
+  validUntil.setDate(validUntil.getDate() + 30);
+  return {
+    client_id: "",
+    professional_id: "",
+    issue_date: localDate(issueDate),
+    valid_until: localDate(validUntil),
+    service_id: "",
+    description: "",
+    quantity: "1",
+    unit_price: "",
+    discount: "0",
+    treatment_plan: "",
+    prescription: "",
+    internal_notes: "",
+  };
+}
+
+type QuoteOption = { id: string; name: string };
+type ServiceOption = QuoteOption & { price: number };
+
+const dateOnlyFmt = (value: string | null | undefined) => {
+  if (!value) return "—";
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+  return Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day)
+    ? new Intl.DateTimeFormat("pt-BR").format(new Date(year!, month! - 1, day))
+    : "—";
+};
+
 function Orcamentos() {
   const { data: membership } = useMembership();
   const orgId = membership?.organization.id;
@@ -55,10 +89,13 @@ function Orcamentos() {
   const quotes = useQuery({
     enabled: Boolean(orgId),
     queryKey: ["quotes", orgId],
+    staleTime: 30 * 1000,
     queryFn: async () => {
       const { data, error } = await client
         .from("quotes")
-        .select("*, clients(name), professionals(name)")
+        .select(
+          "id, client_id, professional_id, issue_date, valid_until, total, discount, surcharge, status, clients(name), professionals(name)",
+        )
         .eq("organization_id", orgId)
         .order("issue_date", { ascending: false });
       if (error) throw error;
@@ -99,7 +136,7 @@ function Orcamentos() {
         throw new Error("Este orçamento já foi convertido em venda.");
       const { data: items, error: itemsError } = await client
         .from("quote_items")
-        .select("*")
+        .select("service_id, product_id, description, quantity, unit_price, total")
         .eq("quote_id", quote.id)
         .eq("organization_id", orgId);
       if (itemsError) throw itemsError;
@@ -155,8 +192,13 @@ function Orcamentos() {
         subtitle={`${filtered.length} orçamento(s)`}
         actions={
           <>
-            <Button variant="outline" onClick={() => void quotes.refetch()}>
-              <RefreshCw className="size-4" /> Atualizar
+            <Button
+              variant="outline"
+              disabled={quotes.isFetching}
+              onClick={() => void quotes.refetch()}
+            >
+              <RefreshCw className={`size-4 ${quotes.isFetching ? "animate-spin" : ""}`} />{" "}
+              Atualizar
             </Button>
             <Button onClick={() => setOpen(true)}>
               <FilePlus2 className="size-4" /> Novo orçamento
@@ -236,8 +278,8 @@ function Orcamentos() {
                   <td className="px-5 py-4 text-muted-foreground">
                     {quote.professionals?.name ?? "Não informado"}
                   </td>
-                  <td className="px-5 py-4">{dateFmt(quote.issue_date)}</td>
-                  <td className="px-5 py-4">{dateFmt(quote.valid_until)}</td>
+                  <td className="px-5 py-4">{dateOnlyFmt(quote.issue_date)}</td>
+                  <td className="px-5 py-4">{dateOnlyFmt(quote.valid_until)}</td>
                   <td className="px-5 py-4 font-semibold">{brl(Number(quote.total))}</td>
                   <td className="px-5 py-4">
                     <Pill
@@ -266,6 +308,7 @@ function Orcamentos() {
                         size="icon"
                         variant="ghost"
                         aria-label="Excluir orçamento"
+                        disabled={remove.isPending}
                         onClick={() => remove.mutate(quote.id)}
                       >
                         <Trash2 className="size-4" />
@@ -306,23 +349,11 @@ function NewQuoteDialog({
 }) {
   const client = supabase as any;
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    client_id: "",
-    professional_id: "",
-    issue_date: new Date().toISOString().slice(0, 10),
-    valid_until: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
-    service_id: "",
-    description: "",
-    quantity: "1",
-    unit_price: "",
-    discount: "0",
-    treatment_plan: "",
-    prescription: "",
-    internal_notes: "",
-  });
+  const [form, setForm] = useState(initialQuoteForm);
   const options = useQuery({
     enabled: open && Boolean(orgId),
     queryKey: ["quote-options", orgId],
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const [clients, professionals, services] = await Promise.all([
         client
@@ -344,6 +375,8 @@ function NewQuoteDialog({
           .eq("active", true)
           .order("name"),
       ]);
+      const failed = [clients, professionals, services].find((result) => result.error);
+      if (failed?.error) throw failed.error;
       return {
         clients: clients.data ?? [],
         professionals: professionals.data ?? [],
@@ -351,7 +384,7 @@ function NewQuoteDialog({
       };
     },
   });
-  const quantity = Number(form.quantity) || 1;
+  const quantity = Number(form.quantity);
   const unitPrice = Number(form.unit_price.replace(",", ".")) || 0;
   const discount = Number(form.discount.replace(",", ".")) || 0;
   const subtotal = quantity * unitPrice;
@@ -360,6 +393,27 @@ function NewQuoteDialog({
     event.preventDefault();
     if (!orgId || !form.description.trim()) {
       toast.error("Informe o item do orçamento.");
+      return;
+    }
+    if (!options.data || options.isLoading) {
+      toast.error("Aguarde o carregamento das opções.");
+      return;
+    }
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      toast.error("Informe uma quantidade válida.");
+      return;
+    }
+    if (
+      !Number.isFinite(unitPrice) ||
+      unitPrice < 0 ||
+      !Number.isFinite(discount) ||
+      discount < 0
+    ) {
+      toast.error("Confira o preço e o desconto.");
+      return;
+    }
+    if (form.valid_until < form.issue_date) {
+      toast.error("A validade deve ser igual ou posterior à emissão.");
       return;
     }
     setSaving(true);
@@ -392,8 +446,12 @@ function NewQuoteDialog({
         discount,
         total,
       });
-      if (itemError) throw itemError;
+      if (itemError) {
+        await client.from("quotes").delete().eq("id", quote.id).eq("organization_id", orgId);
+        throw itemError;
+      }
       toast.success("Orçamento criado.");
+      setForm(initialQuoteForm());
       onDone();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível criar o orçamento.");
@@ -407,6 +465,17 @@ function NewQuoteDialog({
         <DialogHeader>
           <DialogTitle className="font-display">Novo orçamento</DialogTitle>
         </DialogHeader>
+        {options.isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+            <Loader2 className="size-4 animate-spin" /> Carregando clientes, profissionais e
+            serviços...
+          </div>
+        ) : null}
+        {options.error ? (
+          <p className="text-sm text-destructive" role="alert">
+            Não foi possível carregar as opções do orçamento.
+          </p>
+        ) : null}
         <form onSubmit={save} className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
@@ -554,7 +623,7 @@ function NewQuoteDialog({
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || options.isLoading || !!options.error}>
               {saving ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
