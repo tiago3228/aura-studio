@@ -695,7 +695,7 @@ type AppointmentRowProps = {
     client_id: string | null;
     guest_name: string | null;
     guest_phone: string | null;
-    clients: { name: string; phone: string | null } | null;
+    clients: { name: string; phone: string | null; whatsapp: string | null } | null;
     services: { name: string } | null;
     professionals: { name: string } | null;
   };
