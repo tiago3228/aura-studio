@@ -230,7 +230,7 @@ function Atendimentos() {
                       <td className="px-5 py-4">
                         <Link
                           to={item.client_id ? "/clientes/$id" : "/agenda"}
-                          params={item.client_id ? { id: item.client_id } : undefined}
+                          params={item.client_id ? { id: item.client_id } : {}}
                           className="flex items-center gap-2 font-medium hover:text-primary hover:underline"
                         >
                           <span className="grid size-8 place-items-center rounded-full bg-primary-soft text-primary">

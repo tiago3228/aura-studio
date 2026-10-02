@@ -147,7 +147,7 @@ function Dashboard() {
   }
 
   const firstName =
-    user?.user_metadata?.full_name?.toString().split(" ")[0] ??
+    user?.user_metadata?.["full_name"]?.toString().split(" ")[0] ??
     user?.email?.split("@")[0] ??
     membership?.organization.name ??
     "bem-vindo";

@@ -278,15 +278,17 @@ function Orcamentos() {
           </table>
         </div>
       )}
-      <NewQuoteDialog
-        open={open}
-        onOpenChange={setOpen}
-        orgId={orgId}
-        onDone={() => {
-          setOpen(false);
-          void queryClient.invalidateQueries({ queryKey: ["quotes", orgId] });
-        }}
-      />
+      {orgId ? (
+        <NewQuoteDialog
+          open={open}
+          onOpenChange={setOpen}
+          orgId={orgId}
+          onDone={() => {
+            setOpen(false);
+            void queryClient.invalidateQueries({ queryKey: ["quotes", orgId] });
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -299,7 +301,7 @@ function NewQuoteDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  orgId?: string;
+  orgId: string;
   onDone: () => void;
 }) {
   const client = supabase as any;
