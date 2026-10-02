@@ -195,6 +195,7 @@ function Agenda() {
   const bookingMessage = useQuery({
     enabled: !!orgId,
     queryKey: ["booking-share-message", orgId],
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("message_templates")
@@ -228,7 +229,9 @@ function Agenda() {
     queryFn: async () => {
       let query = supabase
         .from("appointments")
-        .select("*, clients(name, phone), services(name), professionals(name)")
+        .select(
+          "id, starts_at, ends_at, status, price, notes, client_id, guest_name, guest_phone, clients(name, phone), services(name), professionals(name)",
+        )
         .gte("starts_at", range.from.toISOString())
         .lt("starts_at", range.to.toISOString())
         .order("starts_at");
@@ -279,6 +282,7 @@ function Agenda() {
   const locations = useQuery({
     enabled: !!orgId,
     queryKey: ["agenda-locations", orgId],
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("organization_locations")
@@ -294,6 +298,7 @@ function Agenda() {
   const lists = useQuery({
     enabled: !!orgId,
     queryKey: ["agenda-lists", orgId],
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const [clients, services, professionals] = await Promise.all([
         supabase
@@ -386,7 +391,7 @@ function Agenda() {
             </Dialog>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button disabled={!canCreateAppointment}>
+                <Button disabled={!canCreateAppointment || lists.isLoading}>
                   <Plus className="size-4" /> {t("Agendar")}
                 </Button>
               </DialogTrigger>
@@ -972,6 +977,10 @@ function NewAppointmentDialog({
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!membership) return;
+    if (!form.service_id || !form.professional_id) {
+      toast.error(t("Selecione o procedimento e o profissional."));
+      return;
+    }
     setSaving(true);
     try {
       const starts = new Date(`${form.date}T${form.time}:00`);
@@ -1040,6 +1049,11 @@ function NewAppointmentDialog({
       <DialogHeader>
         <DialogTitle className="font-display">{t("Novo agendamento")}</DialogTitle>
       </DialogHeader>
+      {!lists ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+          <Loader2 className="size-4 animate-spin" /> {t("Carregando opções...")}
+        </div>
+      ) : null}
       <form onSubmit={save} className="space-y-4">
         <div className="space-y-1.5">
           <Label>{t("Cliente")}</Label>
@@ -1158,7 +1172,7 @@ function NewAppointmentDialog({
           />
         </div>
         <DialogFooter>
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving || !lists}>
             {saving ? <Loader2 className="size-4 animate-spin" /> : null} {t("Salvar")}
           </Button>
         </DialogFooter>
