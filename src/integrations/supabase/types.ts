@@ -5472,6 +5472,14 @@ export type Database = {
           professional_id: string | null
           service_id: string | null
           updated_at: string
+          arm_cm: number | null
+          body_measurements_notes: string | null
+          bust_cm: number | null
+          height_cm: number | null
+          hip_cm: number | null
+          thigh_cm: number | null
+          waist_cm: number | null
+          weight_kg: number | null
         }
         Insert: {
           appointment_id?: string | null
@@ -5490,6 +5498,14 @@ export type Database = {
           professional_id?: string | null
           service_id?: string | null
           updated_at?: string
+          arm_cm?: number | null
+          body_measurements_notes?: string | null
+          bust_cm?: number | null
+          height_cm?: number | null
+          hip_cm?: number | null
+          thigh_cm?: number | null
+          waist_cm?: number | null
+          weight_kg?: number | null
         }
         Update: {
           appointment_id?: string | null
@@ -5508,6 +5524,14 @@ export type Database = {
           professional_id?: string | null
           service_id?: string | null
           updated_at?: string
+          arm_cm?: number | null
+          body_measurements_notes?: string | null
+          bust_cm?: number | null
+          height_cm?: number | null
+          hip_cm?: number | null
+          thigh_cm?: number | null
+          waist_cm?: number | null
+          weight_kg?: number | null
         }
         Relationships: [
           {

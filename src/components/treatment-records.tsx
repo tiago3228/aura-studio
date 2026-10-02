@@ -126,6 +126,7 @@ export function TreatmentRecords({ clientId }: { clientId: string }) {
             <Field label="Evolução" value={rec.evolution} />
             <Field label="Próximos passos" value={rec.next_steps} />
           </dl>
+          <BodyMeasurements record={rec} />
           <PhotoGrid photos={(rec.photos as unknown as Photo[]) ?? []} />
         </article>
       ))}
@@ -139,6 +140,46 @@ function Field({ label, value }: { label: string; value?: string | null }) {
     <div className="flex gap-2">
       <dt className="w-32 shrink-0 text-muted-foreground">{label}</dt>
       <dd className="flex-1 text-pretty">{value}</dd>
+    </div>
+  );
+}
+
+function BodyMeasurements({
+  record,
+}: {
+  record: {
+    weight_kg: number | null;
+    height_cm: number | null;
+    bust_cm: number | null;
+    waist_cm: number | null;
+    hip_cm: number | null;
+    arm_cm: number | null;
+    thigh_cm: number | null;
+    body_measurements_notes: string | null;
+  };
+}) {
+  const values = [
+    ["Peso", record.weight_kg, "kg"],
+    ["Altura", record.height_cm, "cm"],
+    ["Busto", record.bust_cm, "cm"],
+    ["Cintura", record.waist_cm, "cm"],
+    ["Quadril", record.hip_cm, "cm"],
+    ["Braço", record.arm_cm, "cm"],
+    ["Coxa", record.thigh_cm, "cm"],
+  ].filter(([, value]) => value !== null && value !== undefined && value !== "");
+  const notes = record.body_measurements_notes;
+  if (!values.length && !notes) return null;
+  return (
+    <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3 text-xs">
+      <p className="mb-2 font-semibold">Evolução de peso e medidas</p>
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        {values.map(([label, value, unit]) => (
+          <span key={label}>
+            <strong>{label}:</strong> {String(value)} {unit}
+          </span>
+        ))}
+      </div>
+      {notes ? <p className="mt-2 text-muted-foreground">{String(notes)}</p> : null}
     </div>
   );
 }
@@ -200,6 +241,14 @@ function RecordDialog({ clientId, onDone }: { clientId: string; onDone: () => vo
     parameters: "",
     evolution: "",
     next_steps: "",
+    weight_kg: "",
+    height_cm: "",
+    bust_cm: "",
+    waist_cm: "",
+    hip_cm: "",
+    arm_cm: "",
+    thigh_cm: "",
+    body_measurements_notes: "",
   });
   const previews = useMemo(
     () => photosToUpload.map(({ file }) => URL.createObjectURL(file)),
@@ -258,6 +307,14 @@ function RecordDialog({ clientId, onDone }: { clientId: string; onDone: () => vo
         parameters: form.parameters || null,
         evolution: form.evolution || null,
         next_steps: form.next_steps || null,
+        weight_kg: form.weight_kg ? Number(form.weight_kg) : null,
+        height_cm: form.height_cm ? Number(form.height_cm) : null,
+        bust_cm: form.bust_cm ? Number(form.bust_cm) : null,
+        waist_cm: form.waist_cm ? Number(form.waist_cm) : null,
+        hip_cm: form.hip_cm ? Number(form.hip_cm) : null,
+        arm_cm: form.arm_cm ? Number(form.arm_cm) : null,
+        thigh_cm: form.thigh_cm ? Number(form.thigh_cm) : null,
+        body_measurements_notes: form.body_measurements_notes.trim() || null,
         photos: photos as unknown as never,
         created_by: membership.userId,
       });
@@ -380,6 +437,48 @@ function RecordDialog({ clientId, onDone }: { clientId: string; onDone: () => vo
             placeholder="Ex.: retorno em 21 dias, usar protetor solar"
           />
         </div>
+
+        <fieldset className="space-y-3 rounded-lg border border-border p-3">
+          <legend className="px-1 text-sm font-semibold">
+            Evolução de peso e medidas (opcional)
+          </legend>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {(
+              [
+                ["weight_kg", "Peso (kg)"],
+                ["height_cm", "Altura (cm)"],
+                ["bust_cm", "Busto (cm)"],
+                ["waist_cm", "Cintura (cm)"],
+                ["hip_cm", "Quadril (cm)"],
+                ["arm_cm", "Braço (cm)"],
+                ["thigh_cm", "Coxa (cm)"],
+              ] as const
+            ).map(([id, label]) => (
+              <div className="space-y-1.5" key={id}>
+                <Label htmlFor={id}>{label}</Label>
+                <Input
+                  id={id}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form[id]}
+                  onChange={(e) => setForm({ ...form, [id]: e.target.value })}
+                  placeholder="Opcional"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="body_measurements_notes">Observações das medidas</Label>
+            <Textarea
+              id="body_measurements_notes"
+              rows={2}
+              value={form.body_measurements_notes}
+              onChange={(e) => setForm({ ...form, body_measurements_notes: e.target.value })}
+              placeholder="Ex.: redução de cintura, retenção de líquido..."
+            />
+          </div>
+        </fieldset>
 
         <div className="space-y-2">
           <Label>Fotos de evolução da sessão</Label>
