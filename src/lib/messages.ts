@@ -1,6 +1,12 @@
 /** Modelos de mensagem para envio manual pelo WhatsApp. */
 export type MessageEvent =
-  "confirmacao" | "cancelamento" | "reagendamento" | "lembrete" | "agradecimento" | "satisfacao" | "link_agendamento";
+  | "confirmacao"
+  | "cancelamento"
+  | "reagendamento"
+  | "lembrete"
+  | "agradecimento"
+  | "satisfacao"
+  | "link_agendamento";
 
 export const MESSAGE_EVENTS: { value: MessageEvent; label: string }[] = [
   { value: "confirmacao", label: "Confirmação de agendamento" },
@@ -41,7 +47,19 @@ export const MESSAGE_VARIABLES = [
 ];
 
 export function fillTemplate(body: string, vars: Record<string, string>) {
-  return body.replace(/\{(\w+)\}/g, (match, key: string) => vars[key] ?? match);
+  return body.replace(
+    /@@([\p{L}\p{N}_]+)|\{(\w+)\}/gu,
+    (match, esteticKey: string | undefined, auraKey: string | undefined) => {
+      const key = esteticKey ?? auraKey ?? "";
+      const normalized = key
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+      const candidates = normalized === "horario" ? [key, normalized, "hora"] : [key, normalized];
+      const candidate = candidates.find((name) => Object.prototype.hasOwnProperty.call(vars, name));
+      return candidate ? vars[candidate] : match;
+    },
+  );
 }
 
 export function whatsappLink(phone: string, text: string) {

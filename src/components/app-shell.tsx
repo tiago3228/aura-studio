@@ -31,6 +31,7 @@ import {
   FileSignature,
   ClipboardCheck,
   ClipboardList,
+  MessageSquareText,
   FolderKanban,
   ShoppingBag,
   Home,
@@ -82,6 +83,12 @@ const NAV: NavItem[] = [
       { to: "/servicos", label: "Procedimentos", area: "procedimentos", icon: Sparkles },
       { to: "/estoque", label: "Produtos", area: "estoque", icon: Package },
       { to: "/anamneses", label: "Modelos de anamnese", area: "clientes", icon: ClipboardList },
+      {
+        to: "/mensagens",
+        label: "Modelos de mensagens",
+        area: "clientes",
+        icon: MessageSquareText,
+      },
     ],
   },
   { to: "/crm", label: "CRM", area: "crm", icon: BarChart3, mobile: true },
@@ -204,6 +211,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { language, setLanguage, navLabel, t } = useLanguage();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => ({
+    "/cadastros": [
+      "/cadastros",
+      "/clientes",
+      "/servicos",
+      "/estoque",
+      "/anamneses",
+      "/mensagens",
+    ].some((path) => pathname.startsWith(path)),
     "/assistente": pathname.startsWith("/assistente") || pathname.startsWith("/marketing"),
     "/pagamentos": [
       "/pagamentos",

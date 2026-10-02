@@ -10,6 +10,7 @@ import { useMembership } from "@/lib/session";
 import { brl, dateFmt, initials, timeFmt } from "@/lib/format";
 import { PageHeader, Pill, SkeletonCard, EmptyState, StatCard } from "@/components/ui-kit";
 import { TreatmentRecords } from "@/components/treatment-records";
+import { MessageDialog } from "@/components/message-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,7 @@ function ClientDetail() {
   const { data: membership } = useMembership();
   const queryClient = useQueryClient();
   const [openAnamnese, setOpenAnamnese] = useState(false);
+  const [openMessage, setOpenMessage] = useState(false);
 
   const query = useQuery({
     enabled: !!membership,
@@ -116,6 +118,13 @@ function ClientDetail() {
   const preferredProfessionalName = Object.entries(preferredProfessional).sort(
     (a, b) => b[1] - a[1],
   )[0]?.[0];
+  const clientPhone = client.whatsapp ?? client.phone;
+  const messageAppointments = appointments.map((appointment) => ({
+    id: appointment.id,
+    startsAt: appointment.starts_at,
+    serviceName: appointment.services?.name ?? "",
+    professionalName: appointment.professionals?.name ?? "",
+  }));
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -143,7 +152,36 @@ function ClientDetail() {
           </Pill>
         ) : null}
         {crmClient.is_vip ? <Pill tone="gold">VIP</Pill> : null}
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={!clientPhone}
+          onClick={() => setOpenMessage(true)}
+          title={clientPhone ? "Enviar mensagem pelo WhatsApp" : "Cliente sem WhatsApp cadastrado"}
+        >
+          <MessageSquare className="size-4" /> Mensagem
+        </Button>
       </div>
+
+      <Dialog open={openMessage} onOpenChange={setOpenMessage}>
+        {openMessage ? (
+          <MessageDialog
+            target={{
+              appointmentId: null,
+              clientId: client.id,
+              clientName: client.name,
+              phone: clientPhone,
+              serviceName: "",
+              professionalName: "",
+              startsAt: null,
+              appointmentOptions: messageAppointments,
+              allowAppointmentSelection: true,
+            }}
+            onDone={() => setOpenMessage(false)}
+          />
+        ) : null}
+      </Dialog>
 
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
         <StatCard label="Atendimentos" value={String(attended.length)} />

@@ -67,11 +67,11 @@ const cards = [
   },
   {
     title: "Modelos de mensagens",
-    description: "Textos para confirmação, lembrete e comunicação com clientes.",
-    to: "/configuracoes",
+    description: "Modelos personalizados com variáveis e envio manual pelo WhatsApp.",
+    to: "/mensagens",
     icon: MessageSquareText,
     tone: "text-success bg-success-soft",
-    available: false,
+    available: true,
   },
   {
     title: "Fornecedores",

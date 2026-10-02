@@ -27,7 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState, ErrorState, PageHeader, Pill, SkeletonCard } from "@/components/ui-kit";
 import { supabase } from "@/integrations/supabase/client";
-import { hasPermission, useMembership, useSession } from "@/lib/session";
+import { isAdminRole, useMembership, useSession } from "@/lib/session";
 
 export const Route = createFileRoute("/_authenticated/contratos")({
   head: () => ({
@@ -65,11 +65,11 @@ function Contratos() {
   const { user } = useSession();
   const queryClient = useQueryClient();
   const organizationId = membership?.organization.id;
-  const canCreate = hasPermission(membership, "contratos.criar");
-  // Modelos podem ser ajustados por qualquer usuário autenticado da clínica.
+  // Modelos são compartilhados pela loja: qualquer membro ativo pode criar/editar.
+  const canCreate = Boolean(membership);
   const canEdit = Boolean(membership);
-  // “Administrador master” corresponde ao proprietário da organização (role owner).
-  const canDelete = membership?.role === "owner";
+  // Exclusões ficam restritas a proprietários e gerentes.
+  const canDelete = isAdminRole(membership?.role);
   const [search, setSearch] = useState("");
   const [activeOnly, setActiveOnly] = useState(false);
   const [sortBy, setSortBy] = useState<"name" | "updated_at">("name");
@@ -158,6 +158,11 @@ function Contratos() {
         .delete()
         .eq("id", template.id)
         .eq("organization_id", organizationId);
+      if (error?.code === "23503") {
+        throw new Error(
+          "Este modelo já está vinculado a contratos existentes. Desative-o em vez de excluí-lo.",
+        );
+      }
       if (error) throw error;
     },
     onSuccess: async () => {
@@ -223,7 +228,7 @@ function Contratos() {
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Modelos de Contratos"
-        subtitle="Clique em um modelo para editar, ativar ou desativar."
+        subtitle="Todos os membros da loja podem criar e editar modelos; a exclusão fica com proprietários e gerentes. Cada loja mantém sua própria cópia."
         actions={
           canCreate ? (
             <Button onClick={openNewDialog}>

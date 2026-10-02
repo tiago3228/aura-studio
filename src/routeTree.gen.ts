@@ -34,6 +34,7 @@ import { Route as AuthenticatedGatewaysRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedGlobalizacaoRouteImport } from './routes/_authenticated/globalizacao'
 import { Route as AuthenticatedHorariosRouteImport } from './routes/_authenticated/horarios'
 import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
+import { Route as AuthenticatedMensagensRouteImport } from './routes/_authenticated/mensagens'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedOrcamentosRouteImport } from './routes/_authenticated/orcamentos'
 import { Route as AuthenticatedPagamentosRouteImport } from './routes/_authenticated/pagamentos'
@@ -179,6 +180,11 @@ const AuthenticatedMarketingRoute = AuthenticatedMarketingRouteImport.update({
   path: '/marketing',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMensagensRoute = AuthenticatedMensagensRouteImport.update({
+  id: '/mensagens',
+  path: '/mensagens',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -288,6 +294,7 @@ export interface FileRoutesByFullPath {
   '/globalizacao': typeof AuthenticatedGlobalizacaoRoute
   '/horarios': typeof AuthenticatedHorariosRoute
   '/marketing': typeof AuthenticatedMarketingRoute
+  '/mensagens': typeof AuthenticatedMensagensRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/pagamentos': typeof AuthenticatedPagamentosRoute
@@ -330,6 +337,7 @@ export interface FileRoutesByTo {
   '/globalizacao': typeof AuthenticatedGlobalizacaoRoute
   '/horarios': typeof AuthenticatedHorariosRoute
   '/marketing': typeof AuthenticatedMarketingRoute
+  '/mensagens': typeof AuthenticatedMensagensRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/pagamentos': typeof AuthenticatedPagamentosRoute
@@ -374,6 +382,7 @@ export interface FileRoutesById {
   '/_authenticated/globalizacao': typeof AuthenticatedGlobalizacaoRoute
   '/_authenticated/horarios': typeof AuthenticatedHorariosRoute
   '/_authenticated/marketing': typeof AuthenticatedMarketingRoute
+  '/_authenticated/mensagens': typeof AuthenticatedMensagensRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/_authenticated/pagamentos': typeof AuthenticatedPagamentosRoute
@@ -418,6 +427,7 @@ export interface FileRouteTypes {
     | '/globalizacao'
     | '/horarios'
     | '/marketing'
+    | '/mensagens'
     | '/onboarding'
     | '/orcamentos'
     | '/pagamentos'
@@ -460,6 +470,7 @@ export interface FileRouteTypes {
     | '/globalizacao'
     | '/horarios'
     | '/marketing'
+    | '/mensagens'
     | '/onboarding'
     | '/orcamentos'
     | '/pagamentos'
@@ -503,6 +514,7 @@ export interface FileRouteTypes {
     | '/_authenticated/globalizacao'
     | '/_authenticated/horarios'
     | '/_authenticated/marketing'
+    | '/_authenticated/mensagens'
     | '/_authenticated/onboarding'
     | '/_authenticated/orcamentos'
     | '/_authenticated/pagamentos'
@@ -708,6 +720,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMarketingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/mensagens': {
+      id: '/_authenticated/mensagens'
+      path: '/mensagens'
+      fullPath: '/mensagens'
+      preLoaderRoute: typeof AuthenticatedMensagensRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/onboarding': {
       id: '/_authenticated/onboarding'
       path: '/onboarding'
@@ -846,6 +865,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedGlobalizacaoRoute: typeof AuthenticatedGlobalizacaoRoute
   AuthenticatedHorariosRoute: typeof AuthenticatedHorariosRoute
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRoute
+  AuthenticatedMensagensRoute: typeof AuthenticatedMensagensRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedOrcamentosRoute: typeof AuthenticatedOrcamentosRoute
   AuthenticatedPagamentosRoute: typeof AuthenticatedPagamentosRoute
@@ -883,6 +903,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedGlobalizacaoRoute: AuthenticatedGlobalizacaoRoute,
   AuthenticatedHorariosRoute: AuthenticatedHorariosRoute,
   AuthenticatedMarketingRoute: AuthenticatedMarketingRoute,
+  AuthenticatedMensagensRoute: AuthenticatedMensagensRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedOrcamentosRoute: AuthenticatedOrcamentosRoute,
   AuthenticatedPagamentosRoute: AuthenticatedPagamentosRoute,

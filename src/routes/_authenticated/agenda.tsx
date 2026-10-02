@@ -230,7 +230,7 @@ function Agenda() {
       let query = supabase
         .from("appointments")
         .select(
-          "id, starts_at, ends_at, status, price, notes, client_id, guest_name, guest_phone, clients(name, phone), services(name), professionals(name)",
+          "id, starts_at, ends_at, status, price, notes, client_id, guest_name, guest_phone, clients(name, phone, whatsapp), services(name), professionals(name)",
         )
         .gte("starts_at", range.from.toISOString())
         .lt("starts_at", range.to.toISOString())
@@ -726,7 +726,7 @@ function AppointmentRow({
     appointmentId: a.id,
     clientId: a.client_id,
     clientName: a.clients?.name ?? a.guest_name ?? t("Cliente"),
-    phone: a.clients?.phone ?? a.guest_phone,
+    phone: a.clients?.whatsapp ?? a.clients?.phone ?? a.guest_phone,
     serviceName: a.services?.name ?? t("atendimento"),
     professionalName: a.professionals?.name ?? t("nossa equipe"),
     startsAt: a.starts_at,
