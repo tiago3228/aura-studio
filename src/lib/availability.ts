@@ -106,7 +106,12 @@ export function buildSlots(
   for (const window of windows) {
     for (let s = window.start; s + durationMin <= window.end; s += step) {
       const e = s + durationMin;
-      if (blocks.some((b) => overlaps(s, e, b.start, b.end))) continue;
+      // A folga entre atendimentos também precisa caber antes do almoço.
+      // Sem considerar o gap aqui, um atendimento que termina exatamente no
+      // início do almoço era oferecido mesmo quando sua folga avançava sobre
+      // o intervalo.
+      const occupiedEnd = e + Math.max(0, cfg.slotGap);
+      if (blocks.some((b) => overlaps(s, occupiedEnd, b.start, b.end))) continue;
       if (brInstant(day, s).getTime() <= now.getTime()) continue;
       const slot = fromMinutes(s);
       if (!slots.includes(slot)) slots.push(slot);
