@@ -3384,6 +3384,9 @@ export type Database = {
           access_blocked: boolean
           access_blocked_at: string | null
           access_blocked_reason: string | null
+          diamond_access: boolean
+          diamond_access_at: string | null
+          diamond_access_granted_by: string | null
           address: string | null
           booking_slug: string | null
           business_hours: Json
@@ -3415,6 +3418,9 @@ export type Database = {
           access_blocked?: boolean
           access_blocked_at?: string | null
           access_blocked_reason?: string | null
+          diamond_access?: boolean
+          diamond_access_at?: string | null
+          diamond_access_granted_by?: string | null
           address?: string | null
           booking_slug?: string | null
           business_hours?: Json
@@ -3446,6 +3452,9 @@ export type Database = {
           access_blocked?: boolean
           access_blocked_at?: string | null
           access_blocked_reason?: string | null
+          diamond_access?: boolean
+          diamond_access_at?: string | null
+          diamond_access_granted_by?: string | null
           address?: string | null
           booking_slug?: string | null
           business_hours?: Json
@@ -6176,6 +6185,49 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      platform_set_diamond_access: {
+        Args: { _enabled: boolean; _organization_id: string }
+        Returns: {
+          access_blocked: boolean
+          access_blocked_at: string | null
+          access_blocked_reason: string | null
+          address: string | null
+          booking_slug: string | null
+          business_hours: Json
+          city: string | null
+          cover_url: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          diamond_access: boolean
+          diamond_access_at: string | null
+          diamond_access_granted_by: string | null
+          google_review_url: string | null
+          id: string
+          instagram: string | null
+          legal_name: string | null
+          logo_url: string | null
+          name: string
+          onboarding_done: boolean
+          online_booking_enabled: boolean
+          phone: string | null
+          plan: string
+          primary_color: string
+          secondary_color: string
+          state: string | null
+          status: string
+          trial_ends_at: string | null
+          updated_at: string
+          whatsapp: string | null
+          zip: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organizations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       platform_set_organization_access: {
         Args: { _enabled: boolean; _organization_id: string; _reason?: string }
         Returns: {
@@ -6190,6 +6242,9 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          diamond_access: boolean
+          diamond_access_at: string | null
+          diamond_access_granted_by: string | null
           google_review_url: string | null
           id: string
           instagram: string | null

@@ -6,6 +6,7 @@ import {
   Ban,
   CheckCircle2,
   Circle,
+  Gem,
   Loader2,
   RefreshCw,
   ShieldCheck,
@@ -15,7 +16,11 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { setOrganizationAccess, setPlatformSubscription } from "@/lib/secure-actions.functions";
+import {
+  setDiamondAccess,
+  setOrganizationAccess,
+  setPlatformSubscription,
+} from "@/lib/secure-actions.functions";
 import { useSession } from "@/lib/session";
 import { PageHeader, Pill, SkeletonCard } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
@@ -39,6 +44,7 @@ type Organization = {
   created_at: string;
   access_blocked: boolean;
   access_blocked_reason: string | null;
+  diamond_access: boolean;
 };
 type Session = {
   id: string;
@@ -61,6 +67,7 @@ const ONLINE_WINDOW_MS = 90_000;
 
 function PlatformAdmin() {
   const setOrganizationAccessFn = useServerFn(setOrganizationAccess);
+  const setDiamondAccessFn = useServerFn(setDiamondAccess);
   const setPlatformSubscriptionFn = useServerFn(setPlatformSubscription);
   const queryClient = useQueryClient();
   const { user } = useSession();
@@ -76,7 +83,7 @@ function PlatformAdmin() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("organizations")
-        .select("id,name,created_at,access_blocked,access_blocked_reason")
+        .select("id,name,created_at,access_blocked,access_blocked_reason,diamond_access")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Organization[];
@@ -143,7 +150,9 @@ function PlatformAdmin() {
   async function toggleAccess(org: Organization) {
     setBusy(true);
     try {
-      await setOrganizationAccessFn({ data: { organizationId: org.id, enabled: org.access_blocked, reason: reason || null } });
+      await setOrganizationAccessFn({
+        data: { organizationId: org.id, enabled: org.access_blocked, reason: reason || null },
+      });
     } catch {
       setBusy(false);
       toast.error("Não foi possível alterar o acesso.");
@@ -164,6 +173,20 @@ function PlatformAdmin() {
     }
     toast.success("Assinatura atualizada.");
     await queryClient.invalidateQueries({ queryKey: ["platform-subscriptions"] });
+  }
+  async function toggleDiamond(org: Organization) {
+    setBusy(true);
+    try {
+      await setDiamondAccessFn({ data: { organizationId: org.id, enabled: !org.diamond_access } });
+      toast.success(
+        org.diamond_access ? "Acesso Diamond desabilitado." : "Acesso Diamond habilitado.",
+      );
+      await queryClient.invalidateQueries({ queryKey: ["platform-organizations"] });
+    } catch {
+      toast.error("Não foi possível alterar o acesso Diamond.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -193,7 +216,7 @@ function PlatformAdmin() {
           últimos 90 segundos.
         </p>
       </div>
-      <div className="mb-5 grid gap-3 sm:grid-cols-3">
+      <div className="mb-5 grid gap-3 sm:grid-cols-4">
         <div className="surface p-4">
           <p className="text-xs text-muted-foreground">Lojas cadastradas</p>
           <p className="mt-2 text-2xl font-semibold">{organizations.data?.length ?? 0}</p>
@@ -206,6 +229,12 @@ function PlatformAdmin() {
           <p className="text-xs text-muted-foreground">Lojas bloqueadas</p>
           <p className="mt-2 text-2xl font-semibold text-destructive">
             {organizations.data?.filter((org) => org.access_blocked).length ?? 0}
+          </p>
+        </div>
+        <div className="surface p-4">
+          <p className="text-xs text-muted-foreground">Acessos Diamond</p>
+          <p className="mt-2 text-2xl font-semibold text-violet-600">
+            {organizations.data?.filter((org) => org.diamond_access).length ?? 0}
           </p>
         </div>
       </div>
@@ -224,6 +253,7 @@ function PlatformAdmin() {
             <tr className="border-b border-border text-left text-xs text-muted-foreground">
               <th className="p-4">Loja</th>
               <th className="p-4">Assinatura</th>
+              <th className="p-4">Diamond</th>
               <th className="p-4">Acesso</th>
               <th className="p-4">Últimos usuários</th>
               <th className="p-4">Ações</th>
@@ -232,7 +262,7 @@ function PlatformAdmin() {
           <tbody>
             {organizations.isLoading ? (
               <tr>
-                <td className="p-4" colSpan={5}>
+                <td className="p-4" colSpan={6}>
                   <SkeletonCard />
                 </td>
               </tr>
@@ -267,6 +297,24 @@ function PlatformAdmin() {
                         <option value="past_due">Em atraso</option>
                         <option value="canceled">Cancelada</option>
                       </select>
+                    </td>
+                    <td className="p-4">
+                      {org.diamond_access ? (
+                        <Pill tone="gold">
+                          <Gem className="mr-1 size-3" /> Ativo
+                        </Pill>
+                      ) : (
+                        <Pill tone="neutral">Desativado</Pill>
+                      )}
+                      <Button
+                        className="mt-2"
+                        size="sm"
+                        variant={org.diamond_access ? "outline" : "default"}
+                        disabled={busy}
+                        onClick={() => void toggleDiamond(org)}
+                      >
+                        {org.diamond_access ? "Desabilitar" : "Habilitar"}
+                      </Button>
                     </td>
                     <td className="p-4">
                       {org.access_blocked ? (

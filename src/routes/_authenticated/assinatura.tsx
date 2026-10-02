@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, CreditCard, Check, Copy, QrCode } from "lucide-react";
+import { Loader2, CreditCard, Check, Copy, Gem, QrCode } from "lucide-react";
 import { toast } from "sonner";
 
 import { getBilling, startProSubscription, cancelProSubscription } from "@/lib/billing.functions";
@@ -67,7 +67,10 @@ function Assinatura() {
   if (billing.isLoading) return <SkeletonCard />;
 
   const sub = billing.data?.subscription;
-  const status = STATUS[sub?.status ?? "trialing"] ?? STATUS["trialing"]!;
+  const diamondAccess = billing.data?.diamondAccess ?? false;
+  const status = diamondAccess
+    ? { label: "Acesso Diamante", tone: "gold" as const }
+    : (STATUS[sub?.status ?? "trialing"] ?? STATUS["trialing"]!);
   const canManage = billing.data?.isAdmin ?? false;
   const pendingPix = pix.data?.payments.find((p) => p.status === "pending");
 
@@ -133,8 +136,29 @@ function Assinatura() {
               {brl(49.9)} por mês · acesso ilimitado a todos os módulos
             </p>
           </div>
-          <Pill tone={status.tone}>{status.label}</Pill>
+          <span
+            title={
+              diamondAccess
+                ? "Acesso PRO por tempo indeterminado, com todos os módulos liberados gratuitamente."
+                : undefined
+            }
+          >
+            <Pill tone={status.tone}>
+              {diamondAccess ? <Gem className="mr-1 size-3.5" /> : null}
+              {status.label}
+            </Pill>
+          </span>
         </div>
+
+        {diamondAccess ? (
+          <div className="flex items-start gap-3 rounded-lg border border-violet-300/60 bg-violet-50 p-3 text-sm text-violet-950 dark:border-violet-700/60 dark:bg-violet-950/20 dark:text-violet-100">
+            <Gem className="mt-0.5 size-5 shrink-0 text-violet-600 dark:text-violet-300" />
+            <p>
+              <strong>Acesso Diamante liberado</strong>: você tem acesso PRO por tempo
+              indeterminado, com todos os módulos liberados gratuitamente.
+            </p>
+          </div>
+        ) : null}
 
         <ul className="space-y-2">
           {BENEFITS.map((b) => (
@@ -161,7 +185,7 @@ function Assinatura() {
           </div>
         </div>
 
-        {!billing.data?.configured ? (
+        {!diamondAccess && !billing.data?.configured ? (
           <p className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
             Pagamento em configuração: o cadastro de cartão será liberado assim que a integração for
             concluída.
@@ -169,11 +193,17 @@ function Assinatura() {
         ) : null}
 
         <div className="flex flex-wrap gap-2">
-          <Button onClick={subscribe} disabled={busy || !canManage || !billing.data?.configured}>
-            {busy ? <Loader2 className="size-4 animate-spin" /> : <CreditCard className="size-4" />}
-            {sub?.status === "active" ? "Gerenciar cartão" : "Cadastrar cartão e assinar"}
-          </Button>
-          {sub && sub.status !== "canceled" ? (
+          {!diamondAccess ? (
+            <Button onClick={subscribe} disabled={busy || !canManage || !billing.data?.configured}>
+              {busy ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <CreditCard className="size-4" />
+              )}
+              {sub?.status === "active" ? "Gerenciar cartão" : "Cadastrar cartão e assinar"}
+            </Button>
+          ) : null}
+          {!diamondAccess && sub && sub.status !== "canceled" ? (
             <Button variant="outline" onClick={cancelNow} disabled={busy || !canManage}>
               Cancelar assinatura
             </Button>
@@ -193,8 +223,9 @@ function Assinatura() {
               <QrCode className="size-5 text-primary" /> Pagar via Pix
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Copie a chave, pague {brl(pix.data?.amount ?? 49.9)} e avise: a liberação é feita
-              manualmente pela administração.
+              {diamondAccess
+                ? "Sua conta não precisa realizar pagamentos: o acesso Diamante já está liberado."
+                : `Copie a chave, pague ${brl(pix.data?.amount ?? 49.9)} e avise: a liberação é feita manualmente pela administração.`}
             </p>
           </div>
           {pendingPix ? <Pill tone="gold">Aguardando liberação</Pill> : null}
@@ -212,23 +243,27 @@ function Assinatura() {
           Tipo da chave: e-mail · Titular: administração Aura.
         </p>
 
-        <Textarea
-          rows={2}
-          placeholder="Observação (opcional): nome de quem pagou, horário do Pix..."
-          value={pixNote}
-          onChange={(e) => setPixNote(e.target.value)}
-          disabled={!canManage || !!pendingPix}
-        />
-        <Button
-          onClick={informPix}
-          disabled={busy || !canManage || !!pendingPix}
-          variant="secondary"
-        >
-          {busy ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-          Já paguei via Pix
-        </Button>
+        {!diamondAccess ? (
+          <>
+            <Textarea
+              rows={2}
+              placeholder="Observação (opcional): nome de quem pagou, horário do Pix..."
+              value={pixNote}
+              onChange={(e) => setPixNote(e.target.value)}
+              disabled={!canManage || !!pendingPix}
+            />
+            <Button
+              onClick={informPix}
+              disabled={busy || !canManage || !!pendingPix}
+              variant="secondary"
+            >
+              {busy ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+              Já paguei via Pix
+            </Button>
+          </>
+        ) : null}
 
-        {(pix.data?.payments.length ?? 0) > 0 ? (
+        {!diamondAccess && (pix.data?.payments.length ?? 0) > 0 ? (
           <ul className="divide-y divide-border text-sm">
             {pix.data!.payments.map((p) => (
               <li key={p.id} className="flex items-center justify-between py-2">

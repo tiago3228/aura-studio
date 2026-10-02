@@ -22,6 +22,7 @@ import {
   Building2,
   HelpCircle,
   Flower2,
+  Gem,
   ChevronDown,
   ChevronRight,
   Calculator,
@@ -308,8 +309,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       {desktopExpanded || open ? (
-        <p className="px-3 pb-2 text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
+        <p className="flex items-center gap-1 px-3 pb-2 text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
           {membership?.organization.name ?? "Clínica"}
+          {membership?.role === "owner" && membership.organization.diamond_access ? (
+            <span title="Acesso PRO por tempo indeterminado, com todos os módulos liberados gratuitamente.">
+              <Gem className="size-3.5 text-violet-600" aria-label="Acesso Diamante" />
+            </span>
+          ) : null}
         </p>
       ) : null}
 
@@ -433,8 +439,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           {desktopExpanded || open ? (
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-semibold">{membership?.organization.name}</p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
                 {membership ? roleLabel[membership.role] : "—"}
+                {membership?.role === "owner" && membership.organization.diamond_access ? (
+                  <span title="Acesso PRO por tempo indeterminado, com todos os módulos liberados gratuitamente.">
+                    <Gem className="size-3.5 text-violet-600" aria-label="Acesso Diamante" />
+                  </span>
+                ) : null}
               </p>
             </div>
           ) : null}
