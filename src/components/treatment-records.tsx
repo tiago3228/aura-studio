@@ -22,6 +22,7 @@ import { createPatientPortalLink } from "@/lib/patient-portal.functions";
 import { useMembership } from "@/lib/session";
 import { dateFmt, timeFmt } from "@/lib/format";
 import { resizeImage } from "@/lib/image";
+import { alignImagesInBrowser } from "@/lib/opencv-alignment";
 import { EmptyState, Pill, SkeletonCard } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -397,6 +398,13 @@ function PhotoHistory({ records }: { records: MeasurementRecord[] }) {
   const [afterIndex, setAfterIndex] = useState(1);
   const [comparison, setComparison] = useState<string | null>(null);
   const [comparisonLoading, setComparisonLoading] = useState(false);
+  const [alignmentLoading, setAlignmentLoading] = useState(false);
+  const [alignedPreview, setAlignedPreview] = useState<string | null>(null);
+  const [alignmentInfo, setAlignmentInfo] = useState<{
+    confidence: number;
+    matches: number;
+    inliers: number;
+  } | null>(null);
   const photos = records
     .flatMap((record) =>
       (record.photos ?? []).map((photo) => ({ ...photo, date: record.performed_at })),
@@ -420,6 +428,31 @@ function PhotoHistory({ records }: { records: MeasurementRecord[] }) {
     signedUrl: query.data?.[index]?.signedUrl ?? null,
   }));
   const canCompare = signedPhotos.length >= 2;
+  async function handleAlignment() {
+    const before = signedPhotos[beforeIndex];
+    const after = signedPhotos[afterIndex];
+    if (!before?.signedUrl || !after?.signedUrl || beforeIndex === afterIndex) {
+      toast.error("Selecione duas fotos diferentes para alinhar.");
+      return;
+    }
+    setAlignmentLoading(true);
+    setAlignedPreview(null);
+    setAlignmentInfo(null);
+    try {
+      const result = await alignImagesInBrowser(before.signedUrl, after.signedUrl);
+      setAlignedPreview(result.alignedDataUrl);
+      setAlignmentInfo({
+        confidence: result.confidence,
+        matches: result.matches,
+        inliers: result.inliers,
+      });
+      toast.success("Fotos alinhadas localmente no navegador.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível alinhar as fotos.");
+    } finally {
+      setAlignmentLoading(false);
+    }
+  }
   async function handleComparison() {
     const before = signedPhotos[beforeIndex];
     const after = signedPhotos[afterIndex];
@@ -453,7 +486,11 @@ function PhotoHistory({ records }: { records: MeasurementRecord[] }) {
             <select
               className="h-8 rounded-md border border-input bg-background px-2 text-xs"
               value={beforeIndex}
-              onChange={(event) => setBeforeIndex(Number(event.target.value))}
+              onChange={(event) => {
+                setBeforeIndex(Number(event.target.value));
+                setAlignedPreview(null);
+                setAlignmentInfo(null);
+              }}
               aria-label="Foto da primeira sessão"
             >
               {signedPhotos.map((photo, index) => (
@@ -466,7 +503,11 @@ function PhotoHistory({ records }: { records: MeasurementRecord[] }) {
             <select
               className="h-8 rounded-md border border-input bg-background px-2 text-xs"
               value={afterIndex}
-              onChange={(event) => setAfterIndex(Number(event.target.value))}
+              onChange={(event) => {
+                setAfterIndex(Number(event.target.value));
+                setAlignedPreview(null);
+                setAlignmentInfo(null);
+              }}
               aria-label="Foto da sessão posterior"
             >
               {signedPhotos.map((photo, index) => (
@@ -476,6 +517,15 @@ function PhotoHistory({ records }: { records: MeasurementRecord[] }) {
                 </option>
               ))}
             </select>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAlignment}
+              disabled={alignmentLoading || comparisonLoading || !query.data}
+            >
+              {alignmentLoading ? "Alinhando..." : "Alinhar fotos"}
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -493,6 +543,26 @@ function PhotoHistory({ records }: { records: MeasurementRecord[] }) {
         <div className="mb-4 whitespace-pre-wrap rounded-md bg-primary/5 p-3 text-sm leading-6">
           <p className="mb-2 font-semibold">Comparação de evolução por IA</p>
           {comparison}
+        </div>
+      ) : null}
+      {alignedPreview && alignmentInfo ? (
+        <div className="mb-4 rounded-md border border-border bg-muted/20 p-3">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold">Prévia alinhada da sessão posterior</p>
+            <span className="text-xs text-muted-foreground">
+              Confiança: {(alignmentInfo.confidence * 100).toFixed(0)}% · {alignmentInfo.inliers}/
+              {alignmentInfo.matches} pontos confiáveis
+            </span>
+          </div>
+          <img
+            src={alignedPreview}
+            alt="Foto da sessão posterior alinhada ao enquadramento da primeira sessão"
+            className="max-h-[28rem] w-full rounded-md object-contain"
+          />
+          <p className="mt-2 text-xs text-muted-foreground">
+            O processamento foi feito localmente no navegador. Esta prévia corrige enquadramento e
+            perspectiva; não representa medição clínica.
+          </p>
         </div>
       ) : null}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
