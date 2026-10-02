@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, ImagePlus, Loader2, Plus, Trash2 } from "lucide-react";
+import { Camera, FileDown, ImagePlus, Loader2, Plus, Printer, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/lib/session";
@@ -43,6 +44,30 @@ const localInput = (d: Date) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+type MeasurementRecord = {
+  performed_at: string;
+  weight_kg: number | null;
+  height_cm: number | null;
+  bust_cm: number | null;
+  waist_cm: number | null;
+  hip_cm: number | null;
+  arm_cm: number | null;
+  thigh_cm: number | null;
+  body_measurements_notes: string | null;
+};
+
+function calculateBmi(weight: number | null | undefined, heightCm: number | null | undefined) {
+  if (!weight || !heightCm || weight <= 0 || heightCm <= 0) return null;
+  return weight / Math.pow(heightCm / 100, 2);
+}
+
+function bmiLabel(bmi: number) {
+  if (bmi < 18.5) return "abaixo do peso";
+  if (bmi < 25) return "faixa adequada";
+  if (bmi < 30) return "sobrepeso";
+  return "obesidade";
+}
+
 export function TreatmentRecords({ clientId }: { clientId: string }) {
   const { data: membership } = useMembership();
   const queryClient = useQueryClient();
@@ -73,6 +98,15 @@ export function TreatmentRecords({ clientId }: { clientId: string }) {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const measurementRecords = ((query.data ?? []) as MeasurementRecord[]).filter(
+    (record) =>
+      record.weight_kg ||
+      record.bust_cm ||
+      record.waist_cm ||
+      record.hip_cm ||
+      record.arm_cm ||
+      record.thigh_cm,
+  );
 
   return (
     <div className="space-y-3">
@@ -92,6 +126,13 @@ export function TreatmentRecords({ clientId }: { clientId: string }) {
       </Dialog>
 
       {query.isLoading ? <SkeletonCard /> : null}
+
+      {measurementRecords.length > 0 ? (
+        <MeasurementHistory
+          records={measurementRecords}
+          onPrint={() => printMeasurementsReport(measurementRecords)}
+        />
+      ) : null}
 
       {!query.isLoading && (query.data?.length ?? 0) === 0 ? (
         <EmptyState
@@ -134,6 +175,101 @@ export function TreatmentRecords({ clientId }: { clientId: string }) {
   );
 }
 
+function MeasurementHistory({
+  records,
+  onPrint,
+}: {
+  records: MeasurementRecord[];
+  onPrint: () => void;
+}) {
+  const [metric, setMetric] = useState<"weight_kg" | "bmi" | "waist_cm" | "hip_cm" | "bust_cm">(
+    "weight_kg",
+  );
+  const chartData = [...records].reverse().map((record) => ({
+    date: dateFmt(record.performed_at),
+    value: metric === "bmi" ? calculateBmi(record.weight_kg, record.height_cm) : record[metric],
+  }));
+  const metricLabels = {
+    weight_kg: "Peso (kg)",
+    bmi: "IMC",
+    waist_cm: "Cintura (cm)",
+    hip_cm: "Quadril (cm)",
+    bust_cm: "Busto (cm)",
+  };
+  return (
+    <section className="surface p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="font-semibold">Histórico de evolução corporal</h3>
+          <p className="text-xs text-muted-foreground">
+            Acompanhe as medidas registradas nos atendimentos.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <select
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            value={metric}
+            onChange={(event) => setMetric(event.target.value as typeof metric)}
+            aria-label="Métrica do gráfico"
+          >
+            {Object.entries(metricLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <Button type="button" variant="outline" size="sm" onClick={onPrint}>
+            <Printer className="size-4" /> Imprimir / PDF
+          </Button>
+        </div>
+      </div>
+      <div className="mt-4 h-64 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+            <XAxis dataKey="date" fontSize={11} />
+            <YAxis fontSize={11} width={42} />
+            <Tooltip
+              formatter={(value) => [
+                typeof value === "number" ? value.toFixed(2) : value,
+                metricLabels[metric],
+              ]}
+            />
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              dot={{ r: 3 }}
+              connectNulls
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </section>
+  );
+}
+
+function printMeasurementsReport(records: MeasurementRecord[]) {
+  const reportWindow = window.open("", "_blank", "noopener,noreferrer");
+  if (!reportWindow) {
+    toast.error("Permita pop-ups para gerar o relatório.");
+    return;
+  }
+  const rows = [...records]
+    .reverse()
+    .map((record) => {
+      const bmi = calculateBmi(record.weight_kg, record.height_cm);
+      return `<tr><td>${dateFmt(record.performed_at)}</td><td>${record.weight_kg ?? "—"}</td><td>${record.height_cm ?? "—"}</td><td>${bmi ? `${bmi.toFixed(2)} (${bmiLabel(bmi)})` : "—"}</td><td>${record.bust_cm ?? "—"}</td><td>${record.waist_cm ?? "—"}</td><td>${record.hip_cm ?? "—"}</td><td>${record.arm_cm ?? "—"}</td><td>${record.thigh_cm ?? "—"}</td></tr>`;
+    })
+    .join("");
+  reportWindow.document.write(
+    `<!doctype html><html><head><title>Relatório de evolução corporal</title><style>body{font-family:Arial,sans-serif;color:#17202a;padding:32px}h1{font-size:22px}p{color:#5b6570}table{border-collapse:collapse;width:100%;font-size:11px;margin-top:24px}th,td{border:1px solid #d6dce1;padding:7px;text-align:left}th{background:#f1f4f6}@media print{body{padding:0}}</style></head><body><h1>Relatório de evolução de peso e medidas</h1><p>Gerado em ${new Date().toLocaleString("pt-BR")}</p><table><thead><tr><th>Data</th><th>Peso kg</th><th>Altura cm</th><th>IMC</th><th>Busto cm</th><th>Cintura cm</th><th>Quadril cm</th><th>Braço cm</th><th>Coxa cm</th></tr></thead><tbody>${rows}</tbody></table></body></html>`,
+  );
+  reportWindow.document.close();
+  reportWindow.focus();
+  window.setTimeout(() => reportWindow.print(), 300);
+}
+
 function Field({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
@@ -168,6 +304,7 @@ function BodyMeasurements({
     ["Coxa", record.thigh_cm, "cm"],
   ].filter(([, value]) => value !== null && value !== undefined && value !== "");
   const notes = record.body_measurements_notes;
+  const bmi = calculateBmi(record.weight_kg, record.height_cm);
   if (!values.length && !notes) return null;
   return (
     <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3 text-xs">
@@ -178,6 +315,11 @@ function BodyMeasurements({
             <strong>{label}:</strong> {String(value)} {unit}
           </span>
         ))}
+        {bmi ? (
+          <span>
+            <strong>IMC:</strong> {bmi.toFixed(2)} ({bmiLabel(bmi)})
+          </span>
+        ) : null}
       </div>
       {notes ? <p className="mt-2 text-muted-foreground">{String(notes)}</p> : null}
     </div>
@@ -468,6 +610,13 @@ function RecordDialog({ clientId, onDone }: { clientId: string; onDone: () => vo
               </div>
             ))}
           </div>
+          {calculateBmi(Number(form.weight_kg), Number(form.height_cm)) ? (
+            <p className="rounded-md bg-primary/5 px-3 py-2 text-sm text-primary">
+              IMC calculado:{" "}
+              {calculateBmi(Number(form.weight_kg), Number(form.height_cm))!.toFixed(2)} —{" "}
+              {bmiLabel(calculateBmi(Number(form.weight_kg), Number(form.height_cm))!)}
+            </p>
+          ) : null}
           <div className="space-y-1.5">
             <Label htmlFor="body_measurements_notes">Observações das medidas</Label>
             <Textarea
