@@ -303,7 +303,7 @@ function Agenda() {
           .order("name"),
         supabase
           .from("services")
-          .select("id, name, duration_min, price")
+          .select("id, name, duration_min, buffer_min, price")
           .eq("active", true)
           .order("name"),
         supabase.from("professionals").select("id, name").eq("active", true).order("name"),
@@ -938,7 +938,7 @@ function BlockDialog({
 
 type Lists = {
   clients: { id: string; name: string; phone: string | null; email: string | null }[];
-  services: { id: string; name: string; duration_min: number; price: number }[];
+  services: { id: string; name: string; duration_min: number; buffer_min: number; price: number }[];
   professionals: { id: string; name: string }[];
 };
 
@@ -957,7 +957,7 @@ function NewAppointmentDialog({
     client_id: "",
     service_id: "",
     professional_id: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: localInputDate(new Date()),
     time: "09:00",
     notes: "",
     new_client_name: "",
@@ -975,7 +975,9 @@ function NewAppointmentDialog({
     setSaving(true);
     try {
       const starts = new Date(`${form.date}T${form.time}:00`);
-      const ends = new Date(starts.getTime() + (service?.duration_min ?? 60) * 60000);
+      const ends = new Date(
+        starts.getTime() + ((service?.duration_min ?? 60) + (service?.buffer_min ?? 0)) * 60000,
+      );
       let clientId = form.client_id && form.client_id !== "__new__" ? form.client_id : null;
       if (isNewClient) {
         const name = form.new_client_name.trim();
