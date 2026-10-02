@@ -102,6 +102,26 @@ const GUIDES: Guide[] = [
     ],
   },
   {
+    title: "Evolução corporal, resumo com IA e portal da paciente",
+    area: "Novidades",
+    summary:
+      "Registre medidas e fotos, gere uma síntese informativa e compartilhe um portal individual de acompanhamento.",
+    steps: [
+      "Abra a ficha da paciente em Clientes e, na seção de evolução, clique em Novo registro.",
+      "Preencha peso, altura e medidas corporais. Esses campos são opcionais e o IMC é calculado automaticamente quando peso e altura estão preenchidos.",
+      "Adicione fotos de antes, depois ou evolução usando a galeria ou a câmera do dispositivo.",
+      "Consulte o gráfico histórico para acompanhar peso e medidas ao longo dos atendimentos e use o comparativo para analisar duas pacientes.",
+      "Clique em Gerar resumo no bloco Resumo de progresso com IA. A síntese é baseada apenas no histórico registrado e é informativa; não substitui avaliação profissional.",
+      "Clique em Link do portal para gerar um endereço individual. O link é copiado automaticamente e pode ser enviado à paciente.",
+      "A paciente acessa o endereço público sem entrar no painel da clínica e visualiza somente os registros e fotos compartilhados naquele link.",
+      "Para substituir um link, gere outro na ficha. O link anterior é revogado automaticamente.",
+    ],
+    tips: [
+      "Confirme os dados antes de gerar o resumo. Evite incluir informações desnecessárias nas observações.",
+      "O portal é somente leitura e não permite que a paciente altere o prontuário.",
+    ],
+  },
+  {
     title: "Horários da clínica",
     area: "Configurações",
     summary: "Defina a janela geral em que sua clínica aceita agendamentos online.",

@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      patient_portal_tokens: {
+        Row: { id: string; organization_id: string; client_id: string; token_hash: string; expires_at: string | null; revoked_at: string | null; created_by: string | null; created_at: string }
+        Insert: { id?: string; organization_id: string; client_id: string; token_hash: string; expires_at?: string | null; revoked_at?: string | null; created_by?: string | null; created_at?: string }
+        Update: { id?: string; organization_id?: string; client_id?: string; token_hash?: string; expires_at?: string | null; revoked_at?: string | null; created_by?: string | null; created_at?: string }
+        Relationships: []
+      }
       organization_documents: {
         Row: {
           category: string

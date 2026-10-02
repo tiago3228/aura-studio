@@ -34,7 +34,11 @@ export const askAssistant = createServerFn({ method: "POST" })
         .gte("starts_at", since)
         .limit(400),
       supabase.from("sales").select("total, cost, created_at").gte("created_at", since).limit(400),
-      supabase.from("clients").select("name, created_at, birth_date").is("deleted_at", null).limit(400),
+      supabase
+        .from("clients")
+        .select("name, created_at, birth_date")
+        .is("deleted_at", null)
+        .limit(400),
       supabase.from("products").select("name, stock, min_stock, cost_price").limit(200),
       supabase.from("commission_entries").select("net, paid, professionals(name)").limit(300),
       supabase.from("services").select("name, price, duration_min").limit(200),
@@ -85,9 +89,13 @@ export const askAssistant = createServerFn({ method: "POST" })
     });
 
     if (response.status === 429)
-      return { answer: "Muitas perguntas em sequência. Aguarde alguns segundos e tente novamente." };
+      return {
+        answer: "Muitas perguntas em sequência. Aguarde alguns segundos e tente novamente.",
+      };
     if (response.status === 402)
-      return { answer: "Os créditos de IA do espaço de trabalho acabaram. Recarregue para continuar." };
+      return {
+        answer: "Os créditos de IA do espaço de trabalho acabaram. Recarregue para continuar.",
+      };
     if (!response.ok) {
       console.error("AI gateway error", response.status, await response.text());
       return { answer: "Não consegui consultar a IA agora. Tente novamente em instantes." };
@@ -95,4 +103,69 @@ export const askAssistant = createServerFn({ method: "POST" })
 
     const json = (await response.json()) as { choices?: { message?: { content?: string } }[] };
     return { answer: json.choices?.[0]?.message?.content ?? "Sem resposta." };
+  });
+
+export const generatePatientProgressSummary = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ clientId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: client, error: clientError } = await context.supabase
+      .from("clients")
+      .select("id, name")
+      .eq("id", data.clientId)
+      .single();
+    if (clientError || !client) throw new Error("Paciente não encontrada.");
+
+    const { data: records, error: recordsError } = await context.supabase
+      .from("treatment_records")
+      .select(
+        "performed_at, procedure, evolution, weight_kg, height_cm, bust_cm, waist_cm, hip_cm, arm_cm, thigh_cm",
+      )
+      .eq("client_id", data.clientId)
+      .order("performed_at", { ascending: true })
+      .limit(60);
+    if (recordsError) throw new Error("Não foi possível carregar o histórico da paciente.");
+    if (!records?.length)
+      return { answer: "Ainda não há atendimentos suficientes para gerar um resumo." };
+
+    const snapshot = records.map((record) => ({
+      data: record.performed_at.slice(0, 10),
+      procedimento: record.procedure,
+      evolucao: record.evolution,
+      peso_kg: record.weight_kg,
+      altura_cm: record.height_cm,
+      busto_cm: record.bust_cm,
+      cintura_cm: record.waist_cm,
+      quadril_cm: record.hip_cm,
+      braco_cm: record.arm_cm,
+      coxa_cm: record.thigh_cm,
+    }));
+    const apiKey = process.env["LOVABLE_API_KEY"];
+    if (!apiKey) return { answer: "O assistente de IA não está configurado no momento." };
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3.5-flash",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Você é uma assistente de acompanhamento de uma clínica de estética. Gere um resumo objetivo em português do Brasil, baseado somente nos dados fornecidos. Destaque tendências de peso e medidas, evolução relatada e pontos sem dados. Não faça diagnóstico, não prescreva tratamento e inclua ao final: 'Este resumo é informativo e não substitui avaliação profissional.' Use títulos curtos e números concretos.",
+          },
+          {
+            role: "user",
+            content: `Paciente: ${client.name}\nHistórico: ${JSON.stringify(snapshot)}`,
+          },
+        ],
+      }),
+    });
+    if (response.status === 429)
+      return { answer: "Muitas solicitações de IA em sequência. Aguarde e tente novamente." };
+    if (response.status === 402)
+      return { answer: "Os créditos de IA do espaço de trabalho acabaram." };
+    if (!response.ok)
+      return { answer: "Não consegui gerar o resumo agora. Tente novamente em instantes." };
+    const json = (await response.json()) as { choices?: { message?: { content?: string } }[] };
+    return { answer: json.choices?.[0]?.message?.content ?? "Sem resumo disponível." };
   });

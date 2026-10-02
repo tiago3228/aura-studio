@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
   Camera,
   FileDown,
@@ -15,6 +16,8 @@ import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "rec
 import jsPDF from "jspdf";
 
 import { supabase } from "@/integrations/supabase/client";
+import { generatePatientProgressSummary } from "@/lib/ai.functions";
+import { createPatientPortalLink } from "@/lib/patient-portal.functions";
 import { useMembership } from "@/lib/session";
 import { dateFmt, timeFmt } from "@/lib/format";
 import { resizeImage } from "@/lib/image";
@@ -83,6 +86,12 @@ export function TreatmentRecords({ clientId }: { clientId: string }) {
   const { data: membership } = useMembership();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const generateSummary = useServerFn(generatePatientProgressSummary);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const createPortalLink = useServerFn(createPatientPortalLink);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalLink, setPortalLink] = useState<string | null>(null);
 
   const query = useQuery({
     enabled: !!membership,
@@ -131,6 +140,31 @@ export function TreatmentRecords({ clientId }: { clientId: string }) {
       record.arm_cm ||
       record.thigh_cm,
   );
+  async function handleSummary() {
+    setSummaryLoading(true);
+    try {
+      const result = await generateSummary({ data: { clientId } });
+      setAiSummary(result.answer);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível gerar o resumo.");
+    } finally {
+      setSummaryLoading(false);
+    }
+  }
+  async function handlePortalLink() {
+    setPortalLoading(true);
+    try {
+      const result = await createPortalLink({ data: { clientId } });
+      const link = `${window.location.origin}/portal/${result.token}`;
+      setPortalLink(link);
+      await navigator.clipboard?.writeText(link);
+      toast.success("Link do portal criado e copiado.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível criar o link.");
+    } finally {
+      setPortalLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-3">
@@ -140,6 +174,15 @@ export function TreatmentRecords({ clientId }: { clientId: string }) {
             <Plus className="size-4" /> Novo registro
           </Button>
         </DialogTrigger>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={handlePortalLink}
+          disabled={portalLoading}
+        >
+          {portalLoading ? "Gerando..." : "Link do portal"}
+        </Button>
         <RecordDialog
           clientId={clientId}
           onDone={() => {
@@ -148,6 +191,20 @@ export function TreatmentRecords({ clientId }: { clientId: string }) {
           }}
         />
       </Dialog>
+      {portalLink ? (
+        <div className="surface flex flex-wrap items-center gap-2 p-3 text-xs">
+          <span className="font-semibold">Portal da paciente:</span>
+          <code className="min-w-0 flex-1 truncate">{portalLink}</code>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => navigator.clipboard?.writeText(portalLink)}
+          >
+            Copiar
+          </Button>
+        </div>
+      ) : null}
 
       {query.isLoading ? <SkeletonCard /> : null}
 
@@ -170,6 +227,33 @@ export function TreatmentRecords({ clientId }: { clientId: string }) {
             )
           }
         />
+      ) : null}
+
+      {query.data && query.data.length > 0 ? (
+        <section className="surface p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-semibold">Resumo de progresso com IA</h3>
+              <p className="text-xs text-muted-foreground">
+                Síntese informativa baseada no histórico registrado.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleSummary}
+              disabled={summaryLoading}
+            >
+              {summaryLoading ? "Analisando..." : "Gerar resumo"}
+            </Button>
+          </div>
+          {aiSummary ? (
+            <div className="mt-3 whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-sm leading-6">
+              {aiSummary}
+            </div>
+          ) : null}
+        </section>
       ) : null}
 
       {!query.isLoading && (query.data?.length ?? 0) === 0 ? (

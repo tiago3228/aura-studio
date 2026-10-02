@@ -46,6 +46,7 @@ import { Route as AuthenticatedStoneRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
 import { Route as AgendarSlugRouteImport } from './routes/agendar.$slug'
 import { Route as AssinarTokenRouteImport } from './routes/assinar.$token'
+import { Route as PortalTokenRouteImport } from './routes/portal.$token'
 import { Route as AuthenticatedClientesIndexRouteImport } from './routes/_authenticated/clientes/index'
 import { Route as AuthenticatedClientesIdRouteImport } from './routes/_authenticated/clientes/$id'
 import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/public/webhooks/mercadopago'
@@ -239,6 +240,11 @@ const AssinarTokenRoute = AssinarTokenRouteImport.update({
   path: '/assinar/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PortalTokenRoute = PortalTokenRouteImport.update({
+  id: '/portal/$token',
+  path: '/portal/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedClientesIndexRoute =
   AuthenticatedClientesIndexRouteImport.update({
     id: '/clientes/',
@@ -294,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/vendas': typeof AuthenticatedVendasRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/assinar/$token': typeof AssinarTokenRoute
+  '/portal/$token': typeof PortalTokenRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/clientes/': typeof AuthenticatedClientesIndexRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
@@ -335,6 +342,7 @@ export interface FileRoutesByTo {
   '/vendas': typeof AuthenticatedVendasRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/assinar/$token': typeof AssinarTokenRoute
+  '/portal/$token': typeof PortalTokenRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/clientes': typeof AuthenticatedClientesIndexRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
@@ -378,6 +386,7 @@ export interface FileRoutesById {
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/assinar/$token': typeof AssinarTokenRoute
+  '/portal/$token': typeof PortalTokenRoute
   '/_authenticated/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/_authenticated/clientes/': typeof AuthenticatedClientesIndexRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
@@ -421,6 +430,7 @@ export interface FileRouteTypes {
     | '/vendas'
     | '/agendar/$slug'
     | '/assinar/$token'
+    | '/portal/$token'
     | '/clientes/$id'
     | '/clientes/'
     | '/api/public/webhooks/mercadopago'
@@ -462,6 +472,7 @@ export interface FileRouteTypes {
     | '/vendas'
     | '/agendar/$slug'
     | '/assinar/$token'
+    | '/portal/$token'
     | '/clientes/$id'
     | '/clientes'
     | '/api/public/webhooks/mercadopago'
@@ -504,6 +515,7 @@ export interface FileRouteTypes {
     | '/_authenticated/vendas'
     | '/agendar/$slug'
     | '/assinar/$token'
+    | '/portal/$token'
     | '/_authenticated/clientes/$id'
     | '/_authenticated/clientes/'
     | '/api/public/webhooks/mercadopago'
@@ -515,6 +527,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   AgendarSlugRoute: typeof AgendarSlugRoute
   AssinarTokenRoute: typeof AssinarTokenRoute
+  PortalTokenRoute: typeof PortalTokenRoute
   ApiPublicWebhooksMercadopagoRoute: typeof ApiPublicWebhooksMercadopagoRoute
 }
 
@@ -779,6 +792,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AssinarTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/portal/$token': {
+      id: '/portal/$token'
+      path: '/portal/$token'
+      fullPath: '/portal/$token'
+      preLoaderRoute: typeof PortalTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/clientes/': {
       id: '/_authenticated/clientes/'
       path: '/clientes'
@@ -886,6 +906,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   AgendarSlugRoute: AgendarSlugRoute,
   AssinarTokenRoute: AssinarTokenRoute,
+  PortalTokenRoute: PortalTokenRoute,
   ApiPublicWebhooksMercadopagoRoute: ApiPublicWebhooksMercadopagoRoute,
 }
 export const routeTree = rootRouteImport
