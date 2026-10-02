@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 
 const LAST_APPOINTMENT = "__last_appointment_until_today__";
-const STANDARD_EVENTS = new Set(MESSAGE_EVENTS.map((event) => event.value));
+const STANDARD_EVENTS = new Set<string>(MESSAGE_EVENTS.map((event) => event.value));
 
 export type MessageAppointmentOption = {
   id: string;

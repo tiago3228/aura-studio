@@ -14,48 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      patient_portal_tokens: {
-        Row: { id: string; organization_id: string; client_id: string; token_hash: string; expires_at: string | null; revoked_at: string | null; created_by: string | null; created_at: string }
-        Insert: { id?: string; organization_id: string; client_id: string; token_hash: string; expires_at?: string | null; revoked_at?: string | null; created_by?: string | null; created_at?: string }
-        Update: { id?: string; organization_id?: string; client_id?: string; token_hash?: string; expires_at?: string | null; revoked_at?: string | null; created_by?: string | null; created_at?: string }
-        Relationships: []
-      }
-      organization_documents: {
-        Row: {
-          category: string
-          created_at: string
-          file_name: string
-          file_size: number
-          id: string
-          mime_type: string
-          organization_id: string
-          storage_path: string
-          uploaded_by: string
-        }
-        Insert: {
-          category: string
-          created_at?: string
-          file_name: string
-          file_size: number
-          id?: string
-          mime_type: string
-          organization_id: string
-          storage_path: string
-          uploaded_by: string
-        }
-        Update: {
-          category?: string
-          created_at?: string
-          file_name?: string
-          file_size?: number
-          id?: string
-          mime_type?: string
-          organization_id?: string
-          storage_path?: string
-          uploaded_by?: string
-        }
-        Relationships: []
-      }
       acceptance_terms: {
         Row: {
           active: boolean
@@ -637,6 +595,7 @@ export type Database = {
       anamnesis_questions: {
         Row: {
           created_at: string
+          follow_up_label: string
           id: string
           label: string
           options: string[]
@@ -648,6 +607,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          follow_up_label?: string
           id?: string
           label: string
           options?: string[]
@@ -659,6 +619,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          follow_up_label?: string
           id?: string
           label?: string
           options?: string[]
@@ -752,6 +713,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      anamnesis_template_catalog: {
+        Row: {
+          active: boolean
+          code: number
+          created_at: string
+          kind: string
+          name: string
+          questions: Json
+        }
+        Insert: {
+          active?: boolean
+          code: number
+          created_at?: string
+          kind: string
+          name: string
+          questions?: Json
+        }
+        Update: {
+          active?: boolean
+          code?: number
+          created_at?: string
+          kind?: string
+          name?: string
+          questions?: Json
+        }
+        Relationships: []
       }
       anamnesis_templates: {
         Row: {
@@ -1830,6 +1818,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      contract_template_defaults: {
+        Row: {
+          active: boolean
+          code: number
+          content: string
+          description: string | null
+          name: string
+          variables: Json
+          version: number
+        }
+        Insert: {
+          active?: boolean
+          code: number
+          content: string
+          description?: string | null
+          name: string
+          variables?: Json
+          version?: number
+        }
+        Update: {
+          active?: boolean
+          code?: number
+          content?: string
+          description?: string | null
+          name?: string
+          variables?: Json
+          version?: number
+        }
+        Relationships: []
       }
       contract_templates: {
         Row: {
@@ -3177,6 +3195,50 @@ export type Database = {
           },
         ]
       }
+      organization_documents: {
+        Row: {
+          category: string
+          created_at: string
+          file_name: string
+          file_size: number
+          id: string
+          mime_type: string
+          organization_id: string
+          storage_path: string
+          uploaded_by: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          file_name: string
+          file_size: number
+          id?: string
+          mime_type: string
+          organization_id: string
+          storage_path: string
+          uploaded_by: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          file_name?: string
+          file_size?: number
+          id?: string
+          mime_type?: string
+          organization_id?: string
+          storage_path?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_localization_settings: {
         Row: {
           currency_code: string
@@ -3426,10 +3488,6 @@ export type Database = {
           access_blocked: boolean
           access_blocked_at: string | null
           access_blocked_reason: string | null
-          diamond_access: boolean
-          diamond_access_at: string | null
-          diamond_access_granted_by: string | null
-          document_storage_limit_bytes: number
           address: string | null
           booking_slug: string | null
           business_hours: Json
@@ -3438,6 +3496,10 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          diamond_access: boolean
+          diamond_access_at: string | null
+          diamond_access_granted_by: string | null
+          document_storage_limit_bytes: number
           google_review_url: string | null
           id: string
           instagram: string | null
@@ -3461,10 +3523,6 @@ export type Database = {
           access_blocked?: boolean
           access_blocked_at?: string | null
           access_blocked_reason?: string | null
-          diamond_access?: boolean
-          diamond_access_at?: string | null
-          diamond_access_granted_by?: string | null
-          document_storage_limit_bytes?: number
           address?: string | null
           booking_slug?: string | null
           business_hours?: Json
@@ -3473,6 +3531,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          diamond_access?: boolean
+          diamond_access_at?: string | null
+          diamond_access_granted_by?: string | null
+          document_storage_limit_bytes?: number
           google_review_url?: string | null
           id?: string
           instagram?: string | null
@@ -3496,10 +3558,6 @@ export type Database = {
           access_blocked?: boolean
           access_blocked_at?: string | null
           access_blocked_reason?: string | null
-          diamond_access?: boolean
-          diamond_access_at?: string | null
-          diamond_access_granted_by?: string | null
-          document_storage_limit_bytes?: number
           address?: string | null
           booking_slug?: string | null
           business_hours?: Json
@@ -3508,6 +3566,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          diamond_access?: boolean
+          diamond_access_at?: string | null
+          diamond_access_granted_by?: string | null
+          document_storage_limit_bytes?: number
           google_review_url?: string | null
           id?: string
           instagram?: string | null
@@ -3766,6 +3828,54 @@ export type Database = {
             columns: ["portal_access_id"]
             isOneToOne: false
             referencedRelation: "patient_portal_access"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_portal_tokens: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          organization_id: string
+          revoked_at: string | null
+          token_hash: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          organization_id: string
+          revoked_at?: string | null
+          token_hash: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          organization_id?: string
+          revoked_at?: string | null
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_portal_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_portal_tokens_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -4871,6 +4981,165 @@ export type Database = {
         }
         Relationships: []
       }
+      quote_items: {
+        Row: {
+          created_at: string
+          description: string
+          discount: number
+          discount_type: string
+          id: string
+          organization_id: string
+          product_id: string | null
+          quantity: number
+          quote_id: string
+          service_id: string | null
+          total: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          discount?: number
+          discount_type?: string
+          id?: string
+          organization_id: string
+          product_id?: string | null
+          quantity?: number
+          quote_id: string
+          service_id?: string | null
+          total?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          discount?: number
+          discount_type?: string
+          id?: string
+          organization_id?: string
+          product_id?: string | null
+          quantity?: number
+          quote_id?: string
+          service_id?: string | null
+          total?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotes: {
+        Row: {
+          client_id: string | null
+          converted_sale_id: string | null
+          created_at: string
+          created_by: string | null
+          discount: number
+          id: string
+          internal_notes: string | null
+          issue_date: string
+          organization_id: string
+          prescription: string | null
+          professional_id: string | null
+          status: string
+          subtotal: number
+          surcharge: number
+          total: number
+          treatment_plan: string | null
+          updated_at: string
+          valid_until: string
+        }
+        Insert: {
+          client_id?: string | null
+          converted_sale_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          discount?: number
+          id?: string
+          internal_notes?: string | null
+          issue_date?: string
+          organization_id: string
+          prescription?: string | null
+          professional_id?: string | null
+          status?: string
+          subtotal?: number
+          surcharge?: number
+          total?: number
+          treatment_plan?: string | null
+          updated_at?: string
+          valid_until?: string
+        }
+        Update: {
+          client_id?: string | null
+          converted_sale_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          discount?: number
+          id?: string
+          internal_notes?: string | null
+          issue_date?: string
+          organization_id?: string
+          prescription?: string | null
+          professional_id?: string | null
+          status?: string
+          subtotal?: number
+          surcharge?: number
+          total?: number
+          treatment_plan?: string | null
+          updated_at?: string
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_converted_sale_id_fkey"
+            columns: ["converted_sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           active: boolean
@@ -5462,12 +5731,20 @@ export type Database = {
       }
       treatment_records: {
         Row: {
+          aftercare: string | null
           appointment_id: string | null
+          arm_cm: number | null
+          body_measurements_notes: string | null
+          bust_cm: number | null
+          chief_complaint: string | null
           client_id: string
           created_at: string
           created_by: string | null
           evolution: string | null
+          height_cm: number | null
+          hip_cm: number | null
           id: string
+          internal_notes: string | null
           next_steps: string | null
           organization_id: string
           parameters: string | null
@@ -5476,24 +5753,30 @@ export type Database = {
           procedure: string
           products_used: string | null
           professional_id: string | null
+          sale_id: string | null
           service_id: string | null
-          updated_at: string
-          arm_cm: number | null
-          body_measurements_notes: string | null
-          bust_cm: number | null
-          height_cm: number | null
-          hip_cm: number | null
+          status: string
           thigh_cm: number | null
+          treatment_plan: string | null
+          updated_at: string
           waist_cm: number | null
           weight_kg: number | null
         }
         Insert: {
+          aftercare?: string | null
           appointment_id?: string | null
+          arm_cm?: number | null
+          body_measurements_notes?: string | null
+          bust_cm?: number | null
+          chief_complaint?: string | null
           client_id: string
           created_at?: string
           created_by?: string | null
           evolution?: string | null
+          height_cm?: number | null
+          hip_cm?: number | null
           id?: string
+          internal_notes?: string | null
           next_steps?: string | null
           organization_id: string
           parameters?: string | null
@@ -5502,24 +5785,30 @@ export type Database = {
           procedure: string
           products_used?: string | null
           professional_id?: string | null
+          sale_id?: string | null
           service_id?: string | null
-          updated_at?: string
-          arm_cm?: number | null
-          body_measurements_notes?: string | null
-          bust_cm?: number | null
-          height_cm?: number | null
-          hip_cm?: number | null
+          status?: string
           thigh_cm?: number | null
+          treatment_plan?: string | null
+          updated_at?: string
           waist_cm?: number | null
           weight_kg?: number | null
         }
         Update: {
+          aftercare?: string | null
           appointment_id?: string | null
+          arm_cm?: number | null
+          body_measurements_notes?: string | null
+          bust_cm?: number | null
+          chief_complaint?: string | null
           client_id?: string
           created_at?: string
           created_by?: string | null
           evolution?: string | null
+          height_cm?: number | null
+          hip_cm?: number | null
           id?: string
+          internal_notes?: string | null
           next_steps?: string | null
           organization_id?: string
           parameters?: string | null
@@ -5528,14 +5817,12 @@ export type Database = {
           procedure?: string
           products_used?: string | null
           professional_id?: string | null
+          sale_id?: string | null
           service_id?: string | null
-          updated_at?: string
-          arm_cm?: number | null
-          body_measurements_notes?: string | null
-          bust_cm?: number | null
-          height_cm?: number | null
-          hip_cm?: number | null
+          status?: string
           thigh_cm?: number | null
+          treatment_plan?: string | null
+          updated_at?: string
           waist_cm?: number | null
           weight_kg?: number | null
         }
@@ -5566,6 +5853,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatment_records_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
             referencedColumns: ["id"]
           },
           {
@@ -5977,6 +6271,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_contract_templates: {
+        Args: { _organization_id: string }
+        Returns: boolean
+      }
+      can_delete_contract_templates: {
+        Args: { _organization_id: string }
+        Returns: boolean
+      }
       can_view_appointment: {
         Args: { _organization_id: string; _professional_id: string }
         Returns: boolean
@@ -6086,8 +6388,9 @@ export type Database = {
         Args: { _from: string; _location_id?: string; _to: string }
         Returns: Json
       }
+      get_patient_portal: { Args: { _token: string }; Returns: Json }
       get_platform_document_storage_usage: {
-        Args: Record<string, never>
+        Args: never
         Returns: {
           limit_bytes: number
           organization_id: string
@@ -6281,6 +6584,7 @@ export type Database = {
           diamond_access: boolean
           diamond_access_at: string | null
           diamond_access_granted_by: string | null
+          document_storage_limit_bytes: number
           google_review_url: string | null
           id: string
           instagram: string | null
@@ -6324,6 +6628,7 @@ export type Database = {
           diamond_access: boolean
           diamond_access_at: string | null
           diamond_access_granted_by: string | null
+          document_storage_limit_bytes: number
           google_review_url: string | null
           id: string
           instagram: string | null

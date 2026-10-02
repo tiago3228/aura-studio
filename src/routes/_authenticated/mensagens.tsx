@@ -47,7 +47,7 @@ type MessageTemplateEditor = {
   active: boolean;
 };
 
-const STANDARD_EVENTS = new Set(MESSAGE_EVENTS.map((event) => event.value));
+const STANDARD_EVENTS = new Set<string>(MESSAGE_EVENTS.map((event) => event.value));
 
 function MessageTemplatesPage() {
   const { data: membership, isLoading: membershipLoading } = useMembership();

@@ -57,7 +57,7 @@ export function fillTemplate(body: string, vars: Record<string, string>) {
         .toLowerCase();
       const candidates = normalized === "horario" ? [key, normalized, "hora"] : [key, normalized];
       const candidate = candidates.find((name) => Object.prototype.hasOwnProperty.call(vars, name));
-      return candidate ? vars[candidate] : match;
+      return candidate ? (vars[candidate] ?? match) : match;
     },
   );
 }
