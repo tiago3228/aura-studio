@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Plus,
   Printer,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -16,7 +17,7 @@ import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "rec
 import jsPDF from "jspdf";
 
 import { supabase } from "@/integrations/supabase/client";
-import { generatePatientProgressSummary } from "@/lib/ai.functions";
+import { comparePatientPhotos, generatePatientProgressSummary } from "@/lib/ai.functions";
 import { createPatientPortalLink } from "@/lib/patient-portal.functions";
 import { useMembership } from "@/lib/session";
 import { dateFmt, timeFmt } from "@/lib/format";
@@ -391,9 +392,16 @@ function MeasurementHistory({
 }
 
 function PhotoHistory({ records }: { records: MeasurementRecord[] }) {
-  const photos = records.flatMap((record) =>
-    (record.photos ?? []).map((photo) => ({ ...photo, date: record.performed_at })),
-  );
+  const comparePhotos = useServerFn(comparePatientPhotos);
+  const [beforeIndex, setBeforeIndex] = useState(0);
+  const [afterIndex, setAfterIndex] = useState(1);
+  const [comparison, setComparison] = useState<string | null>(null);
+  const [comparisonLoading, setComparisonLoading] = useState(false);
+  const photos = records
+    .flatMap((record) =>
+      (record.photos ?? []).map((photo) => ({ ...photo, date: record.performed_at })),
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
   const paths = photos.map((photo) => photo.path);
   const query = useQuery({
     enabled: paths.length > 0,
@@ -407,9 +415,86 @@ function PhotoHistory({ records }: { records: MeasurementRecord[] }) {
     },
   });
   if (!photos.length) return null;
+  const signedPhotos = photos.map((photo, index) => ({
+    ...photo,
+    signedUrl: query.data?.[index]?.signedUrl ?? null,
+  }));
+  const canCompare = signedPhotos.length >= 2;
+  async function handleComparison() {
+    const before = signedPhotos[beforeIndex];
+    const after = signedPhotos[afterIndex];
+    if (!before?.signedUrl || !after?.signedUrl || beforeIndex === afterIndex) {
+      toast.error("Selecione duas fotos diferentes para comparar.");
+      return;
+    }
+    setComparisonLoading(true);
+    try {
+      const result = await comparePhotos({
+        data: {
+          beforeUrl: before.signedUrl,
+          afterUrl: after.signedUrl,
+          beforeDate: dateFmt(before.date),
+          afterDate: dateFmt(after.date),
+        },
+      });
+      setComparison(result.answer);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível comparar as fotos.");
+    } finally {
+      setComparisonLoading(false);
+    }
+  }
   return (
     <div className="mt-4 border-t border-border pt-4">
-      <h4 className="mb-3 text-sm font-semibold">Histórico fotográfico</h4>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-semibold">Histórico fotográfico</h4>
+        {canCompare ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+              value={beforeIndex}
+              onChange={(event) => setBeforeIndex(Number(event.target.value))}
+              aria-label="Foto da primeira sessão"
+            >
+              {signedPhotos.map((photo, index) => (
+                <option key={`${photo.path}-before`} value={index}>
+                  1ª: {dateFmt(photo.date)}{" "}
+                  {photo.stage ? `· ${PHOTO_STAGE_LABEL[photo.stage]}` : ""}
+                </option>
+              ))}
+            </select>
+            <select
+              className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+              value={afterIndex}
+              onChange={(event) => setAfterIndex(Number(event.target.value))}
+              aria-label="Foto da sessão posterior"
+            >
+              {signedPhotos.map((photo, index) => (
+                <option key={`${photo.path}-after`} value={index}>
+                  Depois: {dateFmt(photo.date)}{" "}
+                  {photo.stage ? `· ${PHOTO_STAGE_LABEL[photo.stage]}` : ""}
+                </option>
+              ))}
+            </select>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleComparison}
+              disabled={comparisonLoading || !query.data}
+            >
+              <Sparkles className="size-4" />
+              {comparisonLoading ? "Comparando..." : "Comparar com IA"}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+      {comparison ? (
+        <div className="mb-4 whitespace-pre-wrap rounded-md bg-primary/5 p-3 text-sm leading-6">
+          <p className="mb-2 font-semibold">Comparação de evolução por IA</p>
+          {comparison}
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {(query.data ?? []).map((item, index) =>
           item.signedUrl ? (

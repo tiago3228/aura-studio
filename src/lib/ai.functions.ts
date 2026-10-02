@@ -169,3 +169,56 @@ export const generatePatientProgressSummary = createServerFn({ method: "POST" })
     const json = (await response.json()) as { choices?: { message?: { content?: string } }[] };
     return { answer: json.choices?.[0]?.message?.content ?? "Sem resumo disponível." };
   });
+
+const photoComparisonSchema = z.object({
+  beforeUrl: z.string().url().max(5000),
+  afterUrl: z.string().url().max(5000),
+  beforeDate: z.string().max(40),
+  afterDate: z.string().max(40),
+});
+
+export const comparePatientPhotos = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => photoComparisonSchema.parse(input))
+  .handler(async ({ data }) => {
+    const apiKey = process.env["LOVABLE_API_KEY"];
+    if (!apiKey) return { answer: "O assistente de IA não está configurado no momento." };
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3.5-flash",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Você é uma assistente de análise visual para uma clínica de estética. Compare somente as duas imagens fornecidas, sem identificar a pessoa e sem fazer diagnóstico médico. Relate de forma objetiva diferenças visíveis de aparência, textura, uniformidade, contorno e iluminação. Separe o que é observação visual do que pode ser efeito de pose, ângulo, iluminação ou qualidade da foto. Nunca invente resultados e não dê promessas ou prescrição. Responda em português do Brasil com os títulos: 'Observações visíveis', 'Pontos de atenção na comparação' e 'Resumo'. Inclua ao final: 'Análise informativa; a avaliação profissional continua indispensável.'",
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Compare a primeira sessão (${data.beforeDate}) com a sessão posterior (${data.afterDate}).`,
+              },
+              { type: "text", text: "Imagem da primeira sessão:" },
+              { type: "image_url", image_url: { url: data.beforeUrl, detail: "auto" } },
+              { type: "text", text: "Imagem da sessão posterior:" },
+              { type: "image_url", image_url: { url: data.afterUrl, detail: "auto" } },
+            ],
+          },
+        ],
+      }),
+    });
+    if (response.status === 429)
+      return { answer: "Muitas solicitações de IA em sequência. Aguarde e tente novamente." };
+    if (response.status === 402)
+      return { answer: "Os créditos de IA do espaço de trabalho acabaram." };
+    if (!response.ok) {
+      console.error("AI photo comparison error", response.status, await response.text());
+      return { answer: "Não consegui comparar as fotos agora. Tente novamente em instantes." };
+    }
+    const json = (await response.json()) as { choices?: { message?: { content?: string } }[] };
+    return { answer: json.choices?.[0]?.message?.content ?? "Sem comparação disponível." };
+  });
