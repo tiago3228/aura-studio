@@ -14,6 +14,20 @@ type AlignmentResult = {
   height: number;
 };
 
+export type DifferenceRegion = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  area: number;
+  score: number;
+};
+
+export type DifferenceMapResult = AlignmentResult & {
+  highlightedDataUrl: string;
+  regions: DifferenceRegion[];
+};
+
 let cvPromise: Promise<OpenCvRuntime> | null = null;
 
 /** Carrega OpenCV somente no navegador, evitando executar o WASM durante SSR. */
@@ -225,5 +239,128 @@ export async function alignImagesInBrowser(
     inlierMask?.delete();
     homography?.delete();
     alignedTarget?.delete();
+  }
+}
+
+/**
+ * Alinha duas fotos e cria um mapa visual das diferenças mais consistentes.
+ * A detecção é determinística e local: diferença absoluta, limiarização,
+ * operações morfológicas e componentes conectados. Não interpreta a causa
+ * clínica da diferença.
+ */
+export async function highlightImageDifferencesInBrowser(
+  referenceUrl: string,
+  targetUrl: string,
+): Promise<DifferenceMapResult> {
+  const alignment = await alignImagesInBrowser(referenceUrl, targetUrl);
+  const cv = await loadOpenCv();
+  const [referenceImage, alignedImage] = await Promise.all([
+    loadImage(referenceUrl),
+    loadImage(alignment.alignedDataUrl),
+  ]);
+  const referenceCanvas = imageCanvas(referenceImage);
+  const alignedCanvas = imageCanvas(alignedImage);
+  const reference = cv.imread(referenceCanvas);
+  const aligned = cv.imread(alignedCanvas);
+  const referenceGray = new cv.Mat();
+  const alignedGray = new cv.Mat();
+  const difference = new cv.Mat();
+  const blurred = new cv.Mat();
+  const mask = new cv.Mat();
+  const kernel = cv.Mat.ones(5, 5, cv.CV_8U);
+  const labels = new cv.Mat();
+  const stats = new cv.Mat();
+  const centroids = new cv.Mat();
+  try {
+    cv.cvtColor(reference, referenceGray, cv.COLOR_RGBA2GRAY);
+    cv.cvtColor(aligned, alignedGray, cv.COLOR_RGBA2GRAY);
+    cv.absdiff(referenceGray, alignedGray, difference);
+    cv.GaussianBlur(difference, blurred, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+    cv.threshold(blurred, mask, 28, 255, cv.THRESH_BINARY);
+    cv.morphologyEx(mask, mask, cv.MORPH_OPEN, kernel);
+    cv.morphologyEx(mask, mask, cv.MORPH_CLOSE, kernel);
+
+    const componentCount = cv.connectedComponentsWithStats(
+      mask,
+      labels,
+      stats,
+      centroids,
+      8,
+      cv.CV_32S,
+    );
+    const minArea = Math.max(120, Math.round(aligned.rows * aligned.cols * 0.001));
+    const regions: DifferenceRegion[] = [];
+    for (let label = 1; label < componentCount; label += 1) {
+      const area = stats.intAt(label, cv.CC_STAT_AREA);
+      const x = stats.intAt(label, cv.CC_STAT_LEFT);
+      const y = stats.intAt(label, cv.CC_STAT_TOP);
+      const width = stats.intAt(label, cv.CC_STAT_WIDTH);
+      const height = stats.intAt(label, cv.CC_STAT_HEIGHT);
+      const touchesEdge =
+        x <= 2 || y <= 2 || x + width >= aligned.cols - 2 || y + height >= aligned.rows - 2;
+      if (area < minArea || touchesEdge) continue;
+      regions.push({
+        x,
+        y,
+        width,
+        height,
+        area,
+        score: Math.min(1, area / (aligned.rows * aligned.cols * 0.08)),
+      });
+    }
+    regions.sort((left, right) => right.area - left.area);
+    const selectedRegions = regions.slice(0, 8);
+
+    const selectedMask = cv.Mat.zeros(mask.rows, mask.cols, cv.CV_8UC1);
+    try {
+      for (const region of selectedRegions) {
+        cv.rectangle(
+          selectedMask,
+          new cv.Point(region.x, region.y),
+          new cv.Point(region.x + region.width, region.y + region.height),
+          new cv.Scalar(255),
+          -1,
+        );
+      }
+      const highlight = new cv.Mat(
+        aligned.rows,
+        aligned.cols,
+        aligned.type(),
+        new cv.Scalar(30, 150, 255, 255),
+      );
+      const overlay = aligned.clone();
+      const highlighted = new cv.Mat();
+      try {
+        highlight.copyTo(overlay, selectedMask);
+        cv.addWeighted(aligned, 0.72, overlay, 0.28, 0, highlighted);
+        const outputCanvas = document.createElement("canvas");
+        outputCanvas.width = aligned.cols;
+        outputCanvas.height = aligned.rows;
+        cv.imshow(outputCanvas, highlighted);
+        return {
+          ...alignment,
+          highlightedDataUrl: outputCanvas.toDataURL("image/jpeg", 0.9),
+          regions: selectedRegions,
+        };
+      } finally {
+        highlight.delete();
+        overlay.delete();
+        highlighted.delete();
+      }
+    } finally {
+      selectedMask.delete();
+    }
+  } finally {
+    reference.delete();
+    aligned.delete();
+    referenceGray.delete();
+    alignedGray.delete();
+    difference.delete();
+    blurred.delete();
+    mask.delete();
+    kernel.delete();
+    labels.delete();
+    stats.delete();
+    centroids.delete();
   }
 }

@@ -22,7 +22,11 @@ import { createPatientPortalLink } from "@/lib/patient-portal.functions";
 import { useMembership } from "@/lib/session";
 import { dateFmt, timeFmt } from "@/lib/format";
 import { resizeImage } from "@/lib/image";
-import { alignImagesInBrowser } from "@/lib/opencv-alignment";
+import {
+  alignImagesInBrowser,
+  highlightImageDifferencesInBrowser,
+  type DifferenceRegion,
+} from "@/lib/opencv-alignment";
 import { EmptyState, Pill, SkeletonCard } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -399,7 +403,10 @@ function PhotoHistory({ records }: { records: MeasurementRecord[] }) {
   const [comparison, setComparison] = useState<string | null>(null);
   const [comparisonLoading, setComparisonLoading] = useState(false);
   const [alignmentLoading, setAlignmentLoading] = useState(false);
+  const [differenceLoading, setDifferenceLoading] = useState(false);
   const [alignedPreview, setAlignedPreview] = useState<string | null>(null);
+  const [highlightedPreview, setHighlightedPreview] = useState<string | null>(null);
+  const [differenceRegions, setDifferenceRegions] = useState<DifferenceRegion[]>([]);
   const [alignmentInfo, setAlignmentInfo] = useState<{
     confidence: number;
     matches: number;
@@ -489,6 +496,8 @@ function PhotoHistory({ records }: { records: MeasurementRecord[] }) {
               onChange={(event) => {
                 setBeforeIndex(Number(event.target.value));
                 setAlignedPreview(null);
+                setHighlightedPreview(null);
+                setDifferenceRegions([]);
                 setAlignmentInfo(null);
               }}
               aria-label="Foto da primeira sessão"
@@ -506,6 +515,8 @@ function PhotoHistory({ records }: { records: MeasurementRecord[] }) {
               onChange={(event) => {
                 setAfterIndex(Number(event.target.value));
                 setAlignedPreview(null);
+                setHighlightedPreview(null);
+                setDifferenceRegions([]);
                 setAlignmentInfo(null);
               }}
               aria-label="Foto da sessão posterior"
@@ -525,6 +536,48 @@ function PhotoHistory({ records }: { records: MeasurementRecord[] }) {
               disabled={alignmentLoading || comparisonLoading || !query.data}
             >
               {alignmentLoading ? "Alinhando..." : "Alinhar fotos"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const before = signedPhotos[beforeIndex];
+                const after = signedPhotos[afterIndex];
+                if (!before?.signedUrl || !after?.signedUrl || beforeIndex === afterIndex) {
+                  toast.error("Selecione duas fotos diferentes para destacar as mudanças.");
+                  return;
+                }
+                setDifferenceLoading(true);
+                setHighlightedPreview(null);
+                setDifferenceRegions([]);
+                try {
+                  const result = await highlightImageDifferencesInBrowser(
+                    before.signedUrl,
+                    after.signedUrl,
+                  );
+                  setAlignedPreview(result.alignedDataUrl);
+                  setHighlightedPreview(result.highlightedDataUrl);
+                  setDifferenceRegions(result.regions);
+                  setAlignmentInfo({
+                    confidence: result.confidence,
+                    matches: result.matches,
+                    inliers: result.inliers,
+                  });
+                  toast.success("Mudanças destacadas localmente no navegador.");
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : "Não foi possível destacar as mudanças.",
+                  );
+                } finally {
+                  setDifferenceLoading(false);
+                }
+              }}
+              disabled={differenceLoading || alignmentLoading || comparisonLoading || !query.data}
+            >
+              {differenceLoading ? "Analisando..." : "Destacar mudanças"}
             </Button>
             <Button
               type="button"
@@ -563,6 +616,26 @@ function PhotoHistory({ records }: { records: MeasurementRecord[] }) {
             O processamento foi feito localmente no navegador. Esta prévia corrige enquadramento e
             perspectiva; não representa medição clínica.
           </p>
+          {highlightedPreview ? (
+            <div className="mt-4 border-t border-border pt-4">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold">Áreas com maior diferença visual</p>
+                <span className="text-xs text-muted-foreground">
+                  {differenceRegions.length} região(ões) destacada(s)
+                </span>
+              </div>
+              <img
+                src={highlightedPreview}
+                alt="Foto posterior alinhada com as áreas de maior diferença visual destacadas"
+                className="max-h-[28rem] w-full rounded-md object-contain"
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                As áreas coloridas indicam diferença de pixels após alinhamento. Podem incluir
+                efeitos de pose, iluminação, roupa ou enquadramento; não são diagnóstico nem medição
+                corporal.
+              </p>
+            </div>
+          ) : null}
         </div>
       ) : null}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
