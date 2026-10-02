@@ -2,17 +2,21 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download,
+  Eye,
   FileSpreadsheet,
   FileText,
   FolderOpen,
   Loader2,
   Trash2,
   Upload,
+  X,
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState, ErrorState, PageHeader, Pill, SkeletonCard } from "@/components/ui-kit";
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership, hasPermission } from "@/lib/session";
@@ -105,6 +109,11 @@ function Documentos() {
   const organizationId = membership?.organization.id;
   const canManage = hasPermission(membership, "documentos.editar");
   const [category, setCategory] = useState<Category>("pdf");
+  const [preview, setPreview] = useState<{
+    document: DocumentRow;
+    url?: string;
+    rows?: unknown[][];
+  } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const currentCategory = CATEGORIES.find((item) => item.id === category)!;
 
@@ -120,6 +129,19 @@ function Documentos() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as DocumentRow[];
+    },
+  });
+
+  const usageQuery = useQuery({
+    enabled: Boolean(organizationId),
+    queryKey: ["organization-document-usage", organizationId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organization_documents")
+        .select("file_size")
+        .eq("organization_id", organizationId!);
+      if (error) throw error;
+      return (data ?? []).reduce((total, row) => total + Number(row.file_size), 0);
     },
   });
 
@@ -168,6 +190,9 @@ function Documentos() {
       await queryClient.invalidateQueries({
         queryKey: ["organization-documents", organizationId, category],
       });
+      await queryClient.invalidateQueries({
+        queryKey: ["organization-document-usage", organizationId],
+      });
       if (inputRef.current) inputRef.current.value = "";
       toast.success("Arquivo enviado para a guarda de documentação.");
     },
@@ -191,6 +216,9 @@ function Documentos() {
       await queryClient.invalidateQueries({
         queryKey: ["organization-documents", organizationId, category],
       });
+      await queryClient.invalidateQueries({
+        queryKey: ["organization-document-usage", organizationId],
+      });
       toast.success("Arquivo excluído.");
     },
     onError: (error) =>
@@ -208,9 +236,40 @@ function Documentos() {
     window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   }
 
+  async function openPreview(document: DocumentRow) {
+    const { data, error } = await supabase.storage
+      .from("clinic-files")
+      .createSignedUrl(document.storage_path, 300);
+    if (error || !data?.signedUrl) {
+      toast.error("Não foi possível abrir a visualização.");
+      return;
+    }
+    if (document.category === "pdf") {
+      setPreview({ document, url: data.signedUrl });
+      return;
+    }
+    try {
+      const response = await fetch(data.signedUrl);
+      const workbook = XLSX.read(await response.arrayBuffer(), { type: "array" });
+      const firstSheetName = workbook.SheetNames[0];
+      if (!firstSheetName) throw new Error("A planilha não possui abas.");
+      const sheet = workbook.Sheets[firstSheetName];
+      if (!sheet) throw new Error("A planilha não possui dados.");
+      const rows = XLSX.utils
+        .sheet_to_json<unknown[]>(sheet, { header: 1, raw: false })
+        .slice(0, 100);
+      setPreview({ document, rows });
+    } catch {
+      toast.error("Não foi possível interpretar esta planilha para preview.");
+    }
+  }
+
   if (documentsQuery.error)
     return <ErrorState message="Não foi possível carregar os documentos." />;
   if (!documentsQuery.data) return <SkeletonCard lines={5} />;
+  const usedBytes = usageQuery.data ?? 0;
+  const limitBytes = membership?.organization.document_storage_limit_bytes ?? 83886080;
+  const usagePercent = Math.min(100, (usedBytes / limitBytes) * 100);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -218,6 +277,24 @@ function Documentos() {
         title="Guarda Documentação"
         subtitle="Armazene arquivos da clínica com acesso privado e organizado por tipo."
       />
+
+      <section className="surface mb-5 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span className="font-medium">Armazenamento utilizado</span>
+          <span className="text-muted-foreground">
+            {formatBytes(usedBytes)} de {formatBytes(limitBytes)} (limite de 80 MB)
+          </span>
+        </div>
+        <div
+          className="mt-2 h-2 overflow-hidden rounded-full bg-muted"
+          aria-label={`${Math.round(usagePercent)}% utilizado`}
+        >
+          <div
+            className={`h-full rounded-full transition-all ${usagePercent >= 90 ? "bg-destructive" : "bg-primary"}`}
+            style={{ width: `${usagePercent}%` }}
+          />
+        </div>
+      </section>
 
       <div className="mb-5 grid gap-3 md:grid-cols-3">
         {CATEGORIES.map((item) => {
@@ -299,6 +376,11 @@ function Documentos() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Pill tone="neutral">{currentCategory.label}</Pill>
+                  {document.category === "pdf" || document.category === "planilhas" ? (
+                    <Button variant="outline" size="sm" onClick={() => void openPreview(document)}>
+                      <Eye className="size-4" /> Preview
+                    </Button>
+                  ) : null}
                   <Button variant="outline" size="sm" onClick={() => void download(document)}>
                     <Download className="size-4" /> Baixar
                   </Button>
@@ -319,6 +401,37 @@ function Documentos() {
           </div>
         )}
       </section>
+
+      <Dialog open={Boolean(preview)} onOpenChange={(open) => !open && setPreview(null)}>
+        <DialogContent className="max-w-6xl">
+          <DialogHeader>
+            <DialogTitle className="truncate pr-8">{preview?.document.file_name}</DialogTitle>
+          </DialogHeader>
+          {preview?.document.category === "pdf" && preview.url ? (
+            <iframe
+              src={preview.url}
+              title={`Preview de ${preview.document.file_name}`}
+              className="h-[70vh] w-full rounded-lg border"
+            />
+          ) : preview?.rows ? (
+            <div className="max-h-[70vh] overflow-auto rounded-lg border">
+              <table className="min-w-full text-left text-sm">
+                <tbody>
+                  {preview.rows.map((row, rowIndex) => (
+                    <tr key={rowIndex} className="border-b border-border last:border-0">
+                      {row.map((cell, cellIndex) => (
+                        <td key={cellIndex} className="whitespace-nowrap px-3 py-2">
+                          {String(cell ?? "")}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

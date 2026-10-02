@@ -3423,6 +3423,7 @@ export type Database = {
           diamond_access: boolean
           diamond_access_at: string | null
           diamond_access_granted_by: string | null
+          document_storage_limit_bytes: number
           address: string | null
           booking_slug: string | null
           business_hours: Json
@@ -3457,6 +3458,7 @@ export type Database = {
           diamond_access?: boolean
           diamond_access_at?: string | null
           diamond_access_granted_by?: string | null
+          document_storage_limit_bytes?: number
           address?: string | null
           booking_slug?: string | null
           business_hours?: Json
@@ -3491,6 +3493,7 @@ export type Database = {
           diamond_access?: boolean
           diamond_access_at?: string | null
           diamond_access_granted_by?: string | null
+          document_storage_limit_bytes?: number
           address?: string | null
           booking_slug?: string | null
           business_hours?: Json
