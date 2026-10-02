@@ -50,8 +50,12 @@ Deno.serve(async (request) => {
     if (!token) return jsonResponse({ error: "invalid_token" }, 400);
 
     const session = await loadContractByToken(token);
-    if (!session || isContractUnavailable(session.contract) || session.acceptance.revoked_at) {
+    if (!session || isContractUnavailable(session.contract)) {
       return jsonResponse({ error: "contract_unavailable" }, 404);
+    }
+
+    if (session.acceptance.revoked_at) {
+      return jsonResponse({ error: "acceptance_revoked" }, 409);
     }
 
     if (session.contract.status === "enviado") {

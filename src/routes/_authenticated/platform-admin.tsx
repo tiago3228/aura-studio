@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Ban,
   CheckCircle2,
+  ChevronDown,
   Circle,
   Gem,
   HardDrive,
@@ -87,6 +88,7 @@ function PlatformAdmin() {
   const [selected, setSelected] = useState<Organization | null>(null);
   const [busy, setBusy] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
+  const [storageUsageOpen, setStorageUsageOpen] = useState(false);
 
   const isMaster = user?.email?.toLowerCase() === MASTER_EMAIL;
   const organizations = useQuery({
@@ -261,7 +263,13 @@ function PlatformAdmin() {
         </div>
       </div>
       <section className="surface mb-5 overflow-hidden">
-        <div className="flex items-center justify-between border-b border-border p-4">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-4 p-4 text-left transition-colors hover:bg-muted/40"
+          aria-expanded={storageUsageOpen}
+          aria-controls="platform-storage-usage-content"
+          onClick={() => setStorageUsageOpen((open) => !open)}
+        >
           <div>
             <h2 className="flex items-center gap-2 font-semibold">
               <HardDrive className="size-4 text-primary" /> Uso da Guarda Documentação
@@ -270,42 +278,57 @@ function PlatformAdmin() {
               Acompanhamento do limite de 80 MB por organização.
             </p>
           </div>
-          <Pill tone="neutral">Alertas a partir de 80%</Pill>
-        </div>
-        {storageUsage.isLoading ? (
-          <div className="p-4">
-            <SkeletonCard lines={3} />
+          <div className="flex shrink-0 items-center gap-3">
+            <Pill tone="neutral">Alertas a partir de 80%</Pill>
+            <ChevronDown
+              aria-hidden="true"
+              className={`size-4 transition-transform ${storageUsageOpen ? "rotate-180" : ""}`}
+            />
           </div>
-        ) : storageUsage.error ? (
-          <p className="p-4 text-sm text-destructive">
-            Não foi possível carregar o uso de armazenamento.
-          </p>
-        ) : (
-          <div className="divide-y divide-border">
-            {(storageUsage.data ?? []).map((item) => {
-              const percent = Math.min(100, Number(item.usage_percent ?? 0));
-              return (
-                <div key={item.organization_id} className="flex flex-wrap items-center gap-4 p-4">
-                  <div className="min-w-44 flex-1">
-                    <p className="font-medium">{item.organization_name}</p>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className={`h-full rounded-full ${percent >= 80 ? "bg-destructive" : "bg-primary"}`}
-                        style={{ width: `${percent}%` }}
-                      />
+        </button>
+        {storageUsageOpen ? (
+          <div id="platform-storage-usage-content" className="border-t border-border">
+            {storageUsage.isLoading ? (
+              <div className="p-4">
+                <SkeletonCard lines={3} />
+              </div>
+            ) : storageUsage.error ? (
+              <p className="p-4 text-sm text-destructive">
+                Não foi possível carregar o uso de armazenamento.
+              </p>
+            ) : storageUsage.data?.length ? (
+              <div className="divide-y divide-border">
+                {storageUsage.data.map((item) => {
+                  const percent = Math.min(100, Number(item.usage_percent ?? 0));
+                  return (
+                    <div
+                      key={item.organization_id}
+                      className="flex flex-wrap items-center gap-4 p-4"
+                    >
+                      <div className="min-w-44 flex-1">
+                        <p className="font-medium">{item.organization_name}</p>
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className={`h-full rounded-full ${percent >= 80 ? "bg-destructive" : "bg-primary"}`}
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      </div>
+                      <span
+                        className={`text-sm font-semibold ${percent >= 80 ? "text-destructive" : "text-muted-foreground"}`}
+                      >
+                        {percent.toFixed(1)}% · {formatStorageBytes(item.used_bytes)} /{" "}
+                        {formatStorageBytes(item.limit_bytes)}
+                      </span>
                     </div>
-                  </div>
-                  <span
-                    className={`text-sm font-semibold ${percent >= 80 ? "text-destructive" : "text-muted-foreground"}`}
-                  >
-                    {percent.toFixed(1)}% · {formatStorageBytes(item.used_bytes)} /{" "}
-                    {formatStorageBytes(item.limit_bytes)}
-                  </span>
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="p-4 text-sm text-muted-foreground">Nenhuma loja cadastrada.</p>
+            )}
           </div>
-        )}
+        ) : null}
       </section>
       <div className="mb-3 flex items-center gap-2">
         <Input
