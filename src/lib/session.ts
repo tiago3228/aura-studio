@@ -36,6 +36,10 @@ export const PERMISSION_GROUPS = [
     ].map((key) => ({ key, label: key.replace("clientes.", "").replaceAll(".", " ") })),
   },
   {
+    area: "WhatsApp",
+    permissions: [{ key: "whatsapp.ver", label: "Visualizar modelos e histórico" }],
+  },
+  {
     area: "Procedimentos",
     permissions: [
       { key: "procedimentos.ver", label: "Visualizar" },

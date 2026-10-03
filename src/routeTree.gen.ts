@@ -45,6 +45,7 @@ import { Route as AuthenticatedSegurancaRouteImport } from './routes/_authentica
 import { Route as AuthenticatedServicosRouteImport } from './routes/_authenticated/servicos'
 import { Route as AuthenticatedStoneRouteImport } from './routes/_authenticated/stone'
 import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
+import { Route as AuthenticatedWhatsappRouteImport } from './routes/_authenticated/whatsapp'
 import { Route as AgendarSlugRouteImport } from './routes/agendar.$slug'
 import { Route as AssinarTokenRouteImport } from './routes/assinar.$token'
 import { Route as PortalTokenRouteImport } from './routes/portal.$token'
@@ -236,6 +237,11 @@ const AuthenticatedVendasRoute = AuthenticatedVendasRouteImport.update({
   path: '/vendas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedWhatsappRoute = AuthenticatedWhatsappRouteImport.update({
+  id: '/whatsapp',
+  path: '/whatsapp',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AgendarSlugRoute = AgendarSlugRouteImport.update({
   id: '/agendar/$slug',
   path: '/agendar/$slug',
@@ -305,6 +311,7 @@ export interface FileRoutesByFullPath {
   '/servicos': typeof AuthenticatedServicosRoute
   '/stone': typeof AuthenticatedStoneRoute
   '/vendas': typeof AuthenticatedVendasRoute
+  '/whatsapp': typeof AuthenticatedWhatsappRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/assinar/$token': typeof AssinarTokenRoute
   '/portal/$token': typeof PortalTokenRoute
@@ -348,6 +355,7 @@ export interface FileRoutesByTo {
   '/servicos': typeof AuthenticatedServicosRoute
   '/stone': typeof AuthenticatedStoneRoute
   '/vendas': typeof AuthenticatedVendasRoute
+  '/whatsapp': typeof AuthenticatedWhatsappRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/assinar/$token': typeof AssinarTokenRoute
   '/portal/$token': typeof PortalTokenRoute
@@ -393,6 +401,7 @@ export interface FileRoutesById {
   '/_authenticated/servicos': typeof AuthenticatedServicosRoute
   '/_authenticated/stone': typeof AuthenticatedStoneRoute
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
+  '/_authenticated/whatsapp': typeof AuthenticatedWhatsappRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/assinar/$token': typeof AssinarTokenRoute
   '/portal/$token': typeof PortalTokenRoute
@@ -438,6 +447,7 @@ export interface FileRouteTypes {
     | '/servicos'
     | '/stone'
     | '/vendas'
+    | '/whatsapp'
     | '/agendar/$slug'
     | '/assinar/$token'
     | '/portal/$token'
@@ -481,6 +491,7 @@ export interface FileRouteTypes {
     | '/servicos'
     | '/stone'
     | '/vendas'
+    | '/whatsapp'
     | '/agendar/$slug'
     | '/assinar/$token'
     | '/portal/$token'
@@ -525,6 +536,7 @@ export interface FileRouteTypes {
     | '/_authenticated/servicos'
     | '/_authenticated/stone'
     | '/_authenticated/vendas'
+    | '/_authenticated/whatsapp'
     | '/agendar/$slug'
     | '/assinar/$token'
     | '/portal/$token'
@@ -797,6 +809,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVendasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/whatsapp': {
+      id: '/_authenticated/whatsapp'
+      path: '/whatsapp'
+      fullPath: '/whatsapp'
+      preLoaderRoute: typeof AuthenticatedWhatsappRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/agendar/$slug': {
       id: '/agendar/$slug'
       path: '/agendar/$slug'
@@ -876,6 +895,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedServicosRoute: typeof AuthenticatedServicosRoute
   AuthenticatedStoneRoute: typeof AuthenticatedStoneRoute
   AuthenticatedVendasRoute: typeof AuthenticatedVendasRoute
+  AuthenticatedWhatsappRoute: typeof AuthenticatedWhatsappRoute
   AuthenticatedClientesIdRoute: typeof AuthenticatedClientesIdRoute
   AuthenticatedClientesIndexRoute: typeof AuthenticatedClientesIndexRoute
 }
@@ -914,6 +934,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedServicosRoute: AuthenticatedServicosRoute,
   AuthenticatedStoneRoute: AuthenticatedStoneRoute,
   AuthenticatedVendasRoute: AuthenticatedVendasRoute,
+  AuthenticatedWhatsappRoute: AuthenticatedWhatsappRoute,
   AuthenticatedClientesIdRoute: AuthenticatedClientesIdRoute,
   AuthenticatedClientesIndexRoute: AuthenticatedClientesIndexRoute,
 }

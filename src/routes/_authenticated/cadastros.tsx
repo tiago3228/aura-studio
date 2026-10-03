@@ -7,9 +7,11 @@ import {
   Sparkles,
   Truck,
   UserRound,
+  MessageCircle,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/ui-kit";
+import { can, useMembership } from "@/lib/session";
 
 export const Route = createFileRoute("/_authenticated/cadastros")({
   head: () => ({
@@ -74,6 +76,14 @@ const cards = [
     available: true,
   },
   {
+    title: "WhatsApp Business",
+    description: "Conecte a conta Meta, consulte modelos aprovados e mensagens recebidas.",
+    to: "/whatsapp",
+    icon: MessageCircle,
+    tone: "text-success bg-success-soft",
+    available: true,
+  },
+  {
     title: "Fornecedores",
     description: "Organize fornecedores de produtos e insumos da clínica.",
     to: "/estoque",
@@ -84,11 +94,18 @@ const cards = [
 ] as const;
 
 function Cadastros() {
+  const { data: membership } = useMembership();
+  const visibleCards = cards.filter(
+    (card) =>
+      card.title !== "WhatsApp Business" ||
+      can(membership?.role, "whatsapp", membership?.permissions),
+  );
+
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader title="Cadastros" subtitle="Acesse e organize os principais dados da clínica." />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {cards.map((card) => {
+        {visibleCards.map((card) => {
           const Icon = card.icon;
           return (
             <Link

@@ -73,29 +73,31 @@ function AuthenticatedLayout() {
 
   const area = pathname.startsWith("/agenda")
     ? "agenda"
-    : pathname.startsWith("/clientes")
-      ? "clientes"
-      : pathname.startsWith("/financeiro") ||
-          pathname.startsWith("/pagamentos") ||
-          pathname.startsWith("/calculadora")
-        ? "financeiro"
-        : pathname.startsWith("/equipe")
-          ? "equipe"
-          : pathname.startsWith("/servicos")
-            ? "procedimentos"
-            : pathname.startsWith("/relatorios")
-              ? "relatorios"
-              : pathname.startsWith("/configuracoes") ||
-                  pathname.startsWith("/horarios") ||
-                  pathname.startsWith("/globalizacao") ||
-                  pathname.startsWith("/gateways") ||
-                  pathname.startsWith("/seguranca") ||
-                  pathname.startsWith("/filiais") ||
-                  pathname.startsWith("/ajuda")
-                ? "configuracoes"
-                : pathname.startsWith("/dashboard")
-                  ? "dashboard"
-                  : null;
+    : pathname.startsWith("/whatsapp")
+      ? "whatsapp"
+      : pathname.startsWith("/clientes")
+        ? "clientes"
+        : pathname.startsWith("/financeiro") ||
+            pathname.startsWith("/pagamentos") ||
+            pathname.startsWith("/calculadora")
+          ? "financeiro"
+          : pathname.startsWith("/equipe")
+            ? "equipe"
+            : pathname.startsWith("/servicos")
+              ? "procedimentos"
+              : pathname.startsWith("/relatorios")
+                ? "relatorios"
+                : pathname.startsWith("/configuracoes") ||
+                    pathname.startsWith("/horarios") ||
+                    pathname.startsWith("/globalizacao") ||
+                    pathname.startsWith("/gateways") ||
+                    pathname.startsWith("/seguranca") ||
+                    pathname.startsWith("/filiais") ||
+                    pathname.startsWith("/ajuda")
+                  ? "configuracoes"
+                  : pathname.startsWith("/dashboard")
+                    ? "dashboard"
+                    : null;
   if (area && !can(membership.role, area, membership.permissions)) {
     return (
       <LanguageProvider>

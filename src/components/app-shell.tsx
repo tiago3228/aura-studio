@@ -36,6 +36,7 @@ import {
   ShoppingBag,
   Home,
   FolderOpen,
+  MessageCircle,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +54,7 @@ type NavItem = {
   area: string;
   icon: typeof CalendarDays;
   mobile?: boolean;
+  whatsappTab?: "automations" | "templates";
   children?: NavItem[];
 };
 
@@ -92,6 +94,29 @@ const NAV: NavItem[] = [
     ],
   },
   { to: "/crm", label: "CRM", area: "crm", icon: BarChart3, mobile: true },
+  {
+    to: "/whatsapp",
+    label: "WhatsApp",
+    area: "whatsapp",
+    icon: MessageCircle,
+    mobile: true,
+    children: [
+      {
+        to: "/whatsapp",
+        label: "Automações",
+        area: "whatsapp",
+        icon: Clock3,
+        whatsappTab: "automations",
+      },
+      {
+        to: "/whatsapp",
+        label: "Modelos de Mensagem Meta",
+        area: "whatsapp",
+        icon: MessageSquareText,
+        whatsappTab: "templates",
+      },
+    ],
+  },
   { to: "/equipe", label: "Equipe", area: "equipe", icon: UserCog },
   {
     to: "/pagamentos",
@@ -209,6 +234,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const activeWhatsappTab = useRouterState({
+    select: (s) => {
+      const search = s.location.search as Record<string, unknown>;
+      return typeof search["tab"] === "string" ? search["tab"] : "overview";
+    },
+  });
   const { language, setLanguage, navLabel, t } = useLanguage();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => ({
     "/cadastros": [
@@ -219,6 +250,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       "/anamneses",
       "/mensagens",
     ].some((path) => pathname.startsWith(path)),
+    "/whatsapp": pathname.startsWith("/whatsapp"),
     "/assistente": pathname.startsWith("/assistente") || pathname.startsWith("/marketing"),
     "/pagamentos": [
       "/pagamentos",
@@ -371,9 +403,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               {children.length ? (
                 <button
                   type="button"
-                  onClick={() =>
-                    setExpandedGroups((current) => ({ ...current, [item.to]: !expanded }))
-                  }
+                  onClick={() => {
+                    setExpandedGroups((current) => ({ ...current, [item.to]: !expanded }));
+                    if (item.to === "/whatsapp") {
+                      void navigate({ to: "/whatsapp", search: { tab: "overview" } });
+                    }
+                  }}
                   aria-expanded={expanded}
                   className={cn(
                     "flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-colors",
@@ -429,12 +464,22 @@ export function AppShell({ children }: { children: ReactNode }) {
                   {children.map((child) => {
                     const ChildIcon = child.icon;
                     const childActive =
-                      pathname === child.to || pathname.startsWith(`${child.to}/`);
+                      (pathname === child.to || pathname.startsWith(`${child.to}/`)) &&
+                      (!child.whatsappTab || activeWhatsappTab === child.whatsappTab);
                     return (
                       <Link
-                        key={child.to}
+                        key={`${child.to}:${child.label}`}
                         to={child.to}
-                        onClick={() => setOpen(false)}
+                        onClick={(event) => {
+                          setOpen(false);
+                          if (child.whatsappTab) {
+                            event.preventDefault();
+                            void navigate({
+                              to: "/whatsapp",
+                              search: { tab: child.whatsappTab },
+                            });
+                          }
+                        }}
                         className={cn(
                           "flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors",
                           childActive
