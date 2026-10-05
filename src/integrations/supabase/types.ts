@@ -5871,6 +5871,137 @@ export type Database = {
           },
         ]
       }
+      whatsapp_automation_jobs: {
+        Row: {
+          appointment_id: string
+          attempt_count: number
+          client_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          last_error_code: string | null
+          organization_id: string
+          processed_at: string | null
+          provider_message_id: string | null
+          rule_id: string
+          scheduled_for: string
+          status: string
+        }
+        Insert: {
+          appointment_id: string
+          attempt_count?: number
+          client_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          last_error_code?: string | null
+          organization_id: string
+          processed_at?: string | null
+          provider_message_id?: string | null
+          rule_id: string
+          scheduled_for: string
+          status?: string
+        }
+        Update: {
+          appointment_id?: string
+          attempt_count?: number
+          client_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          last_error_code?: string | null
+          organization_id?: string
+          processed_at?: string | null
+          provider_message_id?: string | null
+          rule_id?: string
+          scheduled_for?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_automation_jobs_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_automation_jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_automation_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_automation_jobs_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_automation_rules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          event_key: string
+          id: string
+          offset_minutes: number
+          organization_id: string
+          require_opt_in: boolean
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          event_key: string
+          id?: string
+          offset_minutes?: number
+          organization_id: string
+          require_opt_in?: boolean
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          event_key?: string
+          id?: string
+          offset_minutes?: number
+          organization_id?: string
+          require_opt_in?: boolean
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_automation_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_automation_rules_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_message_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_contacts: {
         Row: {
           client_id: string | null
@@ -6014,6 +6145,45 @@ export type Database = {
           },
         ]
       }
+      whatsapp_integration_secret_refs: {
+        Row: {
+          access_token_secret_id: string
+          created_at: string
+          integration_id: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          access_token_secret_id: string
+          created_at?: string
+          integration_id: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          access_token_secret_id?: string
+          created_at?: string
+          integration_id?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_integration_secret_refs_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: true
+            referencedRelation: "whatsapp_integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_integration_secret_refs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_integrations: {
         Row: {
           active: boolean
@@ -6078,6 +6248,69 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "whatsapp_integrations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_message_templates: {
+        Row: {
+          category: string
+          components: Json
+          created_at: string
+          id: string
+          integration_id: string
+          language: string
+          last_synced_at: string
+          meta_template_id: string
+          name: string
+          organization_id: string
+          quality_score: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          components?: Json
+          created_at?: string
+          id?: string
+          integration_id: string
+          language: string
+          last_synced_at?: string
+          meta_template_id: string
+          name: string
+          organization_id: string
+          quality_score?: string | null
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          components?: Json
+          created_at?: string
+          id?: string
+          integration_id?: string
+          language?: string
+          last_synced_at?: string
+          meta_template_id?: string
+          name?: string
+          organization_id?: string
+          quality_score?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_message_templates_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_message_templates_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -6771,6 +7004,22 @@ export type Database = {
           percentage: number
           valid: boolean
         }[]
+      }
+      whatsapp_disconnect_integration: {
+        Args: { _integration_id: string; _organization_id: string }
+        Returns: undefined
+      }
+      whatsapp_get_access_token_secret: {
+        Args: { _integration_id: string }
+        Returns: string
+      }
+      whatsapp_store_integration_secrets: {
+        Args: {
+          _access_token: string
+          _integration_id: string
+          _organization_id: string
+        }
+        Returns: undefined
       }
       write_audit_log: {
         Args: {
