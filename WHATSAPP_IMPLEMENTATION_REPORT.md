@@ -88,3 +88,42 @@ No projeto Aura aberto no Brave autenticado, uma consulta somente de catálogo c
 A inspeção de grants encontrou privilégios padrão para `anon` e privilégios amplos para `authenticated` em quatro tabelas base; as policies bloqueiam acesso sem permissão, mas esses grants eram desnecessários. Também foi constatado que a policy original de `whatsapp_integrations` permitia conexão/edição a qualquer membro com permissão delegada `whatsapp.editar`, enquanto as Edge Functions já exigem explicitamente owner/manager. A migration-base local foi atualizada para revogar grants a `anon`, limitar verbos autenticados e usar `public.is_org_admin(organization_id)` na policy de integrações. Essa mudança ainda não foi aplicada ao Cloud.
 
 A migration Meta e as quatro Edge Functions seguem locais. Nenhuma migration, deploy de função, publicação do site, onboarding Meta ou teste E2E foi realizado nesta retomada. O Sandbox não tem Supabase CLI nem `SUPABASE_ACCESS_TOKEN`; configuração Meta não está disponível nas variáveis locais. A próxima etapa depende de versionar/sincronizar o branch da feature, executar migrations em backend-only e provisionar as credenciais Meta no ambiente seguro antes do E2E.
+
+## Retomada: verificação Meta e rota para clientes — 2026-10-05
+
+### Estado confirmado no painel Meta (somente leitura)
+
+- O portfólio Aura Studio aparece como **qualificado para iniciar a verificação**, mas ainda não verificado. O ativo WhatsApp de teste também aparece como **não verificado**; não há endereço cadastrado nas informações exibidas.
+- Essa indicação significa apenas que a Meta permite iniciar o processo; não é aprovação nem exceção para um provedor individual. Nenhum formulário foi preenchido ou enviado, e nenhum documento foi fornecido.
+- O painel Meta estava autenticado com o perfil Tiago Cardoso. A inspeção terminou na Central de Segurança.
+
+### Requisitos e limites da rota Tech Provider
+
+A documentação da Meta atualizada em 20/08/2026 exige que o Tech Provider verifique sua própria empresa antes de iniciar App Review. O App Review então concede o acesso avançado a `whatsapp_business_messaging` e `whatsapp_business_management`. O fluxo de parceria com Solution Partner também está descrito dentro do onboarding Tech Provider; portanto, **a existência de um BSP parceiro, por si só, não elimina a verificação da empresa Aura quando Aura é o ISV/Tech Provider**.
+
+As documentações para ISVs de [Twilio](https://www.twilio.com/docs/whatsapp/isv/tech-provider-program/integration-guide) e [360dialog](https://docs.360dialog.com/partner/get-started/tech-provider-program/become-a-meta-tech-provider) também exigem verificação empresarial e App Review para a empresa integradora. A ajuda oficial da Meta descreve documentos empresariais que provem nome legal e endereço/telefone; não foi encontrada documentação oficial que garanta um caminho de Tech Provider com apenas CPF, sem negócio legalmente verificável. Isso não equivale a uma recusa formal da Meta para o caso individual.
+
+### Alternativa de provedor gerenciado ainda não confirmada
+
+A [Infobip anuncia uma oferta “platform for platforms”](https://www.infobip.com/whatsapp-business/become-a-provider), com onboarding incorporado ao site do parceiro e operações de integração geridas pela Infobip. A página pública, porém, não confirma que Aura possa usar o app/estatuto Meta da Infobip sem a própria verificação empresarial, nem informa condições comerciais suficientes para decidir. É necessário obter confirmação escrita sobre: uso de Embedded Signup hospedado pelo provedor dentro do Aura, onboarding de WABAs pertencentes aos clientes, requisitos de CNPJ/verificação para Aura, API/webhooks, marca branca e preços. Nenhum contato, cadastro ou contratação foi iniciado.
+
+Uma possibilidade separada é formalizar uma entidade elegível no Brasil — por exemplo, MEI somente se a atividade estiver na lista permitida e cumprir os demais requisitos oficiais. O [Portal do Empreendedor](https://www.gov.br/pt-br/servicos/realizar-registro-como-microempreendedor-individual-mei) informa que a formalização gera CNPJ, mas a elegibilidade depende da ocupação e de outras condições; não houve registro nem recomendação fiscal individual.
+
+### Situação técnica do Aura
+
+- A inspeção do checkout confirmou `main` sincronizado com `origin/main` e árvore de trabalho limpa antes desta atualização documental.
+- O `main` já contém o fluxo direto de Embedded Signup e as funções de backend da integração por organização, com tokens armazenados no Vault. Assim, a ideia de cada clínica autorizar sua própria WABA é contemplada tecnicamente pelo código existente.
+- O código atual ainda informa que o envio de mensagens pelo Aura não está habilitado e não executa automações; o relatório anterior documenta essa limitação. A implantação e o uso de produção continuam bloqueados por revisão/permissões Meta, configuração segura do ambiente e validação/deploy das migrations e funções.
+- Não foi selecionado um BSP porque isso determina arquitetura, credenciais, contrato, custos e tratamento de dados. Uma integração específica de provedor deve ser feita somente depois de validar a oferta e obter essa escolha; não há base para trocar agora o fluxo direto por um SDK/API comercial arbitrário.
+- Nenhum segredo foi lido, alterado ou adicionado ao repositório. Nenhum SQL foi alterado nesta retomada.
+
+### Fontes oficiais consultadas
+
+- [Meta — Become a Tech Provider](https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/get-started-for-tech-providers)
+- [Meta — Embedded Signup v4](https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/version-4)
+- [Meta — como verificar a empresa](https://www.facebook.com/business/help/2058515294227817)
+- [Meta — documentos oficiais para verificação](https://www.facebook.com/business/help/159334372093366/)
+- [Twilio — Tech Provider Program para ISVs](https://www.twilio.com/docs/whatsapp/isv/tech-provider-program)
+- [360dialog — Tech Provider Program](https://docs.360dialog.com/partner/get-started/tech-provider-program)
+- [Infobip — tornar-se provedor WhatsApp](https://www.infobip.com/whatsapp-business/become-a-provider)
+- [Gov.br — formalizar como MEI](https://www.gov.br/pt-br/servicos/realizar-registro-como-microempreendedor-individual-mei)
