@@ -76,3 +76,8 @@ Leia esta nota antes de continuar o deploy de assinatura ou modificar o branch c
 - Sem app Meta, não existem ainda `App ID`/`Configuration ID`, `App Secret` ou configuração de webhook para o Aura. Nenhum secret Meta foi criado. A lista Lovable Secrets anteriormente conferida contém secrets de contratos, não de Meta.
 - Não declarar a integração pronta para clientes: ainda dependem portfolio empresarial apto, verificação empresarial/App Review/Advanced Access da Meta, deploy das quatro Edge Functions e IDs/secrets corretos. O envio Cloud API pelo Aura e o worker de automações continuam fora do código existente; a UI não habilita envio automático.
 - Próximo passo seguro: confirmar que o Brave está na conta Meta antiga correta ou aguardar o bloqueio temporário da Meta; criar o portfólio apenas quando autorizado pela própria Meta; depois concluir o app WhatsApp e retomar deploy isolado por um caminho autenticado, sem publicar o site nem enviar mensagens reais.
+
+
+### Atualização do navegador após novo login informado — 2026-10-05 09:45 -03
+
+O usuário informou que já estava logado e autorizou continuar. `manus-config connector ensure 'My Browser'` habilitou o conector nesta sessão, mas `browser_switch` seguido de navegação/visualização ainda retorna `[Browser: Sandbox]`; `/apps/` redireciona para a página pública da Meta e não mostra conta ou lista de apps. Nenhuma credencial foi inserida. A configuração Meta deve aguardar uma sessão My Browser efetivamente conectada à conta autenticada; não repetir login nem tentar criar app/portfólio sem essa sessão.
