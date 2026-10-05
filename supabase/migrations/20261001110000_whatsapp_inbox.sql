@@ -1,6 +1,7 @@
--- Baseline reconciliado com o schema Cloud existente em 2026-10-03.
--- As tabelas, colunas, policies/RLS e helpers foram conferidos por metadados read-only.
--- Este arquivo versiona a base previamente provisionada; não foi aplicado nesta etapa.
+-- Baseline reconciliado com metadados do Cloud em 2026-10-05.
+-- Colunas, constraints, indexes, triggers e policies/RLS das tabelas-base
+-- foram comparados por consultas read-only; grants e owner/manager foram hardenizados.
+-- Versiona a base previamente provisionada; aplicação ao Cloud permanece pendente.
 
 -- Fase 4: WhatsApp profissional centralizado.
 --
@@ -268,11 +269,18 @@ alter table public.whatsapp_conversations enable row level security;
 alter table public.whatsapp_messages enable row level security;
 alter table public.whatsapp_webhook_events enable row level security;
 
+-- Normalize default Supabase table grants: no anonymous access, and authenticated
+-- receives only the SQL privileges that the policies below intentionally govern.
+revoke all on public.whatsapp_integrations, public.whatsapp_contacts,
+  public.whatsapp_conversations, public.whatsapp_messages,
+  public.whatsapp_webhook_events from anon, authenticated;
 grant select, insert, update, delete on public.whatsapp_integrations to authenticated;
 grant select, insert, update, delete on public.whatsapp_contacts to authenticated;
 grant select, insert, update on public.whatsapp_conversations to authenticated;
 grant select, insert, update on public.whatsapp_messages to authenticated;
-grant all on public.whatsapp_integrations, public.whatsapp_contacts, public.whatsapp_conversations, public.whatsapp_messages, public.whatsapp_webhook_events to service_role;
+grant all on public.whatsapp_integrations, public.whatsapp_contacts,
+  public.whatsapp_conversations, public.whatsapp_messages,
+  public.whatsapp_webhook_events to service_role;
 
 drop policy if exists whatsapp_integrations_read on public.whatsapp_integrations;
 drop policy if exists whatsapp_integrations_manage on public.whatsapp_integrations;
@@ -281,8 +289,8 @@ on public.whatsapp_integrations for select to authenticated
 using (public.has_org_permission(organization_id, 'whatsapp.ver'));
 create policy whatsapp_integrations_manage
 on public.whatsapp_integrations for all to authenticated
-using (public.has_org_permission(organization_id, 'whatsapp.editar'))
-with check (public.has_org_permission(organization_id, 'whatsapp.editar'));
+using (public.is_org_admin(organization_id))
+with check (public.is_org_admin(organization_id));
 
 drop policy if exists whatsapp_contacts_read on public.whatsapp_contacts;
 drop policy if exists whatsapp_contacts_manage on public.whatsapp_contacts;

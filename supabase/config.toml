@@ -3,6 +3,15 @@ project_id = "qpedjuvpnumyahcrojsm"
 [functions.whatsapp-webhook]
 verify_jwt = false
 
+[functions.whatsapp-connect]
+verify_jwt = true
+
+[functions.whatsapp-sync-templates]
+verify_jwt = true
+
+[functions.whatsapp-disconnect]
+verify_jwt = true
+
 [functions.contract-signing-session]
 verify_jwt = false
 

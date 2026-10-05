@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -10,6 +10,7 @@ import {
   MessageCircle,
   RefreshCw,
   ShieldCheck,
+  Unplug,
   Wifi,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -18,7 +19,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { can, isAdminRole, useMembership } from "@/lib/session";
 import { EmptyState, PageHeader, SkeletonCard, Surface } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type MetaTemplate = {
   id: string;
@@ -277,6 +298,10 @@ function WhatsAppPage() {
   const canConnect = isAdminRole(membership?.role);
   const [connecting, setConnecting] = useState(false);
   const [syncingTemplates, setSyncingTemplates] = useState(false);
+  const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  const [disconnectDialogOpen, setDisconnectDialogOpen] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [phonePin, setPhonePin] = useState("");
 
   const integration = useQuery({
     enabled: !!organizationId,
@@ -286,7 +311,7 @@ function WhatsAppPage() {
       const { data, error } = await supabase
         .from("whatsapp_integrations")
         .select(
-          "id, display_name, phone_number, phone_number_id, active, verified, last_webhook_at, last_error, updated_at",
+          "id, display_name, phone_number, phone_number_id, active, verified, onboarding_state, last_webhook_at, last_error, updated_at",
         )
         .eq("organization_id", organizationId)
         .eq("provider", "meta_cloud")
@@ -340,7 +365,7 @@ function WhatsAppPage() {
       : "Ainda sem eventos recebidos";
   }, [integration.data?.last_webhook_at]);
 
-  async function connectWhatsApp() {
+  function requestWhatsAppConnection() {
     if (!organizationId || !canConnect) return;
     if (!APP_ID || !CONFIG_ID) {
       toast.error("A conexão direta ainda não está habilitada pela plataforma.", {
@@ -349,7 +374,16 @@ function WhatsAppPage() {
       });
       return;
     }
+    setPhonePin("");
+    setConnectDialogOpen(true);
+  }
 
+  async function connectWhatsApp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!organizationId || !canConnect || !/^\d{6}$/.test(phonePin)) return;
+    const submittedPin = phonePin;
+    setPhonePin("");
+    setConnectDialogOpen(false);
     setConnecting(true);
     try {
       await loadFacebookSdk(APP_ID);
@@ -366,6 +400,7 @@ function WhatsAppPage() {
           phone_number_id: signup.assets.phone_number_id,
           business_id: signup.assets.business_id ?? null,
           finish_event: signup.assets.finish_event,
+          phone_pin: submittedPin,
         },
       });
       if (error || !data?.ok) throw new Error("WHATSAPP_CONNECT_FAILED");
@@ -392,7 +427,36 @@ function WhatsAppPage() {
         });
       }
     } finally {
+      await queryClient.invalidateQueries({ queryKey: ["whatsapp-integration", organizationId] });
       setConnecting(false);
+      setPhonePin("");
+    }
+  }
+
+  async function disconnectWhatsApp() {
+    if (!organizationId || !integration.data?.id || !canConnect) return;
+    setDisconnecting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-disconnect", {
+        body: { organization_id: organizationId, integration_id: integration.data.id },
+      });
+      if (error || !data?.ok) throw new Error("DISCONNECT_FAILED");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-integration", organizationId] }),
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-meta-templates", organizationId] }),
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-history", organizationId] }),
+      ]);
+      toast.success("WhatsApp desconectado com segurança.", {
+        description: "O Aura removeu sua credencial. O número não foi desregistrado da Meta.",
+      });
+    } catch {
+      toast.error("Não foi possível concluir a desconexão.", {
+        description:
+          "Se a Meta já confirmou a remoção do webhook, a limpeza local ainda precisa ser repetida. A credencial permanece criptografada no Vault até a confirmação completa.",
+      });
+    } finally {
+      setDisconnecting(false);
+      setDisconnectDialogOpen(false);
     }
   }
 
@@ -501,7 +565,7 @@ function WhatsAppPage() {
                   <p className="mt-1 max-w-xl text-sm text-muted-foreground">
                     {connected
                       ? "A conta da clínica está conectada à plataforma Meta. O envio pelo Aura ainda não está habilitado."
-                      : "Conecte o número da clínica pela Meta. Nesta etapa, o Aura ainda não envia mensagens; não é necessário copiar tokens ou chaves."}
+                      : "Conecte o número da clínica pela Meta. Nesta etapa, o Aura ainda não envia mensagens e não solicita tokens ou chaves; o PIN de segurança é usado somente no cadastro."}
                   </p>
                   {connected && integration.data?.phone_number ? (
                     <p className="mt-2 text-sm font-medium">{integration.data.phone_number}</p>
@@ -523,7 +587,7 @@ function WhatsAppPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <Button
                   type="button"
-                  onClick={() => void connectWhatsApp()}
+                  onClick={requestWhatsAppConnection}
                   disabled={!canConnect || connecting}
                 >
                   {connecting ? (
@@ -543,6 +607,19 @@ function WhatsAppPage() {
                     Aura.
                   </p>
                 ) : null}
+                {canConnect &&
+                integration.data?.id &&
+                (integration.data.onboarding_state === "failed" ||
+                  integration.data.onboarding_state === "pending_setup") ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDisconnectDialogOpen(true)}
+                    disabled={disconnecting}
+                  >
+                    <Unplug className="size-4" /> Limpar conexão incompleta
+                  </Button>
+                ) : null}
               </div>
             ) : (
               <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
@@ -553,6 +630,21 @@ function WhatsAppPage() {
                   <ShieldCheck className="size-4" />
                   Envio pelo Aura ainda não habilitado
                 </div>
+                {canConnect ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDisconnectDialogOpen(true)}
+                    disabled={disconnecting}
+                  >
+                    {disconnecting ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Unplug className="size-4" />
+                    )}
+                    Desconectar
+                  </Button>
+                ) : null}
               </div>
             )}
           </Surface>
@@ -752,6 +844,85 @@ function WhatsAppPage() {
           </div>
         )
       ) : null}
+
+      <Dialog
+        open={connectDialogOpen}
+        onOpenChange={(open) => {
+          if (connecting) return;
+          setConnectDialogOpen(open);
+          if (!open) setPhonePin("");
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Preparar conexão do WhatsApp</DialogTitle>
+            <DialogDescription>
+              Informe o PIN de verificação em duas etapas do número. Se a clínica ainda não definiu
+              um PIN, escolha agora um código de 6 dígitos para o registro na Meta.
+            </DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={(event) => void connectWhatsApp(event)}>
+            <div className="space-y-2">
+              <Label htmlFor="whatsapp-registration-pin">PIN de 6 dígitos</Label>
+              <Input
+                id="whatsapp-registration-pin"
+                type="password"
+                inputMode="numeric"
+                autoComplete="new-password"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                value={phonePin}
+                onChange={(event) => setPhonePin(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="••••••"
+                aria-describedby="whatsapp-pin-disclosure"
+                required
+              />
+              <p id="whatsapp-pin-disclosure" className="text-xs text-muted-foreground">
+                O Aura usa esse PIN apenas durante o cadastro server-side. Ele não é salvo no Aura,
+                não aparece em logs e não é retornado pelo backend. Se o número já tiver PIN, use o
+                PIN existente.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setConnectDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={connecting || phonePin.length !== 6}>
+                {connecting ? <Loader2 className="size-4 animate-spin" /> : null}
+                Continuar para a Meta
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={disconnectDialogOpen} onOpenChange={setDisconnectDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desconectar o WhatsApp da clínica?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O Aura pedirá à Meta para remover a inscrição de webhooks e, somente após confirmação,
+              apagará a credencial do Vault, desativará as automações e cancelará envios ainda na
+              fila. O histórico local será preservado. O número não será desregistrado da Meta nem
+              removido do WhatsApp Business.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={disconnecting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={disconnecting}
+              onClick={(event) => {
+                event.preventDefault();
+                void disconnectWhatsApp();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {disconnecting ? <Loader2 className="size-4 animate-spin" /> : null}
+              {disconnecting ? "Desconectando…" : "Desconectar e limpar credencial"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

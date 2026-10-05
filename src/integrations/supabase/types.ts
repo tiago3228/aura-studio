@@ -6026,6 +6026,7 @@ export type Database = {
           last_error_at: string | null
           last_webhook_at: string | null
           metadata: Json
+          onboarding_state: string
           organization_id: string
           phone_number: string | null
           phone_number_id: string | null
@@ -6045,6 +6046,7 @@ export type Database = {
           last_error_at?: string | null
           last_webhook_at?: string | null
           metadata?: Json
+          onboarding_state?: string
           organization_id: string
           phone_number?: string | null
           phone_number_id?: string | null
@@ -6064,6 +6066,7 @@ export type Database = {
           last_error_at?: string | null
           last_webhook_at?: string | null
           metadata?: Json
+          onboarding_state?: string
           organization_id?: string
           phone_number?: string | null
           phone_number_id?: string | null
