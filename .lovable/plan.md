@@ -7,7 +7,7 @@
 - RLS está habilitado nas duas tabelas; FORCE RLS está desabilitado e permanecerá assim.
 - As quatro policies de cada tabela já correspondem ao anexo. Não há policies extras nessas tabelas.
 - Os triggers `monthly_revenue_goals_updated_at` (BEFORE UPDATE) e `dashboard_notes_updated_at` (BEFORE INSERT OR UPDATE) estão habilitados. As duas funções correspondem ao anexo e são SECURITY INVOKER.
-- O registro acessível `supabase_migrations.schema_migrations` não contém migração com referência a essas tabelas. A existência dos objetos não comprova registro de aplicação bem-sucedida.
+- Não há registro referente às tabelas em `supabase_migrations.schema_migrations`; os objetos existentes não comprovam migração registrada.
 
 ## Permissões: situação atual e resultado previsto
 | Papel | Atual, nas duas tabelas | Após o SQL abaixo |
@@ -26,7 +26,7 @@ A diferença encontrada é de permissões, não de schema. RLS não protege TRUN
 2. Aplicar exclusivamente o SQL abaixo pelo fluxo nativo de migrações do Lovable Cloud, sem conectar banco externo.
 3. Confirmar permissões efetivas, ausência de concessões a PUBLIC e por coluna, RLS, oito policies, dois triggers, funções, contagens e registro da migração.
 
-Nenhum DELETE, TRUNCATE, DROP TABLE, desativação de RLS ou alteração do frontend será executado. Os DROP POLICY/TRIGGER seguidos de CREATE e os IF NOT EXISTS tornam a migração reexecutável no estado verificado. As definições existentes das tabelas e suas referências são preservadas, sem criação de novos vínculos. Os blocos GRANT/REVOKE foram apenas movidos para imediatamente após cada CREATE TABLE, antes de índices/RLS/policies; o restante mantém a lógica do anexo.
+Sem DELETE, TRUNCATE, DROP TABLE, desativação de RLS ou alteração do frontend. O SQL é reexecutável no estado verificado e preserva os vínculos existentes. Apenas movi GRANT/REVOKE para após cada CREATE TABLE, antes de índices/RLS/policies; a lógica do anexo foi mantida.
 
 ## SQL final para aprovação
 ```sql
