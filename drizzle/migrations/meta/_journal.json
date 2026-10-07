@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791378019082,
+      "tag": "0000_harden_monthly_revenue_goals_dashboard_notes",
+      "breakpoints": true
+    }
+  ]
+}
