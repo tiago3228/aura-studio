@@ -6,4 +6,4 @@
 - [x] Auditar e concluir o CRM para liberação comercial
 - [x] Renomear o menu para CRM após validação completa
 - [x] Corrigir a recriação de acesso de profissional anteriormente excluído
-- [ ] Aplicar e verificar a migração aprovada de metas/notas, preservando as alterações de hoje e interrompendo se houver divergência
+- [x] Aplicar e verificar a migração aprovada de metas/notas, preservando as alterações de hoje e interrompendo se houver divergência
