@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { Loader2, Plus, Target } from "lucide-react";
 import { toast } from "sonner";
 import {
   Bar,
@@ -14,7 +15,9 @@ import {
 } from "recharts";
 
 import { supabase } from "@/integrations/supabase/client";
-import { useMembership } from "@/lib/session";
+import { isAdminRole, useMembership } from "@/lib/session";
+import { getFinancialIntelligence } from "@/lib/secure-actions.functions";
+import { calculateMonthlyGoalProgress } from "@/lib/monthly-goal";
 import { useLanguage } from "@/lib/language";
 import { addDays, brl, brlShort, dateFmt, isoDay } from "@/lib/format";
 import { PageHeader, Pill, SkeletonCard, StatCard, EmptyState } from "@/components/ui-kit";
@@ -43,6 +46,13 @@ type Method = Database["public"]["Enums"]["payment_method"];
 
 const METHODS: Method[] = ["pix", "credito", "debito", "dinheiro", "transferencia", "outros"];
 
+function localDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export const Route = createFileRoute("/_authenticated/financeiro")({
   head: () => ({
     meta: [
@@ -66,8 +76,16 @@ function Financeiro() {
   const { t } = useLanguage();
   const orgId = membership?.organization.id;
   const queryClient = useQueryClient();
+  const fetchFinancialIntelligence = useServerFn(getFinancialIntelligence);
   const [openSale, setOpenSale] = useState(false);
   const [openBill, setOpenBill] = useState(false);
+  const [openGoal, setOpenGoal] = useState(false);
+  const [goalForm, setGoalForm] = useState("");
+  const [savingGoal, setSavingGoal] = useState(false);
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthStartKey = localDateKey(monthStart);
+  const currentDayKey = localDateKey(now);
 
   const from = addDays(isoDay(new Date()), -29);
 
@@ -75,15 +93,29 @@ function Financeiro() {
     enabled: !!orgId,
     queryKey: ["finance", orgId],
     queryFn: async () => {
+      if (!orgId) throw new Error("Organização não selecionada.");
       const [sales, payable, receivable, payments] = await Promise.all([
         supabase
           .from("sales")
           .select("id, total, cost, discount, created_at, clients(name)")
+          .eq("organization_id", orgId)
           .gte("created_at", from.toISOString())
           .order("created_at", { ascending: false }),
-        supabase.from("accounts_payable").select("*").order("due_date"),
-        supabase.from("accounts_receivable").select("*").order("due_date"),
-        supabase.from("payments").select("method, amount").gte("created_at", from.toISOString()),
+        supabase
+          .from("accounts_payable")
+          .select("*")
+          .eq("organization_id", orgId)
+          .order("due_date"),
+        supabase
+          .from("accounts_receivable")
+          .select("*")
+          .eq("organization_id", orgId)
+          .order("due_date"),
+        supabase
+          .from("payments")
+          .select("method, amount")
+          .eq("organization_id", orgId)
+          .gte("created_at", from.toISOString()),
       ]);
       if (sales.error) throw sales.error;
       return {
@@ -92,6 +124,33 @@ function Financeiro() {
         receivable: receivable.data ?? [],
         payments: payments.data ?? [],
       };
+    },
+  });
+
+  const monthRevenueQuery = useQuery({
+    enabled: !!orgId,
+    queryKey: ["monthly-revenue-achieved", orgId, monthStartKey, currentDayKey],
+    queryFn: async () => {
+      const result = (await fetchFinancialIntelligence({
+        data: { from: monthStartKey, to: currentDayKey, locationId: null },
+      })) as { summary?: { revenue?: number | string } };
+      return Number(result.summary?.revenue ?? 0);
+    },
+  });
+
+  const monthlyGoalQuery = useQuery({
+    enabled: !!orgId,
+    queryKey: ["monthly-revenue-goal", orgId, monthStartKey],
+    queryFn: async () => {
+      if (!orgId) return null;
+      const { data: goal, error } = await supabase
+        .from("monthly_revenue_goals")
+        .select("id, target_amount")
+        .eq("organization_id", orgId)
+        .eq("month_start", monthStartKey)
+        .maybeSingle();
+      if (error) throw error;
+      return goal;
     },
   });
 
@@ -115,7 +174,42 @@ function Financeiro() {
     return { dia: dateFmt(day, { day: "2-digit", month: "2-digit" }), total };
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["finance"] });
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["finance"] });
+    void queryClient.invalidateQueries({ queryKey: ["monthly-revenue-achieved", orgId] });
+  };
+  const monthRevenue = monthRevenueQuery.data ?? 0;
+  const monthlyTarget = Number(monthlyGoalQuery.data?.target_amount ?? 0);
+  const goalProgress = calculateMonthlyGoalProgress(monthRevenue, monthlyTarget);
+
+  async function saveMonthlyGoal(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const targetAmount = Number(goalForm);
+    if (!orgId || !membership || !Number.isFinite(targetAmount) || targetAmount <= 0) {
+      toast.error("Informe uma meta maior que zero.");
+      return;
+    }
+    setSavingGoal(true);
+    const { error } = await supabase.from("monthly_revenue_goals").upsert(
+      {
+        organization_id: orgId,
+        month_start: monthStartKey,
+        target_amount: targetAmount,
+        created_by: membership.userId,
+      },
+      { onConflict: "organization_id,month_start" },
+    );
+    setSavingGoal(false);
+    if (error) {
+      toast.error("Não foi possível salvar a meta. Verifique sua permissão financeira.");
+      return;
+    }
+    toast.success("Meta mensal salva.");
+    setOpenGoal(false);
+    void queryClient.invalidateQueries({
+      queryKey: ["monthly-revenue-goal", orgId, monthStartKey],
+    });
+  }
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -158,6 +252,135 @@ function Financeiro() {
         <StatCard label={t("A receber")} value={brl(openReceivable)} tone="gold" />
         <StatCard label={t("A pagar")} value={brl(openPayable)} tone="danger" />
       </div>
+
+      <section className="surface mt-5 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary">
+              <Target className="size-5" />
+            </span>
+            <div>
+              <h2 className="font-display text-base font-semibold">Meta de faturamento mensal</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {monthStart.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+              </p>
+            </div>
+          </div>
+          {isAdminRole(membership?.role) ? (
+            <Button
+              variant={monthlyTarget ? "outline" : "default"}
+              onClick={() => {
+                setGoalForm(monthlyTarget ? String(monthlyTarget) : "");
+                setOpenGoal(true);
+              }}
+            >
+              <Target className="size-4" /> {monthlyTarget ? "Editar meta" : "Definir meta"}
+            </Button>
+          ) : null}
+        </div>
+
+        {monthlyTarget > 0 ? (
+          <div className="mt-5">
+            <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <p className="text-xs text-muted-foreground">Faturamento atingido</p>
+                <p className="mt-1 font-display text-2xl font-semibold tabular-nums">
+                  {brl(monthRevenue)}{" "}
+                  <span className="text-sm font-normal text-muted-foreground">
+                    de {brl(monthlyTarget)}
+                  </span>
+                </p>
+              </div>
+              <p className="font-display text-xl font-semibold text-primary tabular-nums">
+                {goalProgress.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%
+              </p>
+            </div>
+            <div
+              className="h-3 overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-label="Progresso da meta mensal de faturamento"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.min(goalProgress.percentage, 100)}
+            >
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${Math.min(goalProgress.percentage, 100)}%` }}
+              />
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {!goalProgress.reached ? (
+                <>
+                  Faltam{" "}
+                  <span className="font-semibold text-foreground">
+                    {brl(goalProgress.remaining)}
+                  </span>{" "}
+                  para atingir a meta.
+                </>
+              ) : (
+                <>
+                  Meta atingida! Você superou o objetivo em{" "}
+                  <span className="font-semibold text-success">{brl(goalProgress.exceededBy)}</span>
+                  .
+                </>
+              )}
+            </p>
+          </div>
+        ) : (
+          <p className="mt-5 rounded-lg border border-dashed border-border px-4 py-5 text-center text-sm text-muted-foreground">
+            Defina o objetivo deste mês para acompanhar o valor atingido e quanto ainda falta.
+          </p>
+        )}
+        {monthRevenueQuery.error || monthlyGoalQuery.error ? (
+          <p role="alert" className="mt-3 text-xs text-destructive">
+            Não foi possível atualizar os dados da meta neste momento.
+          </p>
+        ) : null}
+      </section>
+
+      <Dialog open={openGoal} onOpenChange={setOpenGoal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-display">Meta de faturamento mensal</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={saveMonthlyGoal} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="monthly-revenue-target">
+                Meta para{" "}
+                {monthStart.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })} (R$)
+              </Label>
+              <Input
+                id="monthly-revenue-target"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={goalForm}
+                onChange={(event) => setGoalForm(event.target.value)}
+                placeholder="Ex.: 25000,00"
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpenGoal(false)}
+                disabled={savingGoal}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={savingGoal || !membership}>
+                {savingGoal ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Target className="size-4" />
+                )}
+                {savingGoal ? "Salvando..." : "Salvar meta"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <section className="surface mt-6 p-5">
         <h2 className="mb-4 font-display text-base font-semibold">{t("Receita por dia")}</h2>

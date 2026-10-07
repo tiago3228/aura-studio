@@ -37,6 +37,7 @@ import {
   Home,
   FolderOpen,
   MessageCircle,
+  StickyNote,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -66,6 +67,7 @@ const NAV: NavItem[] = [
     icon: Home,
     mobile: true,
   },
+  { to: "/anotacoes", label: "Anotações", area: "dashboard", icon: StickyNote, mobile: true },
   { to: "/agenda", label: "Agenda", area: "agenda", icon: CalendarDays, mobile: true },
   {
     to: "/atendimentos",
@@ -275,6 +277,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   }));
 
   const items = NAV.filter((item) => can(membership?.role, item.area, membership?.permissions));
+  const mobilePrimaryPaths = new Set(["/dashboard", "/agenda", "/atendimentos", "/cadastros"]);
+  const mobilePrimaryItems = items.filter((item) => item.mobile && mobilePrimaryPaths.has(item.to));
+  const isSecondaryMobileRoute = !mobilePrimaryItems.some(
+    (item) =>
+      pathname === item.to ||
+      pathname.startsWith(`${item.to}/`) ||
+      (item.children?.some(
+        (child) => pathname === child.to || pathname.startsWith(`${child.to}/`),
+      ) ??
+        false),
+  );
   const isPlatformAdmin = user?.email?.toLowerCase() === "tiago3228@yahoo.com.br";
   const orgId = membership?.organization.id;
   const scheduledAppointments = useQuery({
@@ -647,26 +660,51 @@ export function AppShell({ children }: { children: ReactNode }) {
         By: Tiago Cardoso
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
-        {items
-          .filter((i) => i.mobile)
-          .map((item) => {
-            const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "flex min-h-14 flex-1 flex-col items-center justify-center gap-1 px-1 py-2.5 text-[10px] font-medium",
-                  active ? "text-primary" : "text-muted-foreground",
-                )}
-              >
-                <Icon className="size-4" />
-                {item.label.split(" ")[0]}
-              </Link>
-            );
-          })}
+      <nav
+        aria-label="Navegação rápida"
+        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+      >
+        {mobilePrimaryItems.map((item) => {
+          const Icon = item.icon;
+          const tabLabel = item.to === "/atendimentos" ? navLabel("Atend.") : navLabel(item.label);
+          const active =
+            pathname === item.to ||
+            pathname.startsWith(`${item.to}/`) ||
+            (item.children?.some(
+              (child) => pathname === child.to || pathname.startsWith(`${child.to}/`),
+            ) ??
+              false);
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              aria-label={navLabel(item.label)}
+              aria-current={active ? "page" : undefined}
+              title={navLabel(item.label)}
+              className={cn(
+                "flex min-h-16 min-w-0 flex-1 touch-manipulation flex-col items-center justify-center gap-1 px-1 py-2 text-[10px] leading-tight font-medium",
+                active ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <Icon className="size-5 shrink-0" />
+              <span className="max-w-full truncate">{tabLabel}</span>
+            </Link>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={navLabel("Mais")}
+          aria-current={isSecondaryMobileRoute ? "page" : undefined}
+          title={navLabel("Mais")}
+          className={cn(
+            "flex min-h-16 min-w-0 flex-1 touch-manipulation flex-col items-center justify-center gap-1 px-1 py-2 text-[10px] leading-tight font-medium",
+            isSecondaryMobileRoute ? "text-primary" : "text-muted-foreground",
+          )}
+        >
+          <Menu className="size-5 shrink-0" />
+          <span className="max-w-full truncate">{navLabel("Mais")}</span>
+        </button>
       </nav>
     </div>
   );

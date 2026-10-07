@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedAjudaRouteImport } from './routes/_authenticated/ajuda'
 import { Route as AuthenticatedAnamnesesRouteImport } from './routes/_authenticated/anamneses'
+import { Route as AuthenticatedAnotacoesRouteImport } from './routes/_authenticated/anotacoes'
 import { Route as AuthenticatedAssinaturaRouteImport } from './routes/_authenticated/assinatura'
 import { Route as AuthenticatedAssistenteRouteImport } from './routes/_authenticated/assistente'
 import { Route as AuthenticatedAtendimentosRouteImport } from './routes/_authenticated/atendimentos'
@@ -80,6 +81,11 @@ const AuthenticatedAjudaRoute = AuthenticatedAjudaRouteImport.update({
 const AuthenticatedAnamnesesRoute = AuthenticatedAnamnesesRouteImport.update({
   id: '/anamneses',
   path: '/anamneses',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAnotacoesRoute = AuthenticatedAnotacoesRouteImport.update({
+  id: '/anotacoes',
+  path: '/anotacoes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAssinaturaRoute = AuthenticatedAssinaturaRouteImport.update({
@@ -281,6 +287,7 @@ export interface FileRoutesByFullPath {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/ajuda': typeof AuthenticatedAjudaRoute
   '/anamneses': typeof AuthenticatedAnamnesesRoute
+  '/anotacoes': typeof AuthenticatedAnotacoesRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/assistente': typeof AuthenticatedAssistenteRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
@@ -325,6 +332,7 @@ export interface FileRoutesByTo {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/ajuda': typeof AuthenticatedAjudaRoute
   '/anamneses': typeof AuthenticatedAnamnesesRoute
+  '/anotacoes': typeof AuthenticatedAnotacoesRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/assistente': typeof AuthenticatedAssistenteRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
@@ -371,6 +379,7 @@ export interface FileRoutesById {
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/ajuda': typeof AuthenticatedAjudaRoute
   '/_authenticated/anamneses': typeof AuthenticatedAnamnesesRoute
+  '/_authenticated/anotacoes': typeof AuthenticatedAnotacoesRoute
   '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
   '/_authenticated/assistente': typeof AuthenticatedAssistenteRoute
   '/_authenticated/atendimentos': typeof AuthenticatedAtendimentosRoute
@@ -417,6 +426,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/ajuda'
     | '/anamneses'
+    | '/anotacoes'
     | '/assinatura'
     | '/assistente'
     | '/atendimentos'
@@ -461,6 +471,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/ajuda'
     | '/anamneses'
+    | '/anotacoes'
     | '/assinatura'
     | '/assistente'
     | '/atendimentos'
@@ -506,6 +517,7 @@ export interface FileRouteTypes {
     | '/_authenticated/agenda'
     | '/_authenticated/ajuda'
     | '/_authenticated/anamneses'
+    | '/_authenticated/anotacoes'
     | '/_authenticated/assinatura'
     | '/_authenticated/assistente'
     | '/_authenticated/atendimentos'
@@ -597,6 +609,13 @@ declare module '@tanstack/react-router' {
       path: '/anamneses'
       fullPath: '/anamneses'
       preLoaderRoute: typeof AuthenticatedAnamnesesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/anotacoes': {
+      id: '/_authenticated/anotacoes'
+      path: '/anotacoes'
+      fullPath: '/anotacoes'
+      preLoaderRoute: typeof AuthenticatedAnotacoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/assinatura': {
@@ -865,6 +884,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedAjudaRoute: typeof AuthenticatedAjudaRoute
   AuthenticatedAnamnesesRoute: typeof AuthenticatedAnamnesesRoute
+  AuthenticatedAnotacoesRoute: typeof AuthenticatedAnotacoesRoute
   AuthenticatedAssinaturaRoute: typeof AuthenticatedAssinaturaRoute
   AuthenticatedAssistenteRoute: typeof AuthenticatedAssistenteRoute
   AuthenticatedAtendimentosRoute: typeof AuthenticatedAtendimentosRoute
@@ -904,6 +924,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedAjudaRoute: AuthenticatedAjudaRoute,
   AuthenticatedAnamnesesRoute: AuthenticatedAnamnesesRoute,
+  AuthenticatedAnotacoesRoute: AuthenticatedAnotacoesRoute,
   AuthenticatedAssinaturaRoute: AuthenticatedAssinaturaRoute,
   AuthenticatedAssistenteRoute: AuthenticatedAssistenteRoute,
   AuthenticatedAtendimentosRoute: AuthenticatedAtendimentosRoute,

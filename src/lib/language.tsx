@@ -10,6 +10,12 @@ export const LANGUAGE_OPTIONS: { value: LanguageCode; label: string }[] = [
 const STORAGE_KEY = "aura-language";
 const NAV_LABELS: Record<string, Record<LanguageCode, string>> = {
   "Visão geral": { "pt-BR": "Visão geral", "pt-PT": "Visão geral", "en-US": "Overview" },
+  Início: { "pt-BR": "Início", "pt-PT": "Início", "en-US": "Home" },
+  Atendimentos: { "pt-BR": "Atendimentos", "pt-PT": "Atendimentos", "en-US": "Appointments" },
+  "Atend.": { "pt-BR": "Atend.", "pt-PT": "Atend.", "en-US": "Visits" },
+  Cadastros: { "pt-BR": "Cadastros", "pt-PT": "Registos", "en-US": "Records" },
+  Mais: { "pt-BR": "Mais", "pt-PT": "Mais", "en-US": "More" },
+  Anotações: { "pt-BR": "Anotações", "pt-PT": "Notas", "en-US": "Notes" },
   Agenda: { "pt-BR": "Agenda", "pt-PT": "Agenda", "en-US": "Calendar" },
   Clientes: { "pt-BR": "Clientes", "pt-PT": "Clientes", "en-US": "Clients" },
   Procedimentos: { "pt-BR": "Procedimentos", "pt-PT": "Procedimentos", "en-US": "Treatments" },

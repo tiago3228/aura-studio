@@ -95,7 +95,7 @@ function AuthenticatedLayout() {
                     pathname.startsWith("/filiais") ||
                     pathname.startsWith("/ajuda")
                   ? "configuracoes"
-                  : pathname.startsWith("/dashboard")
+                  : pathname.startsWith("/dashboard") || pathname.startsWith("/anotacoes")
                     ? "dashboard"
                     : null;
   if (area && !can(membership.role, area, membership.permissions)) {

@@ -18,6 +18,7 @@ import {
   CalendarPlus,
   Cake,
   FileText,
+  LockKeyhole,
   NotebookPen,
   PackagePlus,
   ReceiptText,
@@ -140,7 +141,11 @@ function trailingMonths(now: Date) {
   });
 }
 
-async function loadPaidExpenses(from: string, toExclusive: string): Promise<PaidExpense[]> {
+async function loadPaidExpenses(
+  from: string,
+  toExclusive: string,
+  organizationId: string,
+): Promise<PaidExpense[]> {
   const pageSize = 1000;
   const expenses: PaidExpense[] = [];
 
@@ -148,6 +153,7 @@ async function loadPaidExpenses(from: string, toExclusive: string): Promise<Paid
     const { data, error } = await supabase
       .from("accounts_payable")
       .select("amount, paid_at")
+      .eq("organization_id", organizationId)
       .eq("status", "pago")
       .gte("paid_at", from)
       .lt("paid_at", toExclusive)
@@ -183,14 +189,17 @@ function Dashboard() {
     enabled: !!orgId,
     queryKey: ["dashboard", orgId, today.toISOString().slice(0, 10)],
     queryFn: async () => {
+      if (!orgId) throw new Error("Organização não selecionada.");
       const [sales, clients] = await Promise.all([
         supabase
           .from("sales")
           .select("total, created_at")
+          .eq("organization_id", orgId)
           .gte("created_at", addDays(today, -30).toISOString()),
         supabase
           .from("clients")
           .select("id, name, birth_date")
+          .eq("organization_id", orgId)
           .is("deleted_at", null)
           .not("birth_date", "is", null),
       ]);
@@ -216,9 +225,11 @@ function Dashboard() {
     enabled: !!orgId,
     queryKey: ["dashboard-professionals", orgId],
     queryFn: async () => {
+      if (!orgId) return [];
       const { data, error } = await supabase
         .from("professionals")
         .select("id, name")
+        .eq("organization_id", orgId)
         .eq("active", true)
         .order("name");
       if (error) throw error;
@@ -231,12 +242,14 @@ function Dashboard() {
     queryKey: ["dashboard-appointments", orgId, appointmentPeriod, professionalId],
     refetchInterval: 60_000,
     queryFn: async () => {
+      if (!orgId) return [];
       const { from, to } = appointmentWindow(appointmentPeriod);
       let request = supabase
         .from("appointments")
         .select(
           "id, starts_at, ends_at, status, price, professional_id, clients(name), services(name), professionals(name)",
         )
+        .eq("organization_id", orgId)
         .gte("starts_at", from.toISOString())
         .lt("starts_at", to.toISOString())
         .in("status", ["agendado", "confirmado", "aguardando", "reagendado"])
@@ -263,8 +276,32 @@ function Dashboard() {
   const expensesQuery = useQuery({
     enabled: !!orgId,
     queryKey: ["dashboard-paid-expenses", orgId, financialFrom, financialTo],
-    queryFn: () =>
-      loadPaidExpenses(financialStart.toISOString(), financialEndExclusive.toISOString()),
+    queryFn: () => {
+      if (!orgId) return Promise.resolve([]);
+      return loadPaidExpenses(
+        financialStart.toISOString(),
+        financialEndExclusive.toISOString(),
+        orgId,
+      );
+    },
+  });
+
+  const notesQuery = useQuery({
+    enabled: !!orgId,
+    queryKey: ["dashboard-notes", orgId],
+    queryFn: async () => {
+      if (!orgId) return [];
+      const { data, error } = await supabase
+        .from("dashboard_notes")
+        .select("id, title, due_at, is_private, author_name")
+        .eq("organization_id", orgId)
+        .is("completed_at", null)
+        .order("due_at", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: false })
+        .limit(3);
+      if (error) throw error;
+      return data ?? [];
+    },
   });
 
   if (query.error) return <ErrorState message={(query.error as Error).message} />;
@@ -350,13 +387,52 @@ function Dashboard() {
         </section>
 
         <section className="surface min-h-40 p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <NotebookPen className="size-4 text-gold" />
-            <h2 className="font-display text-base font-semibold">Anotações</h2>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <NotebookPen className="size-4 text-gold" />
+              <h2 className="font-display text-base font-semibold">Anotações</h2>
+            </div>
+            <Link to="/anotacoes" className="text-xs font-semibold text-primary hover:underline">
+              Gerenciar
+            </Link>
           </div>
-          <div className="grid min-h-20 place-items-center rounded-lg border border-dashed border-border px-4 text-center">
-            <p className="text-xs text-muted-foreground">Nenhuma anotação para hoje.</p>
-          </div>
+          {notesQuery.isLoading ? (
+            <p className="py-5 text-center text-xs text-muted-foreground">
+              Carregando lembretes...
+            </p>
+          ) : notesQuery.error ? (
+            <p className="rounded-lg bg-destructive-soft p-3 text-xs text-destructive">
+              Não foi possível carregar as anotações.
+            </p>
+          ) : notesQuery.data?.length ? (
+            <ul className="space-y-2">
+              {notesQuery.data.map((note) => (
+                <li
+                  key={note.id}
+                  className="rounded-lg border border-border bg-background/60 px-3 py-2"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="min-w-0 truncate text-sm font-medium">{note.title}</p>
+                    {note.is_private ? (
+                      <LockKeyhole
+                        className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
+                        aria-label="Nota privada"
+                      />
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    {note.due_at
+                      ? `Lembrete: ${dateFmt(note.due_at)} às ${timeFmt(note.due_at)}`
+                      : `Por ${note.author_name}`}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="grid min-h-20 place-items-center rounded-lg border border-dashed border-border px-4 text-center">
+              <p className="text-xs text-muted-foreground">Nenhuma anotação pendente.</p>
+            </div>
+          )}
         </section>
       </div>
 
