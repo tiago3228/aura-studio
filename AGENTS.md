@@ -11,5 +11,6 @@
 
 - Authenticated membership reads use the request-scoped user client so RLS enforces tenant isolation without an administrative key.
 - Professional creation links credentials only after profile media succeeds, preventing orphaned access when registration rolls back.
+- Cloud schema changes use the native migration flow and its Drizzle journal; verify the applied SQL hash against the database record to confirm versioned execution.
 
 Before resuming contract-signing deployment or editing the shared `main` branch, read `AI_HANDOFF.md` for the current parallel-agent status and deployment blocker.
